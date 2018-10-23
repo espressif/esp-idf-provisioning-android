@@ -197,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                     config.put(BLETransport.SERVICE_UUID_KEY, SERVICE_UUID);
                     config.put(BLETransport.SESSION_UUID_KEY, SESSION_UUID);
                     config.put(BLETransport.CONFIG_UUID_KEY, CONFIG_UUID);
+                    config.put(ConfigureAVS.AVS_CONFIG_UUID_KEY, AVS_CONFIG_UUID);
                     config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
 
                     Provision.showProvisioningWithAmazonUI(thisActivity,
