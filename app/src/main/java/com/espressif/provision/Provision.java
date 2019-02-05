@@ -118,10 +118,10 @@ public class Provision {
      * 3. Provide Network information like SSID and Passphrase
      *
      * @param activity parent activity which is typically part of the app
-     * @param productId product ID in the Alexa Voice Services project
-     * @param productDSN device serial number
-     * @param codeVerifier random value used as a code challenge. This should typically be sent to
-     *                     to received from the device to use in its communication with Alexa
+//     * @param productId product ID in the Alexa Voice Services project
+//     * @param productDSN device serial number
+//     * @param codeVerifier random value used as a code challenge. This should typically be sent to
+//     *                     to received from the device to use in its communication with Alexa
      * @param config Config dictionary
      *               Currently supported configurations are
      *                HashMap<String, String> config = new HashMap<>();
@@ -136,15 +136,15 @@ public class Provision {
      *                config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
      */
     public static void showProvisioningWithAmazonUI(Activity activity,
-                                                    String productId,
-                                                    String productDSN,
-                                                    String codeVerifier,
+//                                                    String productId,
+//                                                    String productDSN,
+//                                                    String codeVerifier,
                                                     HashMap<String, String> config) {
         if(BuildConfig.FLAVOR_avs.equals("avs")) {
-            Intent alexaProvisioningIntent = new Intent(activity, LoginWithAmazon.class);
-            alexaProvisioningIntent.putExtra(ConfigureAVS.PRODUCT_ID_KEY, productId);
-            alexaProvisioningIntent.putExtra(ConfigureAVS.PRODUCT_DSN_KEY, productDSN);
-            alexaProvisioningIntent.putExtra(ConfigureAVS.CODE_VERIFIER_KEY, codeVerifier);
+            Intent alexaProvisioningIntent = new Intent(activity, BLEProvisionLanding.class);
+//            alexaProvisioningIntent.putExtra(ConfigureAVS.PRODUCT_ID_KEY, productId);
+//            alexaProvisioningIntent.putExtra(ConfigureAVS.PRODUCT_DSN_KEY, productDSN);
+//            alexaProvisioningIntent.putExtra(ConfigureAVS.CODE_VERIFIER_KEY, codeVerifier);
 
             Bundle optionsBundle = new Bundle();
             for (Map.Entry<String, String> entry : config.entrySet()) {

@@ -186,6 +186,7 @@ public class BLETransport implements Transport {
             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
                 super.onServicesDiscovered(gatt, status);
                 if (status != BluetoothGatt.GATT_SUCCESS) {
+                    Log.d(TAG,"Status not success");
                     return;
                 }
                 service = gatt.getService(serviceUuid);
@@ -199,8 +200,11 @@ public class BLETransport implements Transport {
                 sessionCharacteristic = service.getCharacteristic(sessionCharacteristicUuid);
                 if(transportListener != null) {
                     if(sessionCharacteristic != null) {
+                        // This is where provisionSession will get called.
+                        Log.d(TAG,"Session characteristic not NULL "+currentDevice.getAddress());
                         transportListener.onPeripheralConfigured(currentDevice);
                     } else {
+                        Log.d(TAG,"Session characteristic is NULL");
                         transportListener.onPeripheralNotConfigured(currentDevice);
                     }
                 }

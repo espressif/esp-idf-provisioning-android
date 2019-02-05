@@ -153,7 +153,7 @@ public class ConfigureAVS {
             productInstanceAttributes.put(DEVICE_SERIAL_NUMBER_KEY, productDSN);
             scopeData.put(PRODUCT_INSTANCE_ATTRIBUTES_KEY, productInstanceAttributes);
             scopeData.put("productID", productId);
-            String codeChallenge = generateCodeChallenge(codeVerifier);
+            String codeChallenge = codeVerifier;
             AuthorizationManager.authorize(new AuthorizeRequest
                     .Builder(requestContext)
                     .addScope(ScopeFactory.scopeNamed(ALEXA_SCOPE, scopeData))
@@ -169,31 +169,14 @@ public class ConfigureAVS {
         }
     }
 
-    private static String generateCodeChallenge(String codeVerifier) {
-        MessageDigest digest = null;
-        byte[] hash = null;
-        try {
-            digest = MessageDigest.getInstance("SHA-256");
-            hash = digest.digest(codeVerifier.getBytes("UTF-8"));
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-
-        return Base64.encodeToString(hash, Base64.URL_SAFE | Base64.NO_PADDING | Base64.NO_WRAP);
-    }
-
     public void configureAmazonLogin(String clientId,
                                      String authCode,
                                      String redirectUri,
-                                     String codeVerifier,
                                      final ConfigureAVSActionListener actionListener) {
         if(this.session.isEstablished()) {
             byte[] message = createSetAVSConfigRequest(clientId,
                     authCode,
-                    redirectUri,
-                    codeVerifier);
+                    redirectUri);
             transport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
                 @Override
                 public void onSuccess(byte[] returnData) {
@@ -215,23 +198,28 @@ public class ConfigureAVS {
 
     private byte[] createSetAVSConfigRequest(String clientId,
                                              String authCode,
-                                             String redirectUri,
-                                             String codeVerifier) {
-        Avsconfig.AVSConfigRequest configRequest = Avsconfig.AVSConfigRequest.newBuilder()
+                                             String redirectUri) {
+        Avsconfig.CmdSetConfig configRequest = Avsconfig.CmdSetConfig.newBuilder()
                 .setAuthCode(authCode)
                 .setClientID(clientId)
-                .setCodeVerifier(codeVerifier)
                 .setRedirectURI(redirectUri)
                 .build();
+        Avsconfig.AVSConfigMsgType msgType = Avsconfig.AVSConfigMsgType.TypeCmdSetConfig;
+        Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.newBuilder()
+                .setMsg(msgType)
+                .setCmdSetConfig(configRequest)
+                .build();
 
-        return this.security.encrypt(configRequest.toByteArray());
+        return this.security.encrypt(payload.toByteArray());
     }
 
     private Avsconfig.AVSConfigStatus processSetAVSConfigResponse(byte[] responseData) {
         byte[] decryptedData = this.security.decrypt(responseData);
+
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.UNRECOGNIZED;
         try {
-            Avsconfig.AVSConfigResponse response = Avsconfig.AVSConfigResponse.parseFrom(decryptedData);
+            Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.parseFrom(decryptedData);
+            Avsconfig.RespSetConfig response = Avsconfig.RespSetConfig.parseFrom(payload.toByteArray());
             status = response.getStatus();
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();
@@ -248,5 +236,6 @@ public class ConfigureAVS {
     public interface ConfigureAVSActionListener {
         void onComplete(Avsconfig.AVSConfigStatus status, Exception e);
     }
+
 
 }

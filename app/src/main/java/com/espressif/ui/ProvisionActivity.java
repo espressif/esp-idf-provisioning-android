@@ -74,7 +74,7 @@ public class ProvisionActivity extends AppCompatActivity {
         clientId = intent.getStringExtra(ConfigureAVS.CLIENT_ID_KEY);
         authCode = intent.getStringExtra(ConfigureAVS.AUTH_CODE_KEY);
         redirectUri = intent.getStringExtra(ConfigureAVS.REDIRECT_URI_KEY);
-        codeVerifier = intent.getStringExtra(ConfigureAVS.CODE_VERIFIER_KEY);
+//        codeVerifier = intent.getStringExtra(ConfigureAVS.CODE_VERIFIER_KEY);
 
         final String deviceUUID = intent.getStringExtra(BLETransport.SERVICE_UUID_KEY);
         final String sessionUUID = intent.getStringExtra(BLETransport.SESSION_UUID_KEY);
@@ -313,13 +313,12 @@ public class ProvisionActivity extends AppCompatActivity {
                             configureAVS.configureAmazonLogin(clientId,
                                     authCode,
                                     redirectUri,
-                                    codeVerifier,
                                     new ConfigureAVS.ConfigureAVSActionListener() {
                                         @Override
                                         public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
                                             if (e == null) {
-                                                Log.d(TAG, "AVS configured. Applying configurations now");
                                                 provision.applyConfigurations(null);
+
                                             }
                                         }
                                     });

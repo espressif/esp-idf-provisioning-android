@@ -2,6 +2,14 @@ apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'nameOfSigningKey'
+            storeFile file('/path/to/signing/key')
+            storePassword '123456'
+            keyPassword '123456'
+        }
+    }
     compileSdkVersion 27
     defaultConfig {
         applicationId "com.espressif.provision"
@@ -10,6 +18,7 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        signingConfig signingConfigs.config
     }
     buildTypes {
         release {
@@ -21,12 +30,11 @@ android {
             resValue "string", "ble_service_uuid", "0000ffff-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_session_uuid", "0000ff51-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_config_uuid", "0000ff52-0000-1000-8000-00805f9b34fb"
-            resValue "string", "ble_avsconfig_uuid", "0000ff53-0000-1000-8000-00805f9b34fb"
-            resValue "string", "ble_device_name_prefix", "PROV_"
-            resValue "string", "product_id", ""
-            resValue "string", "code_verifier", "abcd1234"
+            resValue "string", "ble_avsconfig_uuid", "0000ff54-0000-1000-8000-00805f9b34fb"
+            resValue "string", "ble_device_name_prefix", "ESP-Alexa-"
+            signingConfig signingConfigs.config
+            debuggable true
         }
-
         debug {
             debuggable true
             resValue "string", "proof_of_possesion", "abcd1234"
@@ -35,35 +43,35 @@ android {
             resValue "string", "ble_service_uuid", "0000ffff-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_session_uuid", "0000ff51-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_config_uuid", "0000ff52-0000-1000-8000-00805f9b34fb"
-            resValue "string", "ble_avsconfig_uuid", "0000ff53-0000-1000-8000-00805f9b34fb"
-            resValue "string", "ble_device_name_prefix", "PROV_"
-            resValue "string", "product_id", ""
-            resValue "string", "code_verifier", "abcd1234"
+            resValue "string", "ble_avsconfig_uuid", "0000ff54-0000-1000-8000-00805f9b34fb"
+            resValue "string", "ble_device_name_prefix", "ESP-Alexa-"
+            signingConfig signingConfigs.config
         }
     }
-
     flavorDimensions "transport", "security", "avs"
     productFlavors {
         wifi {
             dimension "transport"
+            signingConfig signingConfigs.config
         }
-
         ble {
             dimension "transport"
+            signingConfig signingConfigs.config
         }
-
         sec0 {
             dimension "security"
+            signingConfig signingConfigs.config
         }
-
         sec1 {
             dimension "security"
+            signingConfig signingConfigs.config
         }
-
         avs {
             dimension "avs"
+            signingConfig signingConfigs.config
         }
     }
+    buildToolsVersion '28.0.3'
 }
 
 protobuf {

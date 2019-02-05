@@ -134,9 +134,7 @@ public class MainActivity extends AppCompatActivity {
         Button provision = findViewById(R.id.provision_button);
         final String productDSN = generateProductDSN();
 
-        PRODUCT_ID = getResources().getString(R.string.product_id);
-        CODE_VERIFIER = getResources().getString(R.string.code_verifier);
-
+        Log.d("MD5", SigningKey.getCertificateMD5Fingerprint(this));
         BASE_URL = getResources().getString(R.string.wifi_base_url);
         NETWORK_NAME_PREFIX = getResources().getString(R.string.wifi_network_name_prefix);
         POP =  getResources().getString(R.string.proof_of_possesion);
@@ -163,29 +161,6 @@ public class MainActivity extends AppCompatActivity {
             provision.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-//                ConfigureAVS.loginWithAmazon(thisActivity,
-//                        PRODUCT_ID,
-//                        productDSN,
-//                        CODE_VERIFIER,
-//                        new ConfigureAVS.AmazonLoginListener() {
-//                            @Override
-//                            public void LoginSucceeded(String clientIdArg,
-//                                                       String authCodeArg,
-//                                                       String redirectUriArg,
-//                                                       String codeVerifierArg) {
-//                                Log.d(TAG, "Amazon login succeeded");
-//                                clientId = clientIdArg;
-//                                authCode = authCodeArg;
-//                                redirectUri = redirectUriArg;
-//                                codeVerifier = codeVerifierArg;
-//                            }
-//
-//                            @Override
-//                            public void LoginFailed() {
-//
-//                            }
-//                        });
-//
                     HashMap<String, String> config = new HashMap<>();
                     config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
                     config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
@@ -201,9 +176,6 @@ public class MainActivity extends AppCompatActivity {
                     config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
 
                     Provision.showProvisioningWithAmazonUI(thisActivity,
-                            PRODUCT_ID,
-                            productDSN,
-                            CODE_VERIFIER,
                             config);
                 }
             });
@@ -351,7 +323,6 @@ public class MainActivity extends AppCompatActivity {
                             configureAVS.configureAmazonLogin(clientId,
                                     authCode,
                                     redirectUri,
-                                    codeVerifier,
                                     new ConfigureAVS.ConfigureAVSActionListener() {
                                         @Override
                                         public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {

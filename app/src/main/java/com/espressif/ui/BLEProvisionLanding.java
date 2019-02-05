@@ -39,8 +39,12 @@ import android.widget.Toast;
 import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
+import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
+import com.espressif.provision.transport.ResponseListener;
+import com.espressif.provision.transport.Transport;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
@@ -216,7 +220,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 bleInstructions.setText(isConfigured ? R.string.enabled_bluetooth_action : R.string.enable_bluetooth_instructions);
                 if(isConfigured) {
                     isDeviceConnected = true;
-                    goToProvisionActivity();
+                    goToLoginActivity();
                 } else {
                     Toast.makeText(thisActivity,
                             "Bluetooth device could not be configured. Please try another device.",
@@ -226,7 +230,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
         });
     }
-
+    private void goToLoginActivity(){
+        LoginWithAmazon.BLE_TRANSPORT = bleTransport;
+        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
+        alexaProvisioningIntent.putExtras(getIntent());
+//        alexaProvisioningIntent.putExtra("session",session);
+        startActivityForResult(alexaProvisioningIntent, Provision.REQUEST_PROVISIONING_CODE);
+    }
     private void goToProvisionActivity() {
         ProvisionActivity.BLE_TRANSPORT = bleTransport;
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);

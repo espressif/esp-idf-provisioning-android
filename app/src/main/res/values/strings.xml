@@ -4,7 +4,7 @@
     <string name="login_with_amazon">Login with Amazon</string>
     <string name="welcome_and_login_with_amazon">Welcome! To continue provisioning your Alexa Powered device, please login with Amazon</string>
     <string name="title_activity_provision_landing">Connect to device</string>
-    <string name="connect_to_device_instructions">To provision your new device, please make sure that your device is turned on and the Wifi symbol blinks green. Now connect your phone to the Wifi network with a name like</string>
+    <string name="connect_to_device_instructions">To provision your new device, please make sure that your device is turned on. Now connect your phone to the Wifi network with a name like</string>
     <string name="connected_to_device_instructions">You are now connected to the device. To provision the device, please enter your Network credentials on the next page.</string>
     <string name="no_internet_note">To make sure you are really connected to the device, please make sure you accept the system dialog informing you that network has no internet access.</string>
     <string name="connect_to_device_action">Connect</string>
@@ -33,4 +33,5 @@
     <string name="enable_bluetooth_action">Enable</string>
     <string name="enabled_bluetooth_action">Provision Network</string>
     <string name="rescan_ble">Scan again</string>
+    <string name="avsconfigversion">1</string>
 </resources>

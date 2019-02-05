@@ -8,14 +8,41 @@ enum AVSConfigStatus {
     InvalidState = 2;
 }
 
-message AVSConfigRequest {
+message CmdGetDetails {
+    uint32 Dummy = 1;
+}
+message RespGetDetails{
+    AVSConfigStatus Status = 1;
+    string Version = 2;
+    string CodeChallenge = 3;
+    string DSN = 4;
+    string ProductID = 5;
+}
+
+message CmdSetConfig {
     string AuthCode = 1;
     string ClientID = 2;
     string RedirectURI = 3;
-    string CodeVerifier = 4;
 }
 
-message AVSConfigResponse {
-    AVSConfigStatus status = 1;
-    uint32 dummy = 2;
+message RespSetConfig{
+    AVSConfigStatus Status = 1;
+    uint32 Dummy = 2;
+}
+
+enum AVSConfigMsgType {
+    TypeCmdGetDetails = 0;
+    TypeRespGetDetails = 1;
+    TypeCmdSetConfig = 2;
+    TypeRespSetConfig =3;
+}
+
+message AVSConfigPayload {
+    AVSConfigMsgType msg = 1;
+    oneof payload {
+        CmdGetDetails cmd_get_details = 10;
+        RespGetDetails resp_get_details = 11;
+        CmdSetConfig cmd_set_config = 12;
+        RespSetConfig resp_set_config = 13;
+    }
 }
