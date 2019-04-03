@@ -187,6 +187,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
             rescanButton.setEnabled(true);
             HashMap<String, String> configUUIDMap = new HashMap<>();
             configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
+            configUUIDMap.put("prov-scan","0000ff50-0000-1000-8000-00805f9b34fb");
             if(avsconfigUUID != null) {
                 configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsconfigUUID);
             }

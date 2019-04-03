@@ -48,12 +48,14 @@ import avs.Avsconfig;
 
 import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
 
+
 public class LoginWithAmazon extends AppCompatActivity {
     public static BLETransport BLE_TRANSPORT = null;
     private static final String TAG = "Espressif::" + LoginWithAmazon.class.getSimpleName();
-    public Session session;
     final Security security = new Security1("abcd1234");
     public Transport transport;
+    public Session session;
+
     public String[] DeviceDetails = new String[3];
     int galat_hai =0;
     @Override
@@ -91,13 +93,13 @@ public class LoginWithAmazon extends AppCompatActivity {
                                     @Override
                                     public void LoginSucceeded(String clientId, String authCode, String redirectUri, String codeVerifier) {
                                         ProvisionActivity.BLE_TRANSPORT = BLE_TRANSPORT;
-                                                        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
+                                                        Intent launchProvisionInstructions = new Intent(getApplicationContext(), WiFiScanList.class);
                                                         launchProvisionInstructions.putExtras(getIntent());
                                                         launchProvisionInstructions.putExtra(ConfigureAVS.CLIENT_ID_KEY, clientId);
                                                         launchProvisionInstructions.putExtra(ConfigureAVS.AUTH_CODE_KEY, authCode);
                                                         launchProvisionInstructions.putExtra(ConfigureAVS.REDIRECT_URI_KEY, redirectUri);
                                                         launchProvisionInstructions.putExtra(ConfigureAVS.CODE_VERIFIER_KEY, codeVerifier);
-
+//                                                        launchProvisionInstructions.putExtra("Session",session);
                                                         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
                                                     }
 

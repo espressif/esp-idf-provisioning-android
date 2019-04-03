@@ -53,6 +53,10 @@
             android:label="@string/provision_activity_title"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
+            android:name="com.espressif.ui.WiFiScanList"
+            android:label="Wi-Fi Scan List"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
             android:name="com.espressif.ui.LoginWithAmazon"
             android:label="@string/title_activity_login_with_amazon"
             android:theme="@style/AppTheme.NoActionBar" />

@@ -25,6 +25,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.espressif.avs.ConfigureAVS;
@@ -57,6 +58,7 @@ public class ProvisionActivity extends AppCompatActivity {
     private String authCode;
     private String redirectUri;
     private String codeVerifier;
+    private TextView ssidInput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +68,14 @@ public class ProvisionActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.provision_activity_title);
         setSupportActionBar(toolbar);
 
+
         Intent intent = getIntent();
+        final String WiFiSSID = intent.getStringExtra(Provision.PROVISIONING_WIFI_SSID);
+        ssidInput = findViewById(R.id.ssid_input_layout);
+        ssidInput.setText(WiFiSSID);
+        ssid = WiFiSSID;
+        Log.d("ProvisionActivity","Selected AP -"+WiFiSSID);
+
         final String pop = intent.getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
@@ -82,24 +91,24 @@ public class ProvisionActivity extends AppCompatActivity {
         final String avsconfigUUID = intent.getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
         final String deviceNamePrefix = intent.getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
 
-        final EditText ssidInput = findViewById(R.id.ssid_input);
-        ssidInput.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                ssid = charSequence.toString().trim();
-                validateForm();
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-
-            }
-        });
+//        ssidInput.addTextChangedListener(new TextWatcher() {
+//            @Override
+//            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//                ssidInput.setText(WiFiSSID);
+//            }
+//
+//            @Override
+//            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+//                ssid = charSequence.toString().trim();
+//                validateForm();
+//            }
+//
+//            @Override
+//            public void afterTextChanged(Editable editable) {
+//
+//            }
+//        });
 
         final EditText passphraseInput = findViewById(R.id.password_input);
         passphraseInput.addTextChangedListener(new TextWatcher() {
@@ -111,7 +120,7 @@ public class ProvisionActivity extends AppCompatActivity {
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 passphrase = charSequence.toString().trim();
-                validateForm();
+//                validateForm();
             }
 
             @Override
@@ -120,12 +129,13 @@ public class ProvisionActivity extends AppCompatActivity {
             }
         });
 
-        final Button provision = findViewById(R.id.provision_button);
+        final Button provisionButton = findViewById(R.id.provision_button);
+        provisionButton.setEnabled(true);
         final Activity thisActivity = this;
-        provision.setOnClickListener(new View.OnClickListener() {
+        provisionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                toggleFormState(false);
+//                toggleFormState(false);
 
                 final Security security;
                 if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
@@ -145,6 +155,7 @@ public class ProvisionActivity extends AppCompatActivity {
                         if(avsconfigUUID != null) {
                             configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsconfigUUID);
                         }
+                        configUUIDMap.put("prov-scan","0000ff50-0000-1000-8000-00805f9b34fb");
                         final BLETransport bleTransport = new BLETransport(thisActivity,
                                 UUID.fromString(deviceUUID),
                                 UUID.fromString(sessionUUID),
@@ -348,28 +359,28 @@ public class ProvisionActivity extends AppCompatActivity {
     }
 
     private void validateForm() {
-        Button provision = findViewById(R.id.provision_button);
+        Button provisionButton = findViewById(R.id.provision_button);
 
         boolean enabled = this.ssid != null &&
                 this.ssid.length() > 0;
-        provision.setEnabled(enabled);
+        provisionButton.setEnabled(enabled);
     }
 
     private void toggleFormState(boolean isEnabled) {
         final View loadingIndicator = findViewById(R.id.progress_indicator);
-        final EditText ssidInput = findViewById(R.id.ssid_input);
+
         final EditText passphraseInput = findViewById(R.id.password_input);
-        final Button provision = findViewById(R.id.provision_button);
+        final Button provisionButton = findViewById(R.id.provision_button);
 
         if (isEnabled) {
             loadingIndicator.setVisibility(View.GONE);
-            provision.setEnabled(true);
-            ssidInput.setEnabled(true);
+            provisionButton.setEnabled(true);
+
             passphraseInput.setEnabled(true);
         } else {
             loadingIndicator.setVisibility(View.VISIBLE);
-            provision.setEnabled(false);
-            ssidInput.setEnabled(false);
+            provisionButton.setEnabled(false);
+
             passphraseInput.setEnabled(false);
         }
     }

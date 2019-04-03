@@ -34,6 +34,7 @@ import java.util.Map;
 import espressif.Constants;
 import espressif.WifiConfig;
 import espressif.WifiConstants;
+import espressif.WifiScan;
 
 import static java.lang.Thread.sleep;
 
@@ -55,6 +56,8 @@ public class Provision {
     public static final String CONFIG_SECURITY_SECURITY0 = "security0";
     public static final String CONFIG_WIFI_AP_KEY = "wifiAPPrefix";
     public static final String PROVISIONING_CONFIG_PATH = "prov-config";
+    public static final String PROVISIONING_WIFI_SSID = "SSID";
+    public static final String PROVISIONING_WIFI_SCAN_PATH = "prov-scan";
     private static final String TAG = "Espressif::" + Provision.class.getSimpleName();
     public ProvisioningListener provisioningListener;
     private Security security;
@@ -118,10 +121,10 @@ public class Provision {
      * 3. Provide Network information like SSID and Passphrase
      *
      * @param activity parent activity which is typically part of the app
-//     * @param productId product ID in the Alexa Voice Services project
-//     * @param productDSN device serial number
-//     * @param codeVerifier random value used as a code challenge. This should typically be sent to
-//     *                     to received from the device to use in its communication with Alexa
+    //     * @param productId product ID in the Alexa Voice Services project
+    //     * @param productDSN device serial number
+    //     * @param codeVerifier random value used as a code challenge. This should typically be sent to
+    //     *                     to received from the device to use in its communication with Alexa
      * @param config Config dictionary
      *               Currently supported configurations are
      *                HashMap<String, String> config = new HashMap<>();
@@ -244,6 +247,7 @@ public class Provision {
                 }
             });
         }
+
     }
 
     private byte[] createSetWifiConfigRequest(String ssid, String passphrase) {

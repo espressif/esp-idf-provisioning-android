@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PASSPHRASE = "Zoey2611";
 
     private String clientId, authCode, redirectUri, codeVerifier;
-    private String PRODUCT_ID, CODE_VERIFIER, POP, BASE_URL, NETWORK_NAME_PREFIX, SERVICE_UUID, SESSION_UUID, CONFIG_UUID, AVS_CONFIG_UUID, DEVICE_NAME_PREFIX;
+    private String PRODUCT_ID, CODE_VERIFIER, POP, BASE_URL, NETWORK_NAME_PREFIX, SERVICE_UUID, SESSION_UUID, CONFIG_UUID, AVS_CONFIG_UUID, DEVICE_NAME_PREFIX, WIFISCAN_CONFIG_UUID;
 
     private void ProvisionWithDataApis() {
         final Activity thisActivity = this;
@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
             HashMap<String, String> configUUIDMap = new HashMap<>();
             configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, CONFIG_UUID);
             configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, AVS_CONFIG_UUID);
-
+            configUUIDMap.put("prov-scan",WIFISCAN_CONFIG_UUID);
             final BLETransport bleTransport = new BLETransport(this,
                     UUID.fromString(SERVICE_UUID),
                     UUID.fromString(SESSION_UUID),
@@ -142,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         SESSION_UUID = getResources().getString(R.string.ble_session_uuid);
         CONFIG_UUID = getResources().getString(R.string.ble_config_uuid);
         AVS_CONFIG_UUID = getResources().getString(R.string.ble_avsconfig_uuid);
+        WIFISCAN_CONFIG_UUID = "0000ff50-0000-1000-8000-00805f9b34fb";
         DEVICE_NAME_PREFIX = getResources().getString(R.string.ble_device_name_prefix);
 
         final String transportVersion, securityVersion;
@@ -173,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
                     config.put(BLETransport.SESSION_UUID_KEY, SESSION_UUID);
                     config.put(BLETransport.CONFIG_UUID_KEY, CONFIG_UUID);
                     config.put(ConfigureAVS.AVS_CONFIG_UUID_KEY, AVS_CONFIG_UUID);
+                    config.put("prov-scan",WIFISCAN_CONFIG_UUID);
                     config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
 
                     Provision.showProvisioningWithAmazonUI(thisActivity,
@@ -195,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                     config.put(BLETransport.SESSION_UUID_KEY, SESSION_UUID);
                     config.put(BLETransport.CONFIG_UUID_KEY, CONFIG_UUID);
                     config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
+
                     Provision.showProvisioningUI(thisActivity, config);
                 }
             });

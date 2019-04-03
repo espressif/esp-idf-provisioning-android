@@ -4,15 +4,15 @@ apply plugin: 'com.google.protobuf'
 android {
     signingConfigs {
         config {
-            keyAlias 'nameOfSigningKey'
-            storeFile file('/path/to/signing/key')
-            storePassword '123456'
-            keyPassword '123456'
+            keyAlias 'nameofcert'
+            storeFile file('path to cert')
+            storePassword 'password'
+            keyPassword 'password'
         }
     }
     compileSdkVersion 27
     defaultConfig {
-        applicationId "com.espressif.provision"
+        applicationId "com.espressif.provavsble"
         minSdkVersion 21
         targetSdkVersion 27
         versionCode 1
@@ -31,6 +31,7 @@ android {
             resValue "string", "ble_session_uuid", "0000ff51-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_config_uuid", "0000ff52-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_avsconfig_uuid", "0000ff54-0000-1000-8000-00805f9b34fb"
+            resValue "string", "ble_scanconfig_uuid", "0000ff50-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_device_name_prefix", "ESP-Alexa-"
             signingConfig signingConfigs.config
             debuggable true
@@ -44,6 +45,8 @@ android {
             resValue "string", "ble_session_uuid", "0000ff51-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_config_uuid", "0000ff52-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_avsconfig_uuid", "0000ff54-0000-1000-8000-00805f9b34fb"
+            resValue "string", "ble_scanconfig_uuid", "0000ff50-0000-1000-8000-00805f9b34fb"
+
             resValue "string", "ble_device_name_prefix", "ESP-Alexa-"
             signingConfig signingConfigs.config
         }
