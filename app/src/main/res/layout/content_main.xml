@@ -12,7 +12,7 @@
     <RelativeLayout
         android:id="@+id/provision_button_layout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="166dp"
         android:layout_marginBottom="32dp"
         app:layout_constraintBottom_toTopOf="@id/ble_provision_button_layout"
         app:layout_constraintEnd_toEndOf="parent"
@@ -24,19 +24,34 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:visibility="gone"
-            android:elevation="4dp"/>
+            android:elevation="4dp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 
     <RelativeLayout
         android:id="@+id/ble_provision_button_layout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
+        android:layout_height="210dp"
+        android:layout_marginBottom="176dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/manageButton"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="64dp"
+            android:background="@color/colorPrimary"
+            android:enabled="true"
+            android:text="Manage Devices" />
 
         <Button
             android:id="@+id/provision_button"
@@ -44,11 +59,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:layout_marginEnd="16dp"
             android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
             android:background="@color/colorPrimary"
             android:enabled="true"
-            android:text="@string/start_provisioning"/>
+            android:text="@string/start_provisioning" />
 
         <ProgressBar
             android:id="@+id/ble_progress_indicator"
@@ -56,9 +71,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:visibility="gone"
-            android:elevation="4dp"/>
+            android:elevation="4dp"
+            android:visibility="gone" />
 
     </RelativeLayout>
+
+
 
 </android.support.constraint.ConstraintLayout>

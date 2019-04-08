@@ -109,4 +109,5 @@ dependencies {
     implementation 'com.google.protobuf:protobuf-lite:3.0.1'
     implementation files('../login-with-amazon-sdk.jar')
     implementation 'com.google.crypto.tink:tink-android:1.1.0'
+    implementation 'com.github.custanator:upnpdiscovery:1.0.1'
 }

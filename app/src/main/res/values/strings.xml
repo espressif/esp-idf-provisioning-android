@@ -18,7 +18,7 @@
     <string name="ssid_hint_text">Network Name</string>
     <string name="password_hint_text">Passphrase</string>
     <string name="provision">Provision</string>
-    <string name="start_provisioning">Start Provisioning</string>
+    <string name="start_provisioning">Provision New Device</string>
     <string name="title_activity_login_with_amazon">Login With Amazon</string>
 
     <string name="title_activity_provision_success">ProvisionSuccessActivity</string>

@@ -144,7 +144,15 @@ public class MainActivity extends AppCompatActivity {
         AVS_CONFIG_UUID = getResources().getString(R.string.ble_avsconfig_uuid);
         WIFISCAN_CONFIG_UUID = "0000ff50-0000-1000-8000-00805f9b34fb";
         DEVICE_NAME_PREFIX = getResources().getString(R.string.ble_device_name_prefix);
+        Button manageDevices = findViewById(R.id.manageButton);
+        manageDevices.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view){
+                Intent goToManagePage = new Intent(getApplicationContext(), ScanLocalDevices.class);
+                startActivity(goToManagePage);
+            }
 
+        });
         final String transportVersion, securityVersion;
         if(BuildConfig.FLAVOR_security.equals("sec1")) {
             securityVersion = Provision.CONFIG_SECURITY_SECURITY1;
@@ -181,6 +189,7 @@ public class MainActivity extends AppCompatActivity {
                             config);
                 }
             });
+
         } else {
             provision.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -202,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+
     }
 
     @Override
