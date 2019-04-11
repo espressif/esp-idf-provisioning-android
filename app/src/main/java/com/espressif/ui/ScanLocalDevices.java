@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 public class ScanLocalDevices extends AppCompatActivity {
-    private ArrayList<UPnPDevice> SSDPdevices;
+    private ArrayList<AlexaLocalDevices> SSDPdevices;
     private ArrayAdapter<String> SSDPadapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +42,7 @@ public class ScanLocalDevices extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
 //                progressBar.setVisibility(View.VISIBLE);
-                Log.d("WiFiScanList","Device to be connected -"+SSDPdevices.get(pos));
+//                Log.d("WiFiScanList","Device to be connected -"+SSDPdevices.get(pos));
                 manageDevice(SSDPdevices.get(pos));
             }
 
@@ -59,7 +59,9 @@ public class ScanLocalDevices extends AppCompatActivity {
         });
     }
 
-    private void manageDevice (UPnPDevice name){
+    private void manageDevice (AlexaLocalDevices name){
+        Log.d("Anuj",name.getFriendlyName()+" " +name.getSoftwareVersion()+" "+name.getStatus());
+
 
     }
     private void searchDevices(){
@@ -67,7 +69,7 @@ public class ScanLocalDevices extends AppCompatActivity {
                 "HOST: 239.255.255.250:1900" + "\r\n" +
                 "MAN: \"ssdp:discover\"" + "\r\n" +
                 "MX: 3"+ "\r\n" +
-//                "ST: urn:schemas-upnp-org:service:AVTransport:1" + "\r\n" + // Use for Sonos
+                "ST: urn:schemas-espressif-com:service:Alexa:1" + "\r\n" + // Use for Sonos
 //                "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1" + "\r\n" + // Use for Routers
 //                "ST: urn:schemas-upnp-org:device:MediaRenderer:1" + "\r\n" + // Use for Routers
                 "ST: ssdp:all" + "\r\n" + // Use this for all UPnP Devices (DEFAULT)
@@ -78,47 +80,79 @@ public class ScanLocalDevices extends AppCompatActivity {
         UPnPDiscovery.discoveryDevices(this, new UPnPDiscovery.OnDiscoveryListener() {
             @Override
             public void OnStart() {
-                Log.d("UPnPDiscovery", "Starting discovery");
+                Log.d("ScanLocalDevices", "Starting discovery");
             }
 
             @Override
             public void OnFoundNewDevice(UPnPDevice device) {
-                Log.d("UPnPDiscovery", "Found new device: " + device.toString());
+//                Log.d("ScanLocalDevices", "Found  device: " + device.toString());
                  final UPnPDevice foundDevice = device;
+
+
                  runOnUiThread(new Runnable() {
                                       public void run() {
                                           boolean deviceExists = false;
-                                              for(UPnPDevice alreadyHere: SSDPdevices) {
+                                              for(AlexaLocalDevices alreadyHere: SSDPdevices) {
                                                   if (foundDevice.getHostAddress().equals(alreadyHere.getHostAddress())) {
                                                       deviceExists = true;
-                                                      Log.d("ManageDevice","Device already exists");
+                                                      SSDPdevices.remove(alreadyHere);
+                                                      SSDPadapter.remove(alreadyHere.getHostAddress()+" | "+alreadyHere.getFriendlyName());
+                                                      SSDPadapter.notifyDataSetChanged();
+
+                                                      Log.d("ManageDevice","Device already exists -"+foundDevice.getST());
+                                                      syncAlexaUpNP(alreadyHere, foundDevice);
+                                                      if(alreadyHere.getFriendlyName() !=null) {
+                                                          SSDPdevices.add(alreadyHere);
+                                                          SSDPadapter.add(alreadyHere.getHostAddress() + " | " + alreadyHere.getFriendlyName());
+                                                          SSDPadapter.notifyDataSetChanged();
+                                                      }
                                                       break;
                                                   }
                                               }
                                               if (!deviceExists) {
+                                                  final AlexaLocalDevices foundAlexa = new AlexaLocalDevices(foundDevice.getHostAddress());
+                                                  syncAlexaUpNP(foundAlexa, foundDevice);
 
-                                                  Log.d("ManageDevice", "Adding to list adapter");
-                                                  SSDPdevices.add(foundDevice);
-                                                  SSDPadapter.add(foundDevice.getFriendlyName()+" | " +foundDevice.getHostAddress()+ "  | " + foundDevice.getManufacturer());
-                                                  SSDPadapter.notifyDataSetChanged();
+                                                  Log.d("ManageDevice", "Adding to list adapter "+foundAlexa.getHostAddress());
+
+
+                                                      SSDPdevices.add(foundAlexa);
+                                                      SSDPadapter.add(foundAlexa.getHostAddress() + " | " + foundAlexa.getFriendlyName());
+//                                                      SSDPadapter.notifyDataSetChanged();
+
                                               }
+
                                           }
-//                                          SSDPdevices.add(foundDevice);
-//                                          SSDPadapter.add(foundDevice.getFriendlyName());
-//
 
                                   });
             }
 
             @Override
             public void OnFinish(HashSet<UPnPDevice> devices) {
-                Log.d("UPnPDiscovery", "Finish discovery");
+                Log.d("ScanLocalDevices", "Finish discovery");
             }
 
             @Override
             public void OnError(Exception e) {
-                Log.d("UPnPDiscovery", "Error: " + e.getLocalizedMessage());
+                Log.d("ScanLocalDevices", "Error: " + e.getLocalizedMessage());
             }
         }, customQuery, customAddress, customPort);
+
+    }
+    public void syncAlexaUpNP(AlexaLocalDevices foundAlexa, UPnPDevice foundDevice){
+        if(foundAlexa.getHostAddress().equals(foundDevice.getHostAddress())){
+            if(foundDevice.getST().contains("modelno")){
+                foundAlexa.setModelno(foundDevice.getST().replace("modelno:",""));
+            }
+            if(foundDevice.getST().contains("softwareversion")){
+                foundAlexa.setSoftwareVersion(foundDevice.getST().replace("softwareversion:",""));
+            }
+            if(foundDevice.getST().contains("status")){
+                foundAlexa.setStatus(foundDevice.getST().replace("status:",""));
+            }
+            if(foundDevice.getST().contains("friendlyname")){
+                foundAlexa.setFriendlyName(foundDevice.getST().replace("friendlyname:",""));
+            }
+        }
     }
 }

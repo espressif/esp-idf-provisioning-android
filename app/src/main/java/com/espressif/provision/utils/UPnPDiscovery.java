@@ -103,8 +103,20 @@ public class UPnPDiscovery extends AsyncTask {
                     String response = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
                     if (response.substring(0, 12).toUpperCase().equals("HTTP/1.1 200")) {
                         UPnPDevice device = new UPnPDevice(datagramPacket.getAddress().getHostAddress(), response);
+//                        Log.d("UPnP","Before getData -"+response);
+//                        Log.d("UPnP","Before getData -"+device.toString());
                         mTheardsCount++;
-                        getData(device.getHostAddress(), device);
+                        mListener.OnFoundNewDevice(device);
+                        devices.add(device);
+                        mTheardsCount--;
+                        if (mTheardsCount == 0) {
+                            mActivity.runOnUiThread(new Runnable() {
+                                public void run() {
+                                    mListener.OnFinish(devices);
+                                }
+                            });
+                        }
+//                        getData(device.getHostAddress(), device);
                     }
                     curTime = System.currentTimeMillis();
                 }
@@ -126,8 +138,8 @@ public class UPnPDiscovery extends AsyncTask {
         return null;
     }
 
-    private void getData(final String url2, final UPnPDevice device) {
-        String url = "http://"+url2+":80/rootDesc.xml";
+    private void getData(final String url, final UPnPDevice device) {
+//        String url = "http://"+url2+"/rootDesc.xml";
         StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
                 new Response.Listener<String>() {
                     @Override
@@ -147,15 +159,15 @@ public class UPnPDiscovery extends AsyncTask {
                 }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                mTheardsCount--;
-                if (mTheardsCount == 0) {
-                    mActivity.runOnUiThread(new Runnable() {
-                        public void run() {
-                            mListener.OnFinish(devices);
-                        }
-                    });
-                }
-                Log.d(TAG, "URL: " + url2 + " get content error!");
+//                mTheardsCount--;
+//                if (mTheardsCount == 0) {
+//                    mActivity.runOnUiThread(new Runnable() {
+//                        public void run() {
+//                            mListener.OnFinish(devices);
+//                        }
+//                    });
+//                }
+                Log.d(TAG, "URL: " + url + " get content error!");
             }
         });
         stringRequest.setTag(TAG + "SSDP description request");
