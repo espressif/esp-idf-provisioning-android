@@ -61,6 +61,10 @@
             android:label="Manage Devices"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
+            android:name="com.espressif.ui.ManageDevices"
+            android:label="Manage Devices"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
             android:name="com.espressif.ui.LoginWithAmazon"
             android:label="@string/title_activity_login_with_amazon"
             android:theme="@style/AppTheme.NoActionBar" />

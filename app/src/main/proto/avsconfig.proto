@@ -30,11 +30,31 @@ message RespSetConfig{
     uint32 Dummy = 2;
 }
 
+message CmdSignInStatus {
+    uint32 Dummy = 1;
+}
+
+message RespSignInStatus {
+    AVSConfigStatus Status = 1;
+}
+
+message CmdSignOut {
+    uint32 Dummy = 1;
+}
+
+message RespSignOut {
+    AVSConfigStatus Status = 1;
+}
+
 enum AVSConfigMsgType {
     TypeCmdGetDetails = 0;
     TypeRespGetDetails = 1;
     TypeCmdSetConfig = 2;
     TypeRespSetConfig =3;
+    TypeCmdSignInStatus = 4;
+    TypeRespSignInStatus = 5;
+    TypeCmdSignOut = 6;
+    TypeRespSignOut = 7;
 }
 
 message AVSConfigPayload {
@@ -44,5 +64,9 @@ message AVSConfigPayload {
         RespGetDetails resp_get_details = 11;
         CmdSetConfig cmd_set_config = 12;
         RespSetConfig resp_set_config = 13;
+	CmdSignInStatus cmd_signin_status = 14;
+	RespSignInStatus resp_signin_status = 15;
+	CmdSignOut cmd_sign_out = 16;
+	RespSignOut resp_sign_out = 17;
     }
 }

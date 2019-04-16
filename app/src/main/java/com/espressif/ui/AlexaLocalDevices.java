@@ -1,8 +1,11 @@
 package com.espressif.ui;
 
-public class AlexaLocalDevices {
+import android.util.Log;
+
+import java.io.Serializable;
+
+public class AlexaLocalDevices implements Serializable {
     private String modelno;
-    private String manufacturer;
     private String hostAddr;
     private String status;
     private String softwareVersion;
@@ -24,6 +27,9 @@ public class AlexaLocalDevices {
     public String getSoftwareVersion(){
         return softwareVersion;
     }
+    public String getModelno(){
+        return modelno;
+    }
 
 
     public void setModelno (String modelno){
@@ -34,9 +40,6 @@ public class AlexaLocalDevices {
         this.status = status;
     }
 
-    public void setManufacturer (String manufacturer){
-        this.manufacturer = manufacturer;
-    }
 
     public void setSoftwareVersion(String softwareVersion){
         this.softwareVersion = softwareVersion;

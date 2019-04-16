@@ -1,5 +1,6 @@
 package com.espressif.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -10,6 +11,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 
+import com.espressif.provision.Provision;
 import com.espressif.provision.utils.UPnPDevice;
 import com.espressif.provision.utils.UPnPDiscovery;
 import com.espressif.provision.R;
@@ -60,9 +62,9 @@ public class ScanLocalDevices extends AppCompatActivity {
     }
 
     private void manageDevice (AlexaLocalDevices name){
-        Log.d("Anuj",name.getFriendlyName()+" " +name.getSoftwareVersion()+" "+name.getStatus());
-
-
+        Intent launchManageDevices = new Intent(getApplicationContext(), ManageDevices.class);
+        launchManageDevices.putExtra("device",name);
+        startActivity(launchManageDevices);
     }
     private void searchDevices(){
         String customQuery = "M-SEARCH * HTTP/1.1" + "\r\n" +
@@ -99,13 +101,14 @@ public class ScanLocalDevices extends AppCompatActivity {
                                                       SSDPadapter.remove(alreadyHere.getHostAddress()+" | "+alreadyHere.getFriendlyName());
                                                       SSDPadapter.notifyDataSetChanged();
 
-                                                      Log.d("ManageDevice","Device already exists -"+foundDevice.getST());
+                                                      Log.d("ScanLocalDevices","Device already exists -"+foundDevice.getST());
                                                       syncAlexaUpNP(alreadyHere, foundDevice);
                                                       if(alreadyHere.getFriendlyName() !=null) {
                                                           SSDPdevices.add(alreadyHere);
                                                           SSDPadapter.add(alreadyHere.getHostAddress() + " | " + alreadyHere.getFriendlyName());
                                                           SSDPadapter.notifyDataSetChanged();
                                                       }
+
                                                       break;
                                                   }
                                               }
@@ -113,7 +116,7 @@ public class ScanLocalDevices extends AppCompatActivity {
                                                   final AlexaLocalDevices foundAlexa = new AlexaLocalDevices(foundDevice.getHostAddress());
                                                   syncAlexaUpNP(foundAlexa, foundDevice);
 
-                                                  Log.d("ManageDevice", "Adding to list adapter "+foundAlexa.getHostAddress());
+                                                  Log.d("ScanLocalDevices", "Adding to list adapter "+foundAlexa.getHostAddress());
 
 
                                                       SSDPdevices.add(foundAlexa);

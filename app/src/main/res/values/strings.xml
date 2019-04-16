@@ -34,4 +34,5 @@
     <string name="enabled_bluetooth_action">Provision Network</string>
     <string name="rescan_ble">Scan again</string>
     <string name="avsconfigversion">1</string>
+    <string name="logout_of_the_device">Deregister device -</string>
 </resources>
