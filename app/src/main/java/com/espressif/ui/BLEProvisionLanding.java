@@ -235,7 +235,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
         LoginWithAmazon.BLE_TRANSPORT = bleTransport;
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
         alexaProvisioningIntent.putExtras(getIntent());
-//        alexaProvisioningIntent.putExtra("session",session);
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
         startActivityForResult(alexaProvisioningIntent, Provision.REQUEST_PROVISIONING_CODE);
     }
     private void goToProvisionActivity() {
