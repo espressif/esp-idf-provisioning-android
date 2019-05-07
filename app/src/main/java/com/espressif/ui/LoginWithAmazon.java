@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 
 import com.espressif.avs.ConfigureAVS;
+import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -155,7 +156,19 @@ public class LoginWithAmazon extends AppCompatActivity {
 
                             } else {
 
-                                // TODO
+                                Log.d(TAG, "Do Amazon Login");
+                                if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
+
+                                    final ConfigureAVS configureAVS = new ConfigureAVS(session);
+                                    configureAVS.configureAmazonLogin(clientId,
+                                            authCode,
+                                            redirectUri,
+                                            new ConfigureAVS.ConfigureAVSActionListener() {
+                                                @Override
+                                                public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
+                                                }
+                                            });
+                                }
                             }
                         }
 
