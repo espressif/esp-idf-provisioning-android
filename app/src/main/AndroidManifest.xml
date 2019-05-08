@@ -69,13 +69,17 @@
             android:label="@string/title_activity_login_with_amazon"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
+            android:name="com.espressif.ui.AlexaActivity"
+            android:label="@string/title_activity_alexa"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
             android:name="com.espressif.ui.ProvisionSuccessActivity"
             android:label="@string/title_activity_provision_success"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.BLEProvisionLanding"
             android:label="@string/title_activity_bleprovision_landing"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar" />
     </application>
 
 </manifest>

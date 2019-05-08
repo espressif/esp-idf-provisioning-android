@@ -166,6 +166,8 @@ public class LoginWithAmazon extends AppCompatActivity {
                                             new ConfigureAVS.ConfigureAVSActionListener() {
                                                 @Override
                                                 public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
+                                                    Log.d(TAG, "Amazon Login Completed Successfully");
+                                                    goToAlexaActivity();
                                                 }
                                             });
                                 }
@@ -252,5 +254,14 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void onClick(View v) {
             // Code to undo the user's last action
         }
+    }
+
+    private void goToAlexaActivity() {
+
+        finish();
+        Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
+        alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, hostAddress);
+        alexaIntent.putExtras(getIntent());
+        startActivity(alexaIntent);
     }
 }

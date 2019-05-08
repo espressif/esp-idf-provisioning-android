@@ -39,6 +39,7 @@
 
     <!--Strings used for Buttons-->
     <string name="btn_scan_again">Scan again</string>
+    <string name="btn_sign_out">Sign Out</string>
 
     <!-- Strings used for Alexa screens -->
     <string name="title_activity_login_with_amazon">Login With Amazon</string>

@@ -185,7 +185,8 @@ public class ScanLocalDevices extends AppCompatActivity {
             public void onSuccess(byte[] returnData) {
 
                 Avsconfig.AVSConfigStatus deviceStatus = processSignInStatusResponse(returnData);
-                Log.d(TAG, "Signin Status Received : " + deviceStatus);
+                Log.d(TAG, "SignIn Status Received : " + deviceStatus);
+                finish();
 
                 if (deviceStatus.equals(Avsconfig.AVSConfigStatus.SignedIn)) {
 
@@ -272,7 +273,6 @@ public class ScanLocalDevices extends AppCompatActivity {
                                     SSDPadapter.add(alreadyHere.getHostAddress() + " | " + alreadyHere.getFriendlyName());
                                     SSDPadapter.notifyDataSetChanged();
                                 }
-
                                 break;
                             }
                         }
@@ -366,6 +366,7 @@ public class ScanLocalDevices extends AppCompatActivity {
     private void goToAlexaActivity() {
 
         Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
+        alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
         alexaIntent.putExtras(getIntent());
         startActivity(alexaIntent);
     }
