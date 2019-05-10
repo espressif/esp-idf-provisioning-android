@@ -53,10 +53,11 @@ public class ScanLocalDevices extends AppCompatActivity {
     private Transport transport;
 
     private Handler mHandler;
-    private UPnPDiscovery discoveryTask;
 
+    private UPnPDiscovery discoveryTask;
     private boolean isScanning = false;
     private String deviceHostAddress;
+    private String deviceName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -136,6 +137,7 @@ public class ScanLocalDevices extends AppCompatActivity {
     private void getDeviceStatus(AlexaLocalDevices device) {
 
         deviceHostAddress = device.getHostAddress();
+        deviceName = device.getFriendlyName();
         Log.d(TAG, "Device host address : " + deviceHostAddress);
         this.transport = new SoftAPTransport(deviceHostAddress + ":80");
         this.security = new Security0();
@@ -359,6 +361,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, false);
         startActivity(alexaProvisioningIntent);
     }
@@ -367,6 +370,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
         Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
         alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
+        alexaIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaIntent.putExtras(getIntent());
         startActivity(alexaIntent);
     }

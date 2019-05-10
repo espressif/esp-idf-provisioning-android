@@ -1,43 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_margin="10dp"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.espressif.ui.LoginWithAmazon"
     tools:showIn="@layout/activity_login_with_amazon">
 
     <TextView
-        android:id="@+id/welcome_message"
+        android:id="@+id/txt_device_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:layout_gravity="center"
-        android:layout_marginBottom="32dp"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:text="@string/welcome_and_login_with_amazon"
+        android:layout_margin="10dp"
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:textSize="18sp"
-        app:layout_constraintBottom_toTopOf="@id/login_with_amazon"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
+        android:visibility="gone" />
 
-    <ImageButton
+    <ImageView
+        android:id="@+id/iv_alexa_logo"
+        android:layout_width="240dp"
+        android:layout_height="120dp"
+        android:layout_below="@id/txt_device_name"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:contentDescription="TODO"
+        android:src="@drawable/ic_alexa_logo_vertical_with_text" />
+
+    <com.espressif.ui.AvsEmberLightText
+        android:id="@+id/alexa_text_1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/iv_alexa_logo"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="30dp"
+        android:gravity="center"
+        android:text="@string/alexa_sign_in_string_1"
+        android:textSize="19sp" />
+
+    <com.espressif.ui.AvsEmberLightText
+        android:id="@+id/alexa_text_2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/alexa_text_1"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="50dp"
+        android:layout_marginEnd="50dp"
+        android:gravity="center"
+        android:text="@string/alexa_sign_in_string_2"
+        android:textSize="19sp" />
+
+    <com.espressif.ui.AvsEmberLightText
+        android:id="@+id/alexa_text_3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/alexa_text_2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="20dp"
+        android:gravity="center"
+        android:text="@string/alexa_sign_in_string_3"
+        android:textSize="17sp" />
+
+    <com.espressif.ui.AvsEmberLightText
+        android:id="@+id/alexa_text_4"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/alexa_text_3"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:text="@string/alexa_sign_in_string_4"
+        android:textSize="17sp" />
+
+    <Button
         android:id="@+id/login_with_amazon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:layout_below="@id/alexa_text_4"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="32dp"
-        android:background="@android:color/transparent"
+        android:layout_marginTop="40dp"
+        android:background="@drawable/bg_alexa_sign_in_btn"
         android:contentDescription="@string/login_with_amazon"
-        android:padding="0dp"
+        android:paddingStart="30dp"
+        android:paddingEnd="30dp"
         android:src="@color/login_button_image_state"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
+        android:text="@string/btn_sign_in_amazon"
+        android:textColor="#EEEEEE" />
 
-</android.support.constraint.ConstraintLayout>
+</RelativeLayout>

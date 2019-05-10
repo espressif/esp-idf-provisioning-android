@@ -19,8 +19,12 @@ import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
 
 import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.BuildConfig;
@@ -46,6 +50,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
     public static BLETransport BLE_TRANSPORT = null;
     public static final String KEY_HOST_ADDRESS = "host_address";
+    public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_IS_PROVISIONING = "is_provisioning";
     private static final String PROOF_OF_POSSESSION = "abcd1234";
 
@@ -56,25 +61,39 @@ public class LoginWithAmazon extends AppCompatActivity {
     public String[] DeviceDetails = new String[3];
     int galat_hai = 0;
     private String hostAddress;
+    private String deviceName;
     private boolean isProvisioning = false;
     private String productId;
     private String productDSN;
     private String codeVerifier;
+
+    private TextView txtDeviceName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login_with_amazon);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         Intent intent = getIntent();
         hostAddress = intent.getStringExtra(KEY_HOST_ADDRESS);
+        deviceName = intent.getStringExtra(KEY_DEVICE_NAME);
         isProvisioning = intent.getBooleanExtra(KEY_IS_PROVISIONING, false);
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(deviceName);
+        setSupportActionBar(toolbar);
+
         View loginButton = findViewById(R.id.login_with_amazon);
+        txtDeviceName = findViewById(R.id.txt_device_name);
         loginButton.setOnClickListener(loginBtnClickListener);
+
+        if (!TextUtils.isEmpty(deviceName)) {
+            txtDeviceName.setText(deviceName);
+        }
+
+        // FIXME : Remove static BLE_TRANSPORT and think for another solution.
+        ProvisionActivity.BLE_TRANSPORT = BLE_TRANSPORT;
 
         if (isProvisioning) {
 
@@ -91,6 +110,36 @@ public class LoginWithAmazon extends AppCompatActivity {
         session = new Session(transport, security);
         session.sessionListener = sessionListener;
         session.init(null);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+
+        if (isProvisioning) {
+            getMenuInflater().inflate(R.menu.menu_alexa_sign_in, menu);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_skip) {
+            finish();
+            if (isProvisioning) {
+                goToWifiScanListActivity();
+            }
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     Session.SessionListener sessionListener = new Session.SessionListener() {
@@ -142,35 +191,28 @@ public class LoginWithAmazon extends AppCompatActivity {
                             Log.d(TAG, "redirectUri : " + redirectUri);
                             Log.d(TAG, "codeVerifier : " + codeVerifier);
 
-                            if (isProvisioning) {
+                            Log.d(TAG, "Do Amazon Login");
+                            if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
 
-                                ProvisionActivity.BLE_TRANSPORT = BLE_TRANSPORT;
+                                final ConfigureAVS configureAVS = new ConfigureAVS(session);
+                                configureAVS.configureAmazonLogin(clientId,
+                                        authCode,
+                                        redirectUri,
+                                        new ConfigureAVS.ConfigureAVSActionListener() {
+                                            @Override
+                                            public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
 
-                                Intent launchProvisionInstructions = new Intent(getApplicationContext(), WiFiScanList.class);
-                                launchProvisionInstructions.putExtras(getIntent());
-                                launchProvisionInstructions.putExtra(ConfigureAVS.CLIENT_ID_KEY, clientId);
-                                launchProvisionInstructions.putExtra(ConfigureAVS.AUTH_CODE_KEY, authCode);
-                                launchProvisionInstructions.putExtra(ConfigureAVS.REDIRECT_URI_KEY, redirectUri);
-                                launchProvisionInstructions.putExtra(ConfigureAVS.CODE_VERIFIER_KEY, codeVerifier);
-                                startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
+                                                Log.d(TAG, "Amazon Login Completed Successfully");
+                                                finish();
 
-                            } else {
+                                                if (isProvisioning) {
 
-                                Log.d(TAG, "Do Amazon Login");
-                                if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
-
-                                    final ConfigureAVS configureAVS = new ConfigureAVS(session);
-                                    configureAVS.configureAmazonLogin(clientId,
-                                            authCode,
-                                            redirectUri,
-                                            new ConfigureAVS.ConfigureAVSActionListener() {
-                                                @Override
-                                                public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
-                                                    Log.d(TAG, "Amazon Login Completed Successfully");
+                                                    goToWifiScanListActivity();
+                                                } else {
                                                     goToAlexaActivity();
                                                 }
-                                            });
-                                }
+                                            }
+                                        });
                             }
                         }
 
@@ -258,10 +300,18 @@ public class LoginWithAmazon extends AppCompatActivity {
 
     private void goToAlexaActivity() {
 
-        finish();
         Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
         alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, hostAddress);
+        alexaIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaIntent.putExtras(getIntent());
         startActivity(alexaIntent);
+    }
+
+    private void goToWifiScanListActivity() {
+
+        Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanList.class);
+        wifiListIntent.putExtras(getIntent());
+        wifiListIntent.putExtras(getIntent());
+        startActivity(wifiListIntent);
     }
 }

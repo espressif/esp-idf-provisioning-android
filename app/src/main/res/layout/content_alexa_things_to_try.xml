@@ -8,20 +8,25 @@
     tools:context="com.espressif.ui.AlexaActivity"
     tools:showIn="@layout/activity_alexa">
 
-    <Button
-        android:id="@+id/btn_sign_out"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/txt_device_name"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/btn_sign_out" />
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_margin="20dp"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textSize="20sp" />
 
     <ImageView
         android:id="@+id/iv_alexa_logo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/btn_sign_out"
+        android:layout_width="240dp"
+        android:layout_height="120dp"
+        android:layout_below="@id/txt_device_name"
+        android:layout_centerHorizontal="true"
         android:contentDescription="TODO"
-        android:src="@drawable/ic_alexa_logo_vertical_with_text"
-        android:visibility="gone" />
+        android:src="@drawable/ic_alexa_logo_vertical_with_text" />
 
     <com.espressif.ui.AvsEmberLightText
         android:id="@+id/alexa_examples_message"
@@ -30,61 +35,75 @@
         android:layout_below="@id/iv_alexa_logo"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
-        android:layout_marginTop="100px"
+        android:layout_margin="30dp"
         android:layout_marginBottom="90px"
         android:text="@string/alexa_examples"
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:textSize="52px"
-        android:visibility="gone" />
+        android:textSize="52px" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.BookerlyItalicText
         android:id="@+id/alexa_example_1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/alexa_examples_message"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
+        android:layout_margin="10dp"
         android:text="@string/alexa_example_1"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:visibility="gone" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.BookerlyItalicText
         android:id="@+id/alexa_example_2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/alexa_example_1"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
+        android:layout_margin="10dp"
         android:text="@string/alexa_example_2"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:visibility="gone" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.BookerlyItalicText
         android:id="@+id/alexa_example_3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/alexa_example_2"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
+        android:layout_margin="10dp"
         android:text="@string/alexa_example_3"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:visibility="gone" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.BookerlyItalicText
         android:id="@+id/alexa_example_4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/alexa_example_3"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="10dp"
         android:text="@string/alexa_example_4"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:visibility="gone" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+    <com.espressif.ui.BookerlyItalicText
+        android:id="@+id/alexa_example_5"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/alexa_example_4"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center"
+        android:layout_margin="10dp"
+        android:text="@string/alexa_example_5"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
     <View
         android:layout_width="match_parent"
@@ -105,5 +124,31 @@
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:visibility="gone" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true">
+
+        <View
+            android:id="@+id/divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginStart="25dp"
+            android:layout_marginEnd="25dp"
+            android:background="#777777" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/divider"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="15dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="30dp"
+            android:gravity="center"
+            android:text="To learn more and access additional features, download the Alexa App." />
+
+    </RelativeLayout>
 
 </RelativeLayout>
