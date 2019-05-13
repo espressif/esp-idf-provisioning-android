@@ -21,6 +21,7 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -56,33 +57,53 @@ import avs.Avsconfig;
 import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
 
 public class BLEProvisionLanding extends AppCompatActivity {
+
     private static final String TAG = "Espressif::" + BLEProvisionLanding.class.getSimpleName();
 
-    private BluetoothAdapter bleAdapter;
-    private BLETransport bleTransport;
-    private Security security;
-    private Session session;
-    private BLETransport.BLETransportListener transportListener;
-    private ArrayAdapter<String> adapter;
-    private ArrayList<BluetoothDevice> bluetoothDevices;
+    private Button btnScan;
     private ProgressBar progressBar;
+    private ListView listView;
+
+    private BluetoothAdapter bleAdapter;
+    private ArrayList<BluetoothDevice> bluetoothDevices;
+
+    private Session session;
+    private Security security;
+    private BLETransport bleTransport;
+    private BLETransport.BLETransportListener transportListener;
+
+    private String configUUID;
+    private String avsConfigUUID;
+    private String serviceUUID;
+    private String sessionUUID;
+    private String deviceNamePrefix;
+    private boolean isScanning;
     private boolean isDeviceConnected;
+    private ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bleprovision_landing);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.connect_to_device_title);
         setSupportActionBar(toolbar);
+
+        serviceUUID = getIntent().getStringExtra(BLETransport.SERVICE_UUID_KEY);
+        sessionUUID = getIntent().getStringExtra(BLETransport.SESSION_UUID_KEY);
+        configUUID = getIntent().getStringExtra(BLETransport.CONFIG_UUID_KEY);
+        avsConfigUUID = getIntent().getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
+        deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
+
+        btnScan = findViewById(R.id.btn_scan);
+        listView = findViewById(R.id.ble_devices_list);
         progressBar = findViewById(R.id.ble_landing_progress_indicator);
-        progressBar.setVisibility(View.VISIBLE);
 
         isDeviceConnected = false;
         bluetoothDevices = new ArrayList<>();
         ArrayList<String> bleNames = new ArrayList<>();
 
-        ListView listView = findViewById(R.id.ble_devices_list);
         adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
                 android.R.id.text1,
@@ -94,31 +115,26 @@ public class BLEProvisionLanding extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
                 isDeviceConnected = false;
+                btnScan.setVisibility(View.GONE);
+                listView.setVisibility(View.GONE);
                 progressBar.setVisibility(View.VISIBLE);
                 bleTransport.connect(bluetoothDevices.get(pos));
             }
         });
-        final Button rescanButton = findViewById(R.id.rescan_button);
-        rescanButton.setOnClickListener(new View.OnClickListener() {
+
+        btnScan.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View view) {
-                progressBar.setVisibility(View.VISIBLE);
-                bluetoothDevices.clear();
-                adapter.clear();
-                bleTransport.scan(transportListener);
+                startScan();
             }
         });
 
-        final String serviceUUID = getIntent().getStringExtra(BLETransport.SERVICE_UUID_KEY);
-        final String sessionUUID = getIntent().getStringExtra(BLETransport.SESSION_UUID_KEY);
-        final String configUUID = getIntent().getStringExtra(BLETransport.CONFIG_UUID_KEY);
-        final String avsconfigUUID = getIntent().getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
-        final String deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-        final Activity thisActivity = this;
-
         transportListener = new BLETransport.BLETransportListener() {
+
             @Override
             public void onPeripheralsFound(ArrayList<BluetoothDevice> devices) {
+
                 boolean deviceExists = false;
                 for (BluetoothDevice device : devices) {
                     for (BluetoothDevice alreadyHere : bluetoothDevices) {
@@ -133,52 +149,61 @@ public class BLEProvisionLanding extends AppCompatActivity {
                     }
                     deviceExists = false;
                 }
-                progressBar.setVisibility(View.GONE);
+                stopScan();
             }
 
             @Override
             public void onPeripheralsNotFound() {
-                progressBar.setVisibility(View.GONE);
-                thisActivity.runOnUiThread(new Runnable() {
+
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "No Bluetooth devices found!",
                                 Toast.LENGTH_LONG)
                                 .show();
                     }
                 });
+                stopScan();
             }
 
             @Override
             public void onPeripheralConfigured(BluetoothDevice device) {
+
                 bleDeviceConfigured(true);
             }
 
             @Override
             public void onPeripheralNotConfigured(BluetoothDevice device) {
+
+                isScanning = false;
+                btnScan.setEnabled(true);
+                btnScan.setAlpha(1f);
+                progressBar.setVisibility(View.GONE);
+                listView.setVisibility(View.VISIBLE);
                 bleDeviceConfigured(false);
             }
 
             @Override
             public void onPeripheralDisconnected(Exception e) {
-                thisActivity.runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "Bluetooth device disconnected.",
                                 Toast.LENGTH_LONG)
                                 .show();
+                        // TODO check for stopScan();
                     }
                 });
             }
 
             @Override
             public void onFailure(final Exception e) {
-                thisActivity.runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "Bluetooth connection failed : " + e.getMessage(),
                                 Toast.LENGTH_LONG)
                                 .show();
@@ -187,25 +212,31 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
         };
 
+        HashMap<String, String> configUUIDMap = new HashMap<>();
+        configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
+        configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
+        if (avsConfigUUID != null) {
+            configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsConfigUUID);
+        }
+
+        bleTransport = new BLETransport(this,
+                UUID.fromString(serviceUUID),
+                UUID.fromString(sessionUUID),
+                configUUIDMap,
+                deviceNamePrefix,
+                3000);
+
         boolean isBLEEnabled = this.checkBLEPermissions();
         if (!isBLEEnabled) {
-            rescanButton.setEnabled(false);
+            btnScan.setEnabled(false);
+            btnScan.setAlpha(0.5f);
+            btnScan.setTextColor(Color.WHITE);
             requestBluetoothEnable();
         } else {
-            rescanButton.setEnabled(true);
-            HashMap<String, String> configUUIDMap = new HashMap<>();
-            configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
-            configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
-            if (avsconfigUUID != null) {
-                configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsconfigUUID);
-            }
-            bleTransport = new BLETransport(this,
-                    UUID.fromString(serviceUUID),
-                    UUID.fromString(sessionUUID),
-                    configUUIDMap,
-                    deviceNamePrefix,
-                    3000);
-            bleTransport.scan(transportListener);
+            btnScan.setEnabled(true);
+            btnScan.setAlpha(1f);
+            btnScan.setTextColor(Color.WHITE);
+            startScan();
         }
     }
 
@@ -220,13 +251,11 @@ public class BLEProvisionLanding extends AppCompatActivity {
     }
 
     private void bleDeviceConfigured(final Boolean isConfigured) {
-        final Activity thisActivity = this;
+
         this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                progressBar.setVisibility(View.GONE);
-                final TextView bleInstructions = findViewById(R.id.bluetooth_status_message);
-                bleInstructions.setText(isConfigured ? R.string.enabled_bluetooth_action : R.string.enable_bluetooth_instructions);
+
                 if (isConfigured) {
 
                     isDeviceConnected = true;
@@ -260,13 +289,50 @@ public class BLEProvisionLanding extends AppCompatActivity {
                     session.init(null);
 
                 } else {
-                    Toast.makeText(thisActivity,
+                    Toast.makeText(BLEProvisionLanding.this,
                             "Bluetooth device could not be configured. Please try another device.",
                             Toast.LENGTH_LONG)
                             .show();
                 }
             }
         });
+    }
+
+    private void startScan() {
+
+        isScanning = true;
+        bluetoothDevices.clear();
+        adapter.clear();
+        updateProgressAndScanBtn();
+        bleTransport.scan(transportListener);
+    }
+
+    private void stopScan() {
+
+        isScanning = false;
+        updateProgressAndScanBtn();
+    }
+
+    /**
+     * This method will update UI (Scan button enable / disable and progressbar visibility)
+     */
+    private void updateProgressAndScanBtn() {
+
+        if (isScanning) {
+
+            btnScan.setEnabled(false);
+            btnScan.setAlpha(0.5f);
+            btnScan.setTextColor(Color.WHITE);
+            progressBar.setVisibility(View.VISIBLE);
+            listView.setVisibility(View.GONE);
+
+        } else {
+
+            btnScan.setEnabled(true);
+            btnScan.setAlpha(1f);
+            progressBar.setVisibility(View.GONE);
+            listView.setVisibility(View.VISIBLE);
+        }
     }
 
     private void goToLoginActivity() {
@@ -375,13 +441,27 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == Provision.REQUEST_PROVISIONING_CODE &&
-                resultCode == RESULT_OK) {
+
+        Log.e(TAG, "On Activity Result : requestCode : " + requestCode + ", resultCode : " + resultCode);
+
+        if (requestCode == Provision.REQUEST_PROVISIONING_CODE && resultCode == RESULT_OK) {
             setResult(resultCode);
             finish();
-        } else if (requestCode == Provision.REQUEST_ENABLE_BLE_CODE &&
-                resultCode == RESULT_OK) {
-            this.checkBLEPermissions();
+        } else if (requestCode == Provision.REQUEST_ENABLE_BLE_CODE && resultCode == RESULT_OK) {
+            boolean isEnable = checkBLEPermissions();
+
+            if (isEnable) {
+
+                HashMap<String, String> configUUIDMap = new HashMap<>();
+                configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
+                configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
+                if (avsConfigUUID != null) {
+                    configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsConfigUUID);
+                }
+                startScan();
+            } else {
+                Log.e(TAG, "Error");
+            }
         }
     }
 
