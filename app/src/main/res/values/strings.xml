@@ -18,8 +18,6 @@
     <string name="ssid_hint_text">Network Name</string>
     <string name="password_hint_text">Passphrase</string>
     <string name="provision">Provision</string>
-    <string name="start_provisioning">Provision New Device</string>
-    <string name="title_activity_login_with_amazon">Login With Amazon</string>
 
     <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
 
@@ -35,4 +33,35 @@
     <string name="rescan_ble">Scan again</string>
     <string name="avsconfigversion">1</string>
     <string name="logout_of_the_device">Deregister device -</string>
+    <string name="text_wifi_network_connection">Make sure you are connected on the same WiFi network as the Alexa device</string>
+
+    <!--Strings used for Buttons-->
+    <string name="btn_provision">Provision New Device</string>
+    <string name="btn_manage">Manage</string>
+    <string name="btn_scan_again">Scan again</string>
+    <string name="btn_sign_in_amazon">Sign in with Amazon</string>
+    <string name="btn_do_it_later">Do It Later</string>
+    <string name="btn_sign_out">Sign Out</string>
+    <string name="btn_skip">Skip</string>
+
+    <!-- Strings used for Alexa screens -->
+    <string name="title_activity_login_with_amazon">Login With Amazon</string>
+    <string name="title_activity_alexa">Do More With Alexa</string>
+    <string name="alexa_examples">Here are some of the many things you can ask Alexa</string>
+    <string name="alexa_example_1">Alexa, what’s the weather today?</string>
+    <string name="alexa_example_2">Alexa, play my Flash Briefing.</string>
+    <string name="alexa_example_3">Alexa, set a timer for 20 minutes.</string>
+    <string name="alexa_example_4">Alexa, add "Dinner with Mom" to my calendar.</string>
+    <string name="alexa_example_5">Alexa, set an alarm for 6 a.m.</string>
+    <string name="alexa_app_link_msg">To learn more and access additional features, download the Amazon Alexa App.</string>
+    <string name="alexa_sign_in_string_1">Your device includes access to Alexa.</string>
+    <string name="alexa_sign_in_string_2">Connect your Amazon account to access personalized features.</string>
+    <string name="alexa_sign_in_string_3">Alexa allows you to use voice to play music and get news, sports scores, weather and more-all hands-free.</string>
+    <string name="alexa_sign_in_string_4">All you have to do is ask Alexa.</string>
+
+    <!-- Strings used for Progress -->
+    <string name="progress_scanning">Scanning Devices...</string>
+    <string name="progress_get_status">Getting Status</string>
+    <string name="progress_loading">Loading...</string>
+
 </resources>

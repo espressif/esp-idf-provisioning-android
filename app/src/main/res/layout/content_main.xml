@@ -5,9 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.espressif.espressif.MainActivity"
+    tools:context="com.espressif.ui.MainActivity"
     tools:showIn="@layout/activity_main">
-
 
     <RelativeLayout
         android:id="@+id/provision_button_layout"
@@ -51,7 +50,7 @@
             android:layout_marginBottom="64dp"
             android:background="@color/colorPrimary"
             android:enabled="true"
-            android:text="Manage Devices" />
+            android:text="@string/btn_manage" />
 
         <Button
             android:id="@+id/provision_button"
@@ -63,7 +62,7 @@
             android:layout_marginEnd="16dp"
             android:background="@color/colorPrimary"
             android:enabled="true"
-            android:text="@string/start_provisioning" />
+            android:text="@string/btn_provision" />
 
         <ProgressBar
             android:id="@+id/ble_progress_indicator"
@@ -75,7 +74,5 @@
             android:visibility="gone" />
 
     </RelativeLayout>
-
-
 
 </android.support.constraint.ConstraintLayout>

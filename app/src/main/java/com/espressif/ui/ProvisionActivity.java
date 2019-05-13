@@ -29,7 +29,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.espressif.avs.ConfigureAVS;
-import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.session.Session;
@@ -54,10 +53,6 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private String ssid;
     private String passphrase;
-    private String clientId;
-    private String authCode;
-    private String redirectUri;
-    private String codeVerifier;
     private TextView ssidInput;
 
     @Override
@@ -68,29 +63,23 @@ public class ProvisionActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.provision_activity_title);
         setSupportActionBar(toolbar);
 
-
         Intent intent = getIntent();
         final String WiFiSSID = intent.getStringExtra(Provision.PROVISIONING_WIFI_SSID);
         ssidInput = findViewById(R.id.ssid_input_layout);
         ssidInput.setText(WiFiSSID);
         ssid = WiFiSSID;
-        Log.d("ProvisionActivity","Selected AP -"+WiFiSSID);
+        Log.d("ProvisionActivity", "Selected AP -" + WiFiSSID);
 
         final String pop = intent.getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
-        clientId = intent.getStringExtra(ConfigureAVS.CLIENT_ID_KEY);
-        authCode = intent.getStringExtra(ConfigureAVS.AUTH_CODE_KEY);
-        redirectUri = intent.getStringExtra(ConfigureAVS.REDIRECT_URI_KEY);
-//        codeVerifier = intent.getStringExtra(ConfigureAVS.CODE_VERIFIER_KEY);
 
         final String deviceUUID = intent.getStringExtra(BLETransport.SERVICE_UUID_KEY);
         final String sessionUUID = intent.getStringExtra(BLETransport.SESSION_UUID_KEY);
         final String configUUID = intent.getStringExtra(BLETransport.CONFIG_UUID_KEY);
         final String avsconfigUUID = intent.getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
         final String deviceNamePrefix = intent.getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-
 
 //        ssidInput.addTextChangedListener(new TextWatcher() {
 //            @Override
@@ -149,13 +138,13 @@ public class ProvisionActivity extends AppCompatActivity {
                     transport = new SoftAPTransport(baseUrl);
                     provision(transport, security);
                 } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-                    if(ProvisionActivity.BLE_TRANSPORT == null) {
+                    if (ProvisionActivity.BLE_TRANSPORT == null) {
                         HashMap<String, String> configUUIDMap = new HashMap<>();
                         configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
-                        if(avsconfigUUID != null) {
+                        if (avsconfigUUID != null) {
                             configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsconfigUUID);
                         }
-                        configUUIDMap.put("prov-scan","0000ff50-0000-1000-8000-00805f9b34fb");
+                        configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
                         final BLETransport bleTransport = new BLETransport(thisActivity,
                                 UUID.fromString(deviceUUID),
                                 UUID.fromString(sessionUUID),
@@ -295,7 +284,7 @@ public class ProvisionActivity extends AppCompatActivity {
                         } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
                             statusText = thisActivity.getResources().getString(R.string.wifi_disconnected_text);
                         } else {
-                            statusText = "Device provisioning failed.\nReason : " +  failedReason + "\nPlease try again";
+                            statusText = "Device provisioning failed.\nReason : " + failedReason + "\nPlease try again";
                         }
                         goToSuccessPage(statusText);
                     }
@@ -317,25 +306,11 @@ public class ProvisionActivity extends AppCompatActivity {
                     }
                 };
                 provision.configureWifi(ssid, passphrase, new Provision.ProvisionActionListener() {
+
                     @Override
                     public void onComplete(Constants.Status status, Exception e) {
-                        if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
-                            final ConfigureAVS configureAVS = new ConfigureAVS(session);
-                            configureAVS.configureAmazonLogin(clientId,
-                                    authCode,
-                                    redirectUri,
-                                    new ConfigureAVS.ConfigureAVSActionListener() {
-                                        @Override
-                                        public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
-                                            if (e == null) {
-                                                provision.applyConfigurations(null);
 
-                                            }
-                                        }
-                                    });
-                        } else {
-                            provision.applyConfigurations(null);
-                        }
+                        provision.applyConfigurations(null);
                     }
                 });
             }
@@ -386,6 +361,7 @@ public class ProvisionActivity extends AppCompatActivity {
     }
 
     private void goToSuccessPage(String statusText) {
+
         Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
         goToSuccessPage.putExtra("status", statusText);
         startActivity(goToSuccessPage);

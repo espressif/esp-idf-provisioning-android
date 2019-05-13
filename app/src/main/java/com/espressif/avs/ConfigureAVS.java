@@ -16,7 +16,6 @@ package com.espressif.avs;
 import android.app.Activity;
 import android.app.Application;
 import android.os.Bundle;
-import android.util.Base64;
 import android.util.Log;
 
 import com.amazon.identity.auth.device.AuthError;
@@ -27,18 +26,14 @@ import com.amazon.identity.auth.device.api.authorization.AuthorizeRequest;
 import com.amazon.identity.auth.device.api.authorization.AuthorizeResult;
 import com.amazon.identity.auth.device.api.authorization.ScopeFactory;
 import com.amazon.identity.auth.device.api.workflow.RequestContext;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.security.Security;
+import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.Transport;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import avs.Avsconfig;
 
@@ -85,7 +80,10 @@ public class ConfigureAVS {
 
             @Override
             public void onActivityResumed(Activity activity) {
-                requestContext.onResume();
+
+                if (activity.isDestroyed()) {
+                    requestContext.onResume();
+                }
             }
 
             @Override
@@ -173,7 +171,9 @@ public class ConfigureAVS {
                                      String authCode,
                                      String redirectUri,
                                      final ConfigureAVSActionListener actionListener) {
-        if(this.session.isEstablished()) {
+
+        if (this.session.isEstablished()) {
+
             byte[] message = createSetAVSConfigRequest(clientId,
                     authCode,
                     redirectUri);
@@ -181,14 +181,14 @@ public class ConfigureAVS {
                 @Override
                 public void onSuccess(byte[] returnData) {
                     Avsconfig.AVSConfigStatus status = processSetAVSConfigResponse(returnData);
-                    if(actionListener != null) {
+                    if (actionListener != null) {
                         actionListener.onComplete(status, null);
                     }
                 }
 
                 @Override
                 public void onFailure(Exception e) {
-                    if(actionListener != null) {
+                    if (actionListener != null) {
                         actionListener.onComplete(Avsconfig.AVSConfigStatus.InvalidParam, e);
                     }
                 }
@@ -236,6 +236,4 @@ public class ConfigureAVS {
     public interface ConfigureAVSActionListener {
         void onComplete(Avsconfig.AVSConfigStatus status, Exception e);
     }
-
-
 }
