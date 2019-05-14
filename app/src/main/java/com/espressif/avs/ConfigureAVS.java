@@ -38,6 +38,7 @@ import org.json.JSONObject;
 import avs.Avsconfig;
 
 public class ConfigureAVS {
+
     public static final String PRODUCT_ID_KEY = "productId";
     public static final String PRODUCT_DSN_KEY = "productDSN";
     public static final String CODE_VERIFIER_KEY = "codeVerifier";
@@ -55,6 +56,10 @@ public class ConfigureAVS {
     private Security security;
     private Transport transport;
 
+    private static String codeVerifier;
+    private static RequestContext requestContext;
+    private static AmazonLoginListener amazonLoginListener;
+
     public ConfigureAVS(Session session) {
         this.session = session;
         this.security = session.getSecurity();
@@ -64,9 +69,12 @@ public class ConfigureAVS {
     public static void loginWithAmazon(Activity activity,
                                        String productId,
                                        String productDSN,
-                                       final String codeVerifier,
-                                       final AmazonLoginListener amazonLoginListener) {
-        final RequestContext requestContext = RequestContext.create(activity);
+                                       final String aCodeVerifier,
+                                       final AmazonLoginListener loginListener) {
+
+        codeVerifier = aCodeVerifier;
+        amazonLoginListener = loginListener;
+        requestContext = RequestContext.create(activity);
         activity.getApplication().registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
             @Override
             public void onActivityCreated(Activity activity, Bundle bundle) {
@@ -81,7 +89,7 @@ public class ConfigureAVS {
             @Override
             public void onActivityResumed(Activity activity) {
 
-                if (activity.isDestroyed()) {
+                if (requestContext != null) {
                     requestContext.onResume();
                 }
             }
@@ -104,46 +112,14 @@ public class ConfigureAVS {
             @Override
             public void onActivityDestroyed(Activity activity) {
 
+                if (requestContext != null) {
+                    requestContext.unregisterListener(amazonAuthorizeListener);
+                }
+                requestContext = null;
             }
         });
 
-        requestContext.registerListener(new AuthorizeListener() {
-
-            /* Authorization was completed successfully. */
-            @Override
-            public void onSuccess(AuthorizeResult result) {
-                /* Your app is now authorized for the requested scopes */
-                Log.d(TAG, "Client ID is " + result.getClientId());
-                Log.d(TAG, "Authorization code is " + result.getAuthorizationCode());
-                Log.d(TAG, "Redirect URI is " + result.getRedirectURI());
-                if (amazonLoginListener != null) {
-                    amazonLoginListener.LoginSucceeded(result.getClientId(),
-                            result.getAuthorizationCode(),
-                            result.getRedirectURI(),
-                            codeVerifier);
-                }
-            }
-
-            /* There was an error during the attempt to authorize the
-            application. */
-            @Override
-            public void onError(AuthError ae) {
-                Log.d(TAG, "Amazon Auth error :" + ae.toString());
-                if (amazonLoginListener != null) {
-                    amazonLoginListener.LoginFailed();
-                }
-            }
-
-            /* Authorization was cancelled before it could be completed. */
-            @Override
-            public void onCancel(AuthCancellation cancellation) {
-                Log.d(TAG, "Amazon Auth error :" + cancellation.getDescription());
-                if (amazonLoginListener != null) {
-                    amazonLoginListener.LoginFailed();
-                }
-            }
-        });
-
+        requestContext.registerListener(amazonAuthorizeListener);
         final JSONObject scopeData = new JSONObject();
         final JSONObject productInstanceAttributes = new JSONObject();
 
@@ -166,6 +142,44 @@ public class ConfigureAVS {
             }
         }
     }
+
+    private static AuthorizeListener amazonAuthorizeListener = new AuthorizeListener() {
+
+        /* Authorization was completed successfully. */
+        @Override
+        public void onSuccess(AuthorizeResult result) {
+
+            /* Your app is now authorized for the requested scopes */
+            Log.e(TAG, "Client ID is " + result.getClientId());
+            Log.e(TAG, "Authorization code is " + result.getAuthorizationCode());
+            Log.e(TAG, "Redirect URI is " + result.getRedirectURI());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginSucceeded(result.getClientId(),
+                        result.getAuthorizationCode(),
+                        result.getRedirectURI(),
+                        codeVerifier);
+            }
+        }
+
+        /* There was an error during the attempt to authorize the
+        application. */
+        @Override
+        public void onError(AuthError ae) {
+            Log.d(TAG, "Amazon Auth error :" + ae.toString());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginFailed();
+            }
+        }
+
+        /* Authorization was cancelled before it could be completed. */
+        @Override
+        public void onCancel(AuthCancellation cancellation) {
+            Log.d(TAG, "Amazon Auth error :" + cancellation.getDescription());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginFailed();
+            }
+        }
+    };
 
     public void configureAmazonLogin(String clientId,
                                      String authCode,
