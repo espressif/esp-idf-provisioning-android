@@ -14,7 +14,6 @@
 package com.espressif.ui;
 
 import android.Manifest;
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -335,10 +334,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
         }
     }
 
-    private void goToLoginActivity() {
+    private void goToProofOfPossessionActivity() {
 
         LoginWithAmazon.BLE_TRANSPORT = bleTransport;
-        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
+        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
         alexaProvisioningIntent.putExtras(getIntent());
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
         startActivityForResult(alexaProvisioningIntent, Provision.REQUEST_PROVISIONING_CODE);
@@ -379,7 +378,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
                     goToProvisionActivity();
 
                 } else {
-                    goToLoginActivity();
+                    goToProofOfPossessionActivity();
                 }
             }
 

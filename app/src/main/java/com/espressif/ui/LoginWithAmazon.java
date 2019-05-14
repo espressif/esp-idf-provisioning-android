@@ -13,10 +13,12 @@
 // limitations under the License.
 package com.espressif.ui;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -24,6 +26,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.espressif.avs.ConfigureAVS;
@@ -52,7 +55,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     public static final String KEY_HOST_ADDRESS = "host_address";
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_IS_PROVISIONING = "is_provisioning";
-    private static final String PROOF_OF_POSSESSION = "abcd1234";
+    public static final String KEY_PROOF_OF_POSSESSION = "proof_of_possession";
 
     private Session session;
     private Security security;
@@ -98,7 +101,8 @@ public class LoginWithAmazon extends AppCompatActivity {
         if (isProvisioning) {
 
             transport = BLE_TRANSPORT;
-            security = new Security1(PROOF_OF_POSSESSION);
+            String proofOfPossession = intent.getStringExtra(KEY_PROOF_OF_POSSESSION);
+            security = new Security1(proofOfPossession);
 
         } else {
 

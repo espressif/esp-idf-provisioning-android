@@ -80,6 +80,11 @@
             android:name="com.espressif.ui.BLEProvisionLanding"
             android:label="@string/title_activity_bleprovision_landing"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.ProofOfPossessionActivity"
+            android:label="@string/title_activity_pop"
+            android:theme="@style/AppTheme.NoActionBar" />
+
     </application>
 
 </manifest>
