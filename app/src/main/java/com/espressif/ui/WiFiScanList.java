@@ -47,7 +47,8 @@ public class WiFiScanList extends AppCompatActivity {
         apDevices = new ArrayList<>();
         ArrayList<String> apNames = new ArrayList<>();
         intent = getIntent();
-        final String pop = intent.getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
+        final String pop = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
+        Log.e("WiFiScanList", "POP : " + pop);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
@@ -84,9 +85,9 @@ public class WiFiScanList extends AppCompatActivity {
             this.security = new Security0();
         }
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-            if (ProvisionActivity.BLE_TRANSPORT == null) {
+            if (BLEProvisionLanding.bleTransport == null) {
             } else {
-                transport = ProvisionActivity.BLE_TRANSPORT;
+                transport = BLEProvisionLanding.bleTransport;
                 fetchScanList();
             }
         }

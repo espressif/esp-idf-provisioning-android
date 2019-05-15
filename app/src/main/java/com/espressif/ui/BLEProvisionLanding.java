@@ -39,21 +39,11 @@ import android.widget.Toast;
 import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
-import com.espressif.provision.transport.ResponseListener;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
-
-import avs.Avsconfig;
-
-import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
 
 public class BLEProvisionLanding extends AppCompatActivity {
 
@@ -66,10 +56,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private BluetoothAdapter bleAdapter;
     private ArrayList<BluetoothDevice> bluetoothDevices;
 
-    private Session session;
-    private Security security;
-    private BLETransport bleTransport;
+    public static BLETransport bleTransport;
     private BLETransport.BLETransportListener transportListener;
+    // FIXME : Remove static BLE_TRANSPORT and think for another solution.
 
     private String configUUID;
     private String avsConfigUUID;
@@ -242,8 +231,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        Log.d(TAG, "ON RESUME");
         if (isDeviceConnected) {
-            bleTransport.disconnect();
+//            bleTransport.disconnect();
             final TextView bleInstructions = findViewById(R.id.bluetooth_status_message);
             bleInstructions.setText(R.string.enable_bluetooth_instructions);
         }
@@ -258,34 +249,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 if (isConfigured) {
 
                     isDeviceConnected = true;
-
-                    final String pop = getIntent().getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
-                    Log.e(TAG, "POP : " + pop);
-                    final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
-
-                    if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-                        security = new Security1(pop);
-                    } else {
-                        security = new Security0();
-                    }
-
-                    session = new Session(bleTransport, security);
-
-                    session.sessionListener = new Session.SessionListener() {
-
-                        @Override
-                        public void OnSessionEstablished() {
-                            Log.d(TAG, "Session established");
-                            getStatus();
-                        }
-
-                        @Override
-                        public void OnSessionEstablishFailed(Exception e) {
-                            Log.d(TAG, "Session failed");
-                            // TODO
-                        }
-                    };
-                    session.init(null);
+                    finish();
+                    goToProofOfPossessionActivity();
 
                 } else {
                     Toast.makeText(BLEProvisionLanding.this,
@@ -336,76 +301,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private void goToProofOfPossessionActivity() {
 
-        LoginWithAmazon.BLE_TRANSPORT = bleTransport;
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
         alexaProvisioningIntent.putExtras(getIntent());
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        startActivityForResult(alexaProvisioningIntent, Provision.REQUEST_PROVISIONING_CODE);
-    }
-
-    private void goToProvisionActivity() {
-
-        ProvisionActivity.BLE_TRANSPORT = bleTransport;
-        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
-        launchProvisionInstructions.putExtras(getIntent());
-        startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
-    }
-
-    private void getStatus() {
-
-        Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
-                .setDummy(123)
-                .build();
-        Avsconfig.AVSConfigMsgType msgType = Avsconfig.AVSConfigMsgType.TypeCmdSignInStatus;
-        Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.newBuilder()
-                .setMsg(msgType)
-                .setCmdSigninStatus(configRequest)
-                .build();
-
-        byte[] message = security.encrypt(payload.toByteArray());
-
-        this.bleTransport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
-
-            @Override
-            public void onSuccess(byte[] returnData) {
-
-                Avsconfig.AVSConfigStatus deviceStatus = processSignInStatusResponse(returnData);
-                Log.d(TAG, "SignIn Status Received : " + deviceStatus);
-                finish();
-
-                if (deviceStatus.equals(Avsconfig.AVSConfigStatus.SignedIn)) {
-
-                    goToProvisionActivity();
-
-                } else {
-                    goToProofOfPossessionActivity();
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                Log.d(TAG, "Error in getting status");
-                e.printStackTrace();
-            }
-        });
-    }
-
-    private Avsconfig.AVSConfigStatus processSignInStatusResponse(byte[] responseData) {
-
-        Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
-
-        try {
-
-            Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.parseFrom(decryptedData);
-            Avsconfig.RespSignInStatus signInStatus = payload.getRespSigninStatus();
-            status = signInStatus.getStatus();
-            Log.d(TAG, "SignIn Status message " + status.getNumber() + status.toString());
-
-        } catch (InvalidProtocolBufferException e) {
-            e.printStackTrace();
-        }
-        return status;
+        startActivity(alexaProvisioningIntent);
     }
 
     private boolean checkBLEPermissions() {

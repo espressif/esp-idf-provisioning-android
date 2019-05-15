@@ -13,12 +13,10 @@
 // limitations under the License.
 package com.espressif.ui;
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -26,9 +24,17 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.amazon.identity.auth.device.AuthError;
+import com.amazon.identity.auth.device.api.authorization.AuthCancellation;
+import com.amazon.identity.auth.device.api.authorization.AuthorizationManager;
+import com.amazon.identity.auth.device.api.authorization.AuthorizeListener;
+import com.amazon.identity.auth.device.api.authorization.AuthorizeRequest;
+import com.amazon.identity.auth.device.api.authorization.AuthorizeResult;
+import com.amazon.identity.auth.device.api.authorization.ScopeFactory;
+import com.amazon.identity.auth.device.api.workflow.RequestContext;
 import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
@@ -43,6 +49,9 @@ import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import avs.Avsconfig;
 
 import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
@@ -51,11 +60,12 @@ public class LoginWithAmazon extends AppCompatActivity {
 
     private static final String TAG = "Espressif:" + LoginWithAmazon.class.getSimpleName();
 
-    public static BLETransport BLE_TRANSPORT = null;
     public static final String KEY_HOST_ADDRESS = "host_address";
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_IS_PROVISIONING = "is_provisioning";
-    public static final String KEY_PROOF_OF_POSSESSION = "proof_of_possession";
+    private static final String DEVICE_SERIAL_NUMBER_KEY = "deviceSerialNumber";
+    private static final String PRODUCT_INSTANCE_ATTRIBUTES_KEY = "productInstanceAttributes";
+    private static final String ALEXA_SCOPE = "alexa:all";
 
     private Session session;
     private Security security;
@@ -72,12 +82,15 @@ public class LoginWithAmazon extends AppCompatActivity {
 
     private TextView txtDeviceName;
 
+    private RequestContext requestContext;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login_with_amazon);
+        requestContext = RequestContext.create(this);
 
+        setContentView(R.layout.activity_login_with_amazon);
         Intent intent = getIntent();
         hostAddress = intent.getStringExtra(KEY_HOST_ADDRESS);
         deviceName = intent.getStringExtra(KEY_DEVICE_NAME);
@@ -95,13 +108,10 @@ public class LoginWithAmazon extends AppCompatActivity {
             txtDeviceName.setText(deviceName);
         }
 
-        // FIXME : Remove static BLE_TRANSPORT and think for another solution.
-        ProvisionActivity.BLE_TRANSPORT = BLE_TRANSPORT;
-
         if (isProvisioning) {
 
-            transport = BLE_TRANSPORT;
-            String proofOfPossession = intent.getStringExtra(KEY_PROOF_OF_POSSESSION);
+            transport = BLEProvisionLanding.bleTransport;
+            String proofOfPossession = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
             security = new Security1(proofOfPossession);
 
         } else {
@@ -114,6 +124,22 @@ public class LoginWithAmazon extends AppCompatActivity {
         session = new Session(transport, security);
         session.sessionListener = sessionListener;
         session.init(null);
+
+        requestContext.registerListener(amazonAuthorizeListener);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.e(TAG, "Login With Amazon onResume");
+        requestContext.onResume();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.e(TAG, "Login With Amazon onDestroy");
+        requestContext.unregisterListener(amazonAuthorizeListener);
     }
 
     @Override
@@ -153,7 +179,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
             Log.d(TAG, "Session established");
 
-            getDeviceDetails(new ConfigureAVS.ConfigureAVSActionListener() {
+            getDeviceDetails(new ConfigureAVSActionListener() {
 
                 @Override
                 public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
@@ -180,55 +206,117 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void onClick(View v) {
 
             Log.d(TAG, "Login button Clicked");
-            ConfigureAVS.loginWithAmazon(LoginWithAmazon.this,
-                    productId,
-                    productDSN,
-                    codeVerifier,
-                    new ConfigureAVS.AmazonLoginListener() {
 
-                        @Override
-                        public void LoginSucceeded(String clientId, String authCode, String redirectUri, String codeVerifier) {
+            final JSONObject scopeData = new JSONObject();
+            final JSONObject productInstanceAttributes = new JSONObject();
 
-                            Log.d(TAG, "LoginSucceeded");
-                            Log.d(TAG, "clientId : " + clientId);
-                            Log.d(TAG, "authCode : " + authCode);
-                            Log.d(TAG, "redirectUri : " + redirectUri);
-                            Log.d(TAG, "codeVerifier : " + codeVerifier);
-
-                            Log.d(TAG, "Do Amazon Login");
-                            if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
-
-                                final ConfigureAVS configureAVS = new ConfigureAVS(session);
-                                configureAVS.configureAmazonLogin(clientId,
-                                        authCode,
-                                        redirectUri,
-                                        new ConfigureAVS.ConfigureAVSActionListener() {
-                                            @Override
-                                            public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
-
-                                                Log.d(TAG, "Amazon Login Completed Successfully");
-                                                finish();
-
-                                                if (isProvisioning) {
-
-                                                    goToWifiScanListActivity();
-                                                } else {
-                                                    goToAlexaActivity();
-                                                }
-                                            }
-                                        });
-                            }
-                        }
-
-                        @Override
-                        public void LoginFailed() {
-                            // TODO
-                        }
-                    });
+            try {
+                productInstanceAttributes.put(DEVICE_SERIAL_NUMBER_KEY, productDSN);
+                scopeData.put(PRODUCT_INSTANCE_ATTRIBUTES_KEY, productInstanceAttributes);
+                scopeData.put("productID", productId);
+                String codeChallenge = codeVerifier;
+                AuthorizationManager.authorize(new AuthorizeRequest
+                        .Builder(requestContext)
+                        .addScope(ScopeFactory.scopeNamed(ALEXA_SCOPE, scopeData))
+                        .forGrantType(AuthorizeRequest.GrantType.AUTHORIZATION_CODE)
+                        .withProofKeyParameters(codeChallenge, "S256")
+                        .build());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (Exception e) {
+                if (amazonLoginListener != null) {
+                    amazonLoginListener.LoginFailed();
+                }
+            }
         }
     };
 
-    public void getDeviceDetails(final ConfigureAVS.ConfigureAVSActionListener configureAVSActionListener) {
+    private AuthorizeListener amazonAuthorizeListener = new AuthorizeListener() {
+
+        /* Authorization was completed successfully. */
+        @Override
+        public void onSuccess(AuthorizeResult result) {
+
+            /* Your app is now authorized for the requested scopes */
+            Log.e(TAG, "Client ID is " + result.getClientId());
+            Log.e(TAG, "Authorization code is " + result.getAuthorizationCode());
+            Log.e(TAG, "Redirect URI is " + result.getRedirectURI());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginSucceeded(result.getClientId(),
+                        result.getAuthorizationCode(),
+                        result.getRedirectURI(),
+                        codeVerifier);
+            }
+        }
+
+        /* There was an error during the attempt to authorize the
+        application. */
+        @Override
+        public void onError(AuthError ae) {
+            Log.d(TAG, "Amazon Auth error :" + ae.toString());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginFailed();
+            }
+        }
+
+        /* Authorization was cancelled before it could be completed. */
+        @Override
+        public void onCancel(AuthCancellation cancellation) {
+            Log.d(TAG, "Amazon Auth error :" + cancellation.getDescription());
+            if (amazonLoginListener != null) {
+                amazonLoginListener.LoginFailed();
+            }
+        }
+    };
+
+    private AmazonLoginListener amazonLoginListener = new AmazonLoginListener() {
+
+        @Override
+        public void LoginSucceeded(String clientId, String authCode, String redirectUri, String codeVerifier) {
+
+            Log.d(TAG, "LoginSucceeded");
+            Log.d(TAG, "clientId : " + clientId);
+            Log.d(TAG, "authCode : " + authCode);
+            Log.d(TAG, "redirectUri : " + redirectUri);
+            Log.d(TAG, "codeVerifier : " + codeVerifier);
+
+            Log.d(TAG, "Do Amazon Login");
+            if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
+
+                configureAmazonLogin(clientId,
+                        authCode,
+                        redirectUri,
+                        new ConfigureAVSActionListener() {
+                            @Override
+                            public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
+
+                                Log.d(TAG, "Amazon Login Completed Successfully");
+                                finish();
+
+                                if (isProvisioning) {
+
+                                    goToWifiScanListActivity();
+                                } else {
+                                    goToAlexaActivity();
+                                }
+                            }
+                        });
+            }
+        }
+
+        @Override
+        public void LoginFailed() {
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(LoginWithAmazon.this, "Authentication failed!", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    };
+
+    public void getDeviceDetails(final ConfigureAVSActionListener configureAVSActionListener) {
 
         Log.e(TAG, "Get Device Details");
         Avsconfig.CmdGetDetails configRequest = Avsconfig.CmdGetDetails.newBuilder()
@@ -251,11 +339,12 @@ public class LoginWithAmazon extends AppCompatActivity {
 
             @Override
             public void onFailure(Exception e) {
+                // TODO
             }
         });
     }
 
-    private String[] processSetAVSConfigResponse(byte[] responseData, ConfigureAVS.ConfigureAVSActionListener configureAVSActionListener) {
+    private String[] processSetAVSConfigResponse(byte[] responseData, ConfigureAVSActionListener configureAVSActionListener) {
 
         byte[] decryptedData = security.decrypt(responseData);
         try {
@@ -284,6 +373,67 @@ public class LoginWithAmazon extends AppCompatActivity {
         }
         return DeviceDetails;
     }
+
+    private void configureAmazonLogin(String clientId,
+                                      String authCode,
+                                      String redirectUri,
+                                      final ConfigureAVSActionListener actionListener) {
+
+        if (this.session.isEstablished()) {
+
+            byte[] message = createSetAVSConfigRequest(clientId,
+                    authCode,
+                    redirectUri);
+            transport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
+                @Override
+                public void onSuccess(byte[] returnData) {
+                    Avsconfig.AVSConfigStatus status = processSetAVSConfigResponse(returnData);
+                    if (actionListener != null) {
+                        actionListener.onComplete(status, null);
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    if (actionListener != null) {
+                        actionListener.onComplete(Avsconfig.AVSConfigStatus.InvalidParam, e);
+                    }
+                }
+            });
+        }
+    }
+
+    private byte[] createSetAVSConfigRequest(String clientId,
+                                             String authCode,
+                                             String redirectUri) {
+        Avsconfig.CmdSetConfig configRequest = Avsconfig.CmdSetConfig.newBuilder()
+                .setAuthCode(authCode)
+                .setClientID(clientId)
+                .setRedirectURI(redirectUri)
+                .build();
+        Avsconfig.AVSConfigMsgType msgType = Avsconfig.AVSConfigMsgType.TypeCmdSetConfig;
+        Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.newBuilder()
+                .setMsg(msgType)
+                .setCmdSetConfig(configRequest)
+                .build();
+
+        return this.security.encrypt(payload.toByteArray());
+    }
+
+    private Avsconfig.AVSConfigStatus processSetAVSConfigResponse(byte[] responseData) {
+        byte[] decryptedData = this.security.decrypt(responseData);
+
+        Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.UNRECOGNIZED;
+        try {
+            Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.parseFrom(decryptedData);
+            Avsconfig.RespSetConfig response = Avsconfig.RespSetConfig.parseFrom(payload.toByteArray());
+            status = response.getStatus();
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return status;
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -315,7 +465,16 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanList.class);
         wifiListIntent.putExtras(getIntent());
-        wifiListIntent.putExtras(getIntent());
         startActivity(wifiListIntent);
+    }
+
+    public interface AmazonLoginListener {
+        void LoginSucceeded(String clientId, String authCode, String redirectUri, String codeVerifier);
+
+        void LoginFailed();
+    }
+
+    public interface ConfigureAVSActionListener {
+        void onComplete(Avsconfig.AVSConfigStatus status, Exception e);
     }
 }

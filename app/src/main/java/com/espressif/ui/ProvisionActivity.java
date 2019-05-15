@@ -31,10 +31,10 @@ import android.widget.Toast;
 import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
+import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
@@ -43,13 +43,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.UUID;
 
-import avs.Avsconfig;
 import espressif.Constants;
 import espressif.WifiConstants;
 
 public class ProvisionActivity extends AppCompatActivity {
+
     private static final String TAG = "Espressif::" + ProvisionActivity.class.getSimpleName();
-    public static BLETransport BLE_TRANSPORT = null;
 
     private String ssid;
     private String passphrase;
@@ -70,7 +69,8 @@ public class ProvisionActivity extends AppCompatActivity {
         ssid = WiFiSSID;
         Log.d("ProvisionActivity", "Selected AP -" + WiFiSSID);
 
-        final String pop = intent.getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
+        final String pop = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
+        Log.e(TAG, "POP : " + pop);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
@@ -138,7 +138,7 @@ public class ProvisionActivity extends AppCompatActivity {
                     transport = new SoftAPTransport(baseUrl);
                     provision(transport, security);
                 } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-                    if (ProvisionActivity.BLE_TRANSPORT == null) {
+                    if (BLEProvisionLanding.bleTransport == null) {
                         HashMap<String, String> configUUIDMap = new HashMap<>();
                         configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
                         if (avsconfigUUID != null) {
@@ -221,7 +221,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             }
                         });
                     } else {
-                        provision(ProvisionActivity.BLE_TRANSPORT, security);
+                        provision(BLEProvisionLanding.bleTransport, security);
                     }
                 }
             }
@@ -364,6 +364,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
         Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
         goToSuccessPage.putExtra("status", statusText);
+        goToSuccessPage.putExtras(getIntent());
         startActivity(goToSuccessPage);
         this.setResult(RESULT_OK);
         this.finish();
