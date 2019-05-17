@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Int-BLE-AVS</string>
+    <string name="app_name">Int-BLE-AVS-Prov</string>
     <string name="action_settings">Settings</string>
     <string name="login_with_amazon">Login with Amazon</string>
     <string name="welcome_and_login_with_amazon">Welcome! To continue provisioning your Alexa Powered device, please login with Amazon</string>
