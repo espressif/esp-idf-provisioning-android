@@ -35,11 +35,9 @@ After you have completed everything that's required as part of [Step 3](https://
 
 ## Configuring Build
 
-There are multiple build options. It is a combination of 3 options along with one mandatory `Avs` field - transport, security and release type.
+There are multiple build options. It is a combination of 2 options along with one mandatory `Avs` field -  security and release type.
 
-- Transports 
-  - WiFi
-  - BLE
+
 - Security
   - 0 (no security)
   - 1 (security as per IDF docs for provisioning)
