@@ -47,7 +47,8 @@ public class WiFiScanList extends AppCompatActivity {
         apDevices = new ArrayList<>();
         ArrayList<String> apNames = new ArrayList<>();
         intent = getIntent();
-        final String pop = intent.getStringExtra(Provision.CONFIG_PROOF_OF_POSSESSION_KEY);
+        final String pop = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
+        Log.e("WiFiScanList", "POP : " + pop);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
@@ -84,9 +85,9 @@ public class WiFiScanList extends AppCompatActivity {
             this.security = new Security0();
         }
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-            if (ProvisionActivity.BLE_TRANSPORT == null) {
+            if (BLEProvisionLanding.bleTransport == null) {
             } else {
-                transport = ProvisionActivity.BLE_TRANSPORT;
+                transport = BLEProvisionLanding.bleTransport;
                 fetchScanList();
             }
         }
@@ -94,7 +95,7 @@ public class WiFiScanList extends AppCompatActivity {
 
     private void callProvision(String ssid) {
 
-        Log.d("WiFiScanList", "Selected AP -" + ssid);
+        Log.e("WiFiScanList", "Selected AP -" + ssid);
         finish();
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
@@ -174,9 +175,8 @@ public class WiFiScanList extends AppCompatActivity {
         transport.sendConfigData("prov-scan", data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
-                processGetWifiStatus(returnData);
                 Log.d("WiFiScan", "Successfully got scan result");
-
+                processGetWifiStatus(returnData);
             }
 
             @Override
@@ -195,9 +195,7 @@ public class WiFiScanList extends AppCompatActivity {
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
             WifiScan.RespScanStatus response = payload.getRespScanStatus();
 
-
             scanFinished = response.getScanFinished();
-
 
 //            if(scanFinished == true) {
             getWiFiScanList(response.getResultCount());
@@ -211,7 +209,6 @@ public class WiFiScanList extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
 
     private void getWiFiScanList(int count) {
         Log.d("WIFIScanList", "Getting " + count + " SSIDs");
@@ -228,9 +225,8 @@ public class WiFiScanList extends AppCompatActivity {
         transport.sendConfigData("prov-scan", data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
-                processGetSSIDs(returnData);
                 Log.d("WiFiScan", "Successfully got SSID list");
-
+                processGetSSIDs(returnData);
             }
 
             @Override
@@ -242,19 +238,21 @@ public class WiFiScanList extends AppCompatActivity {
     }
 
     private void processGetSSIDs(byte[] responseData) {
+
         byte[] decryptedData = this.security.decrypt(responseData);
         try {
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
             final WifiScan.RespScanResult response = payload.getRespScanResult();
 
-
             for (int i = 0; i < response.getEntriesCount(); i++) {
 //                apDevices.add(response.getEntries(i).getSsid().toStringUtf8());
             }
-            progressBar.setVisibility(View.INVISIBLE);
-            this.runOnUiThread(new Runnable() {
+
+            runOnUiThread(new Runnable() {
                 public void run() {
                     //do your modifications here
+
+                    progressBar.setVisibility(View.INVISIBLE);
 
                     for (int i = 0; i < response.getEntriesCount(); i++) {
                         apDevices.add(response.getEntries(i).getSsid().toStringUtf8());
@@ -265,11 +263,9 @@ public class WiFiScanList extends AppCompatActivity {
                 }
             });
 
-
         } catch (InvalidProtocolBufferException e) {
 
             e.printStackTrace();
         }
-
     }
 }

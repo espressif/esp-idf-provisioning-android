@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Int-BLE-AVS</string>
+    <string name="app_name">Int-BLE-AVS-Prov</string>
     <string name="action_settings">Settings</string>
     <string name="login_with_amazon">Login with Amazon</string>
     <string name="welcome_and_login_with_amazon">Welcome! To continue provisioning your Alexa Powered device, please login with Amazon</string>
@@ -43,10 +43,12 @@
     <string name="btn_do_it_later">Do It Later</string>
     <string name="btn_sign_out">Sign Out</string>
     <string name="btn_skip">Skip</string>
+    <string name="btn_next">Next</string>
 
     <!-- Strings used for Alexa screens -->
     <string name="title_activity_login_with_amazon">Login With Amazon</string>
     <string name="title_activity_alexa">Do More With Alexa</string>
+    <string name="title_activity_pop">Proof Of Possession</string>
     <string name="alexa_examples">Here are some of the many things you can ask Alexa</string>
     <string name="alexa_example_1">Alexa, what’s the weather today?</string>
     <string name="alexa_example_2">Alexa, play my Flash Briefing.</string>
