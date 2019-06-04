@@ -3,10 +3,10 @@ package com.espressif.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
@@ -26,26 +26,29 @@ import espressif.WifiScan;
 
 public class WiFiScanList extends AppCompatActivity {
 
+    private static final String TAG = WiFiScanList.class.getSimpleName();
+
     private ProgressBar progressBar;
-    private boolean isDeviceConnected;
-    private ArrayList<String> apDevices;
-    private ArrayAdapter<String> adapter;
+    private ArrayList<WiFiAccessPoint> apDevices;
+    private WiFiListAdapter adapter;
     public Session session;
     public Security security;
     public Transport transport;
-    Intent intent;
-
+    private Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.wifi_scan_list);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(R.string.title_activity_wifi_scan_list);
+        setSupportActionBar(toolbar);
+
         progressBar = findViewById(R.id.wifi_progress_indicator);
         progressBar.setVisibility(View.VISIBLE);
 
-        isDeviceConnected = false;
         apDevices = new ArrayList<>();
-        ArrayList<String> apNames = new ArrayList<>();
         intent = getIntent();
         final String pop = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
         Log.e("WiFiScanList", "POP : " + pop);
@@ -54,24 +57,20 @@ public class WiFiScanList extends AppCompatActivity {
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
         ListView listView = findViewById(R.id.wifi_ap_list);
-        adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_list_item_1,
-                android.R.id.text1,
-                apNames);
-//        adapter.notifyDataSetChanged();
+        adapter = new WiFiListAdapter(this, R.id.tv_wifi_name, apDevices);
 
         // Assign adapter to ListView
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
-                isDeviceConnected = false;
+
                 progressBar.setVisibility(View.VISIBLE);
                 Log.d("WiFiScanList", "Device to be connected -" + apDevices.get(pos));
-                callProvision(apDevices.get(pos));
+                callProvision(apDevices.get(pos).getWifiName());
             }
-
         });
+
         listView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
@@ -91,6 +90,12 @@ public class WiFiScanList extends AppCompatActivity {
                 fetchScanList();
             }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+//        BLEProvisionLanding.isBleWorkDone = true;
+        super.onBackPressed();
     }
 
     private void callProvision(String ssid) {
@@ -163,7 +168,7 @@ public class WiFiScanList extends AppCompatActivity {
     }
 
     private void getWifiScanStatus() {
-//        Thread.sleep(120);
+
         WifiScan.CmdScanStatus configRequest = WifiScan.CmdScanStatus.newBuilder()
                 .build();
         WifiScan.WiFiScanMsgType msgType = WifiScan.WiFiScanMsgType.TypeCmdScanStatus;
@@ -211,6 +216,7 @@ public class WiFiScanList extends AppCompatActivity {
     }
 
     private void getWiFiScanList(int count) {
+
         Log.d("WIFIScanList", "Getting " + count + " SSIDs");
         WifiScan.CmdScanResult configRequest = WifiScan.CmdScanResult.newBuilder()
                 .setStartIndex(0)
@@ -249,16 +255,45 @@ public class WiFiScanList extends AppCompatActivity {
             }
 
             runOnUiThread(new Runnable() {
-                public void run() {
-                    //do your modifications here
 
-                    progressBar.setVisibility(View.INVISIBLE);
+                public void run() {
+
+                    // do your modifications here
 
                     for (int i = 0; i < response.getEntriesCount(); i++) {
-                        apDevices.add(response.getEntries(i).getSsid().toStringUtf8());
-                        adapter.add(response.getEntries(i).getSsid().toStringUtf8());
+
+                        Log.e("WifiScan", "Response : " + response.getEntries(i).getSsid().toStringUtf8());
+                        String ssid = response.getEntries(i).getSsid().toStringUtf8();
+                        int rssi = response.getEntries(i).getRssi();
+                        boolean isAvailable = false;
+
+                        for (int index = 0; index < apDevices.size(); index++) {
+
+                            if (ssid.equals(apDevices.get(index).getWifiName())) {
+
+                                isAvailable = true;
+
+                                if (apDevices.get(index).getRssi() < rssi) {
+
+                                    apDevices.get(index).setRssi(rssi);
+                                }
+                                break;
+                            }
+                        }
+
+                        if (!isAvailable) {
+
+                            WiFiAccessPoint wifiAp = new WiFiAccessPoint();
+                            wifiAp.setWifiName(response.getEntries(i).getSsid().toStringUtf8());
+                            wifiAp.setRssi(response.getEntries(i).getRssi());
+                            apDevices.add(wifiAp);
+                            Log.e(TAG, "" + ssid + " added in list : " + wifiAp.getWifiName() + ", RSSI : " + wifiAp.getRssi());
+                        }
+
+                        Log.e(TAG, "Size of  list : " + apDevices.size());
                     }
 
+                    progressBar.setVisibility(View.INVISIBLE);
                     adapter.notifyDataSetChanged();
                 }
             });
