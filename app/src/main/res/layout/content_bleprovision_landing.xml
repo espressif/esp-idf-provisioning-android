@@ -52,7 +52,7 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_margin="20dp"
-        android:background="@color/colorPrimary"
+        android:background="@drawable/bg_btn"
         android:text="@string/rescan_ble" />
 
 </RelativeLayout>
