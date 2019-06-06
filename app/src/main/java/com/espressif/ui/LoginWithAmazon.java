@@ -16,11 +16,13 @@ package com.espressif.ui;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -35,7 +37,6 @@ import com.amazon.identity.auth.device.api.authorization.AuthorizeRequest;
 import com.amazon.identity.auth.device.api.authorization.AuthorizeResult;
 import com.amazon.identity.auth.device.api.authorization.ScopeFactory;
 import com.amazon.identity.auth.device.api.workflow.RequestContext;
-import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
@@ -43,7 +44,6 @@ import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
-import com.espressif.provision.transport.BLETransport;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
@@ -206,6 +206,8 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void onClick(View v) {
 
             Log.d(TAG, "Login button Clicked");
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 
             final JSONObject scopeData = new JSONObject();
             final JSONObject productInstanceAttributes = new JSONObject();
@@ -310,7 +312,7 @@ public class LoginWithAmazon extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(LoginWithAmazon.this, "Authentication failed!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginWithAmazon.this, "SignIn failed!", Toast.LENGTH_SHORT).show();
                 }
             });
         }

@@ -57,6 +57,7 @@
     <string name="alexa_sign_in_string_2">Connect your Amazon account to access personalized features.</string>
     <string name="alexa_sign_in_string_3">Alexa allows you to use voice to play music and get news, sports scores, weather and more-all hands-free.</string>
     <string name="alexa_sign_in_string_4">All you have to do is ask Alexa.</string>
+    <string name="alexa_download_app">To learn more and access additional features, download the</string>
 
     <!-- Strings used for Progress -->
     <string name="progress_scanning">Scanning Devices...</string>

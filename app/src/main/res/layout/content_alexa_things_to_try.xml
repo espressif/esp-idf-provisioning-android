@@ -111,20 +111,6 @@
         android:layout_below="@id/alexa_example_4"
         android:visibility="gone" />
 
-    <com.espressif.ui.AvsEmberLightText
-        android:id="@+id/alexa_app_link"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_gravity="center"
-        android:layout_marginStart="25dp"
-        android:layout_marginEnd="25dp"
-        android:text="@string/alexa_app_link_msg"
-        android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:visibility="gone" />
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -138,7 +124,8 @@
             android:layout_marginEnd="25dp"
             android:background="#777777" />
 
-        <TextView
+        <com.espressif.ui.AvsEmberLightText
+            android:id="@+id/alexa_app_link"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/divider"
