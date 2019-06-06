@@ -129,7 +129,6 @@ public class AlexaActivity extends AppCompatActivity {
             @Override
             public void onClick(View textView) {
                 textView.invalidate();
-                Toast.makeText(getApplicationContext(), "Alexa App Clicked.", Toast.LENGTH_SHORT).show();
                 openAlexaApp();
             }
 
