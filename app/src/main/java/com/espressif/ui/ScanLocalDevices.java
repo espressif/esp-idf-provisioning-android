@@ -5,9 +5,11 @@ import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -106,6 +108,9 @@ public class ScanLocalDevices extends AppCompatActivity {
             public void onClick(View v) {
 
                 Log.d(TAG, "Initiating discovery");
+                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
                 isScanning = true;
                 updateProgressAndScanBtn();
                 searchDevices();

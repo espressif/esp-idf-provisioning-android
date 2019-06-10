@@ -1,15 +1,25 @@
 package com.espressif.ui;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -28,8 +38,8 @@ public class AlexaActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif:" + AlexaActivity.class.getSimpleName();
 
-//    private Button btnSignOut;
-//    private AvsEmberLightText txtAlexaAppLink;
+    //    private Button btnSignOut;
+    private AvsEmberLightText txtAlexaAppLink;
 
     private Session session;
     private Security security;
@@ -107,16 +117,59 @@ public class AlexaActivity extends AppCompatActivity {
     private void initViews() {
 
 //        btnSignOut = findViewById(R.id.btn_sign_out);
-//        txtAlexaAppLink = findViewById(R.id.alexa_app_link);
 //        btnSignOut.setOnClickListener(signOutBtnClickListener);
 
         txtDeviceName = findViewById(R.id.txt_device_name);
+        txtAlexaAppLink = findViewById(R.id.alexa_app_link);
+
+        SpannableString stringForAlexaAppLink = new SpannableString("To learn more and access additional features, download the Alexa App.");
+
+        ClickableSpan clickableSpan = new ClickableSpan() {
+
+            @Override
+            public void onClick(View textView) {
+                textView.invalidate();
+                openAlexaApp();
+            }
+
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(getResources().getColor(R.color.alexa_color));
+                ds.setUnderlineText(false);
+            }
+        };
+        stringForAlexaAppLink.setSpan(clickableSpan, 59, 68, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        txtAlexaAppLink.setText(stringForAlexaAppLink);
+        txtAlexaAppLink.setMovementMethod(LinkMovementMethod.getInstance());
+    }
+
+    private void openAlexaApp() {
+        openApplication("com.amazon.dee.app");
+    }
+
+    public void openApplication(String packageN) {
+        Intent i = getPackageManager().getLaunchIntentForPackage(packageN);
+        if (i != null) {
+            i.addCategory(Intent.CATEGORY_LAUNCHER);
+            startActivity(i);
+        } else {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + packageN)));
+            } catch (android.content.ActivityNotFoundException anfe) {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("http://play.google.com/store/apps/details?id=" + packageN)));
+            }
+        }
     }
 
     private View.OnClickListener signOutBtnClickListener = new View.OnClickListener() {
 
         @Override
         public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 
             if (session.isEstablished()) {
                 sendSignOutCommand();

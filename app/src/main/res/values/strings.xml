@@ -19,13 +19,10 @@
     <string name="password_hint_text">Passphrase</string>
     <string name="provision">Provision</string>
 
-    <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
-
     <string name="success_text">Device successfully provisioned!</string>
     <string name="wifi_disconnected_text">Please check the device indicators for provisioning status.</string>
     <string name="done">Done</string>
 
-    <string name="title_activity_bleprovision_landing">BLEProvisionLanding</string>
     <string name="enable_bluetooth_instructions">To provision your new device, please make sure that your Phone\'s Bluetooth is turned on and within range of your new device.</string>
     <string name="enabled_bluetooth_instructions">To provision the device, please enter your Network credentials on the next page.</string>
     <string name="enable_bluetooth_action">Enable</string>
@@ -60,10 +57,20 @@
     <string name="alexa_sign_in_string_2">Connect your Amazon account to access personalized features.</string>
     <string name="alexa_sign_in_string_3">Alexa allows you to use voice to play music and get news, sports scores, weather and more-all hands-free.</string>
     <string name="alexa_sign_in_string_4">All you have to do is ask Alexa.</string>
+    <string name="alexa_download_app">To learn more and access additional features, download the</string>
 
     <!-- Strings used for Progress -->
     <string name="progress_scanning">Scanning Devices...</string>
     <string name="progress_get_status">Getting Status</string>
     <string name="progress_loading">Loading...</string>
+
+    <!--Error Messages-->
+    <string name="error_ble_not_supported">Sorry! BLE is not supported.</string>
+    <string name="error_bluetooth_not_supported">Sorry! Bluetooth is not supported.</string>
+
+    <!--Screen titles-->
+    <string name="title_activity_wifi_scan_list">WiFi List</string>
+    <string name="title_activity_bleprovision_landing">BLEProvisionLanding</string>
+    <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
 
 </resources>

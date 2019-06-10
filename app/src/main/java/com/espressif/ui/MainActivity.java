@@ -16,9 +16,11 @@ package com.espressif.ui;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -66,10 +68,13 @@ public class MainActivity extends AppCompatActivity {
         manageDevices.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
                 Intent goToManagePage = new Intent(getApplicationContext(), ScanLocalDevices.class);
                 startActivity(goToManagePage);
             }
-
         });
 
         final String transportVersion, securityVersion;
@@ -89,6 +94,10 @@ public class MainActivity extends AppCompatActivity {
             provision.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
+
+                    Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                    vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
                     HashMap<String, String> config = new HashMap<>();
                     config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
                     config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
@@ -112,6 +121,10 @@ public class MainActivity extends AppCompatActivity {
             provision.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
+
+                    Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                    vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
                     HashMap<String, String> config = new HashMap<>();
                     config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
                     config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);

@@ -14,8 +14,10 @@
 package com.espressif.ui;
 
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -37,8 +39,12 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
 
         Button doneButton = findViewById(R.id.done_button);
         doneButton.setOnClickListener(new View.OnClickListener() {
+
             @Override
             public void onClick(View view) {
+
+                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
                 finish();
             }
         });

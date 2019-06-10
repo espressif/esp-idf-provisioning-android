@@ -48,7 +48,7 @@
             android:layout_marginTop="0dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="64dp"
-            android:background="@color/colorPrimary"
+            android:background="@drawable/bg_btn"
             android:enabled="true"
             android:text="@string/btn_manage" />
 
@@ -60,7 +60,7 @@
             android:layout_centerInParent="true"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:background="@color/colorPrimary"
+            android:background="@drawable/bg_btn"
             android:enabled="true"
             android:text="@string/btn_provision" />
 

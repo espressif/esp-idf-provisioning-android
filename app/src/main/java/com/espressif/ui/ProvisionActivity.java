@@ -17,11 +17,13 @@ import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -125,6 +127,9 @@ public class ProvisionActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 //                toggleFormState(false);
+
+                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 
                 final Security security;
                 if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
