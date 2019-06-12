@@ -4,7 +4,7 @@ public class WiFiAccessPoint {
 
     private String wifiName; // SSID
     private int rssi;
-    private boolean isSecure;
+    private int security;
 
     public String getWifiName() {
         return wifiName;
@@ -22,11 +22,11 @@ public class WiFiAccessPoint {
         this.rssi = rssi;
     }
 
-    public boolean isSecure() {
-        return isSecure;
+    public int getSecurity() {
+        return security;
     }
 
-    public void setSecure(boolean secure) {
-        isSecure = secure;
+    public void setSecurity(int security) {
+        this.security = security;
     }
 }

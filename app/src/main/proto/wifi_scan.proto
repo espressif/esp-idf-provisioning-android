@@ -2,6 +2,7 @@ syntax = "proto3";
 package espressif;
 
 import "constants.proto";
+import "wifi_constants.proto";
 
 message CmdScanStart {
     bool blocking = 1;
@@ -30,6 +31,8 @@ message WiFiScanResult {
     bytes ssid = 1;
     uint32 channel = 2;
     int32 rssi = 3;
+    bytes bssid = 4;
+    WifiAuthMode auth = 5;
 }
 
 message RespScanResult {
@@ -57,4 +60,3 @@ message WiFiScanPayload {
         RespScanResult resp_scan_result = 15;
     }
 }
-

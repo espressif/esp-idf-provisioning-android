@@ -286,6 +286,7 @@ public class WiFiScanList extends AppCompatActivity {
                             WiFiAccessPoint wifiAp = new WiFiAccessPoint();
                             wifiAp.setWifiName(response.getEntries(i).getSsid().toStringUtf8());
                             wifiAp.setRssi(response.getEntries(i).getRssi());
+                            wifiAp.setSecurity(response.getEntries(i).getAuthValue());
                             apDevices.add(wifiAp);
                             Log.e(TAG, "" + ssid + " added in list : " + wifiAp.getWifiName() + ", RSSI : " + wifiAp.getRssi());
                         }
