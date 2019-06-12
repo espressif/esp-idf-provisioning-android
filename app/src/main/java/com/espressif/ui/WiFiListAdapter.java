@@ -9,6 +9,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.R;
 
 import java.util.ArrayList;
@@ -39,12 +40,11 @@ public class WiFiListAdapter extends ArrayAdapter<WiFiAccessPoint> {
         wifiNameText.setText(wiFiAccessPoint.getWifiName());
         rssiImage.setImageLevel(getRssiLevel(wiFiAccessPoint.getRssi()));
 
-        // TODO Enable this code.
-//        if (wiFiAccessPoint.isSecure()) {
-//        lockImage.setVisibility(View.VISIBLE);
-//        } else {
-//            lockImage.setVisibility(View.GONE);
-//        }
+        if (wiFiAccessPoint.getSecurity() == AppConstants.WIFI_OPEN) {
+            lockImage.setVisibility(View.GONE);
+        } else {
+            lockImage.setVisibility(View.VISIBLE);
+        }
 
         return view;
     }

@@ -10,6 +10,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -67,7 +68,7 @@ public class WiFiScanList extends AppCompatActivity {
 
                 progressBar.setVisibility(View.VISIBLE);
                 Log.d("WiFiScanList", "Device to be connected -" + apDevices.get(pos));
-                callProvision(apDevices.get(pos).getWifiName());
+                callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
             }
         });
 
@@ -98,13 +99,14 @@ public class WiFiScanList extends AppCompatActivity {
         super.onBackPressed();
     }
 
-    private void callProvision(String ssid) {
+    private void callProvision(String ssid, int security) {
 
         Log.e("WiFiScanList", "Selected AP -" + ssid);
         finish();
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
+        launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
         startActivity(launchProvisionInstructions);
     }
 
@@ -285,12 +287,11 @@ public class WiFiScanList extends AppCompatActivity {
 
                             WiFiAccessPoint wifiAp = new WiFiAccessPoint();
                             wifiAp.setWifiName(response.getEntries(i).getSsid().toStringUtf8());
+                            wifiAp.setSecurity(response.getEntries(i).getAuthValue());
                             wifiAp.setRssi(response.getEntries(i).getRssi());
                             apDevices.add(wifiAp);
-                            Log.e(TAG, "" + ssid + " added in list : " + wifiAp.getWifiName() + ", RSSI : " + wifiAp.getRssi());
+                            Log.e(TAG, "" + ssid + " added in list : " + wifiAp.getWifiName() + ", Security : " + wifiAp.getSecurity());
                         }
-
-                        Log.e(TAG, "Size of  list : " + apDevices.size());
                     }
 
                     progressBar.setVisibility(View.INVISIBLE);
