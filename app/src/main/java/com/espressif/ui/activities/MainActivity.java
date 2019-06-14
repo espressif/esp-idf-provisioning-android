@@ -91,9 +91,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-//        if (BuildConfig.FLAVOR_transport.equals("ble") && BLEProvisionLanding.isBleWorkDone) {
-//            BLEProvisionLanding.bleTransport.disconnect();
-//        }
+        if (BuildConfig.FLAVOR_transport.equals("ble") && BLEProvisionLanding.isBleWorkDone) {
+            BLEProvisionLanding.bleTransport.disconnect();
+        }
     }
 
     @Override

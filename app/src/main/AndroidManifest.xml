@@ -34,18 +34,26 @@
             android:label="@string/title_activity_provision_landing"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ProvisionActivity"
+            android:name="com.espressif.ui.activities.ProvisionActivity"
             android:label="@string/provision_activity_title"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ProvisionSuccessActivity"
+            android:name="com.espressif.ui.activities.ProvisionSuccessActivity"
             android:label="@string/title_activity_provision_success"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.BLEProvisionLanding"
             android:label="@string/title_activity_bleprovision_landing"
-            android:theme="@style/AppTheme.NoActionBar">
-        </activity>
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.WiFiScanActivity"
+            android:label="@string/title_activity_wifi_scan_list"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.ProofOfPossessionActivity"
+            android:label="@string/title_activity_pop"
+            android:theme="@style/AppTheme.NoActionBar" />
+
     </application>
 
 </manifest>

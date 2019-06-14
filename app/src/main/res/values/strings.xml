@@ -18,16 +18,40 @@
     <string name="provision">Provision</string>
     <string name="start_provisioning">Start Provisioning</string>
 
-    <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
-
     <string name="success_text">Device successfully provisioned!</string>
     <string name="wifi_disconnected_text">Please check the device indicators for provisioning status.</string>
     <string name="done">Done</string>
 
-    <string name="title_activity_bleprovision_landing">BLEProvisionLanding</string>
     <string name="enable_bluetooth_instructions">To provision your new device, please make sure that your Phone\'s Bluetooth is turned on and within range of your new device.</string>
     <string name="enabled_bluetooth_instructions">To provision the device, please enter your Network credentials on the next page.</string>
     <string name="enable_bluetooth_action">Enable</string>
     <string name="enabled_bluetooth_action">Provision Network</string>
-    <string name="rescan_ble">Scan again</string>
+
+    <!--Strings used for Buttons-->
+    <string name="btn_provision">Provision New Device</string>
+    <string name="btn_manage">Manage</string>
+    <string name="btn_scan_again">Scan again</string>
+    <string name="btn_sign_in_amazon">Sign in with Amazon</string>
+    <string name="btn_do_it_later">Do It Later</string>
+    <string name="btn_sign_out">Sign Out</string>
+    <string name="btn_skip">Skip</string>
+    <string name="btn_next">Next</string>
+
+    <!-- Strings used for Progress -->
+    <string name="progress_scanning">Scanning Devices...</string>
+    <string name="progress_get_status">Getting Status</string>
+    <string name="progress_loading">Loading...</string>
+
+    <!--Error Messages-->
+    <string name="error_ble_not_supported">Sorry! BLE is not supported.</string>
+    <string name="error_bluetooth_not_supported">Sorry! Bluetooth is not supported.</string>
+
+    <!--Screen titles-->
+    <string name="title_activity_wifi_scan_list">WiFi List</string>
+    <string name="title_activity_bleprovision_landing">BLEProvisionLanding</string>
+    <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
+    <string name="title_activity_login_with_amazon">Login With Amazon</string>
+    <string name="title_activity_alexa">Do More With Alexa</string>
+    <string name="title_activity_pop">Proof Of Possession</string>
+
 </resources>

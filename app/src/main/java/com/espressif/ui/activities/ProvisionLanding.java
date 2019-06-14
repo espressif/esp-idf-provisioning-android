@@ -35,7 +35,6 @@ import android.widget.TextView;
 
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.ui.ProvisionActivity;
 
 public class ProvisionLanding extends AppCompatActivity {
 
