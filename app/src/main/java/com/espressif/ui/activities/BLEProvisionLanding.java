@@ -36,15 +36,12 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
-import com.espressif.AppConstants;
-import com.espressif.ui.ProvisionActivity;
 import com.espressif.ui.adapters.BleDeviceListAdapter;
 
 import java.util.ArrayList;
@@ -342,16 +339,32 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private void bleDeviceConfigured(final Boolean isConfigured) {
 
-        this.runOnUiThread(new Runnable() {
+        runOnUiThread(new Runnable() {
+
             @Override
             public void run() {
 
+                progressBar.setVisibility(View.GONE);
+
                 if (isConfigured) {
 
+                    isConnecting = false;
                     isDeviceConnected = true;
-//                    finish();
-//                    goToProofOfPossessionActivity();
-                    initSession();
+                    final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+
+                    bleTransport.deviceCapabilities.remove("wifi_scan");
+                    if (!bleTransport.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                        goToPopActivity();
+
+                    } else if (bleTransport.deviceCapabilities.contains("wifi_scan")) {
+
+                        goToWifiScanListActivity();
+
+                    } else {
+
+                        goToProvisionActivity();
+                    }
 
                 } else {
                     Toast.makeText(BLEProvisionLanding.this,
@@ -385,89 +398,27 @@ public class BLEProvisionLanding extends AppCompatActivity {
         }
     }
 
-    private void goToProofOfPossessionActivity() {
-
-        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
-        alexaProvisioningIntent.putExtras(getIntent());
-        alexaProvisioningIntent.putExtra(AppConstants.KEY_IS_PROVISIONING, true);
-        startActivity(alexaProvisioningIntent);
-    }
-
     private void goToPopActivity() {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
         alexaProvisioningIntent.putExtras(getIntent());
-        alexaProvisioningIntent.putExtra(AppConstants.KEY_IS_PROVISIONING, true);
         startActivity(alexaProvisioningIntent);
+    }
+
+    private void goToWifiScanListActivity() {
+
+        Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanActivity.class);
+        wifiListIntent.putExtras(getIntent());
+        wifiListIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, "");
+        startActivity(wifiListIntent);
     }
 
     private void goToProvisionActivity() {
 
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
-        launchProvisionInstructions.putExtra(AppConstants.KEY_IS_PROVISIONING, true);
         launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, "");
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
-    }
-
-    private void initSession() {
-
-        final String pop = "";
-        final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
-
-        if (bleTransport.deviceCapabilities.contains("no_pop")) {
-
-            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-                security = new Security1(pop);
-            } else {
-                security = new Security0();
-            }
-
-            session = new Session(BLEProvisionLanding.bleTransport, security);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-                    Log.d(TAG, "Session established");
-                    goToProvisionActivity();
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.d(TAG, "Session failed");
-                }
-            };
-            session.init(null);
-
-        } else {
-
-            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-
-                goToPopActivity();
-
-            } else {
-
-                security = new Security0();
-                session = new Session(BLEProvisionLanding.bleTransport, security);
-
-                session.sessionListener = new Session.SessionListener() {
-
-                    @Override
-                    public void OnSessionEstablished() {
-                        Log.d(TAG, "Session established");
-
-                        goToProvisionActivity();
-                    }
-
-                    @Override
-                    public void OnSessionEstablishFailed(Exception e) {
-                        Log.d(TAG, "Session failed");
-                    }
-                };
-                session.init(null);
-            }
-        }
     }
 
     private AdapterView.OnItemClickListener btDeviceCLickListener = new AdapterView.OnItemClickListener() {

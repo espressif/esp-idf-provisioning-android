@@ -447,7 +447,7 @@ public class BLETransport implements Transport {
                         String cap = capabilities.getString(i);
                         deviceCapabilities.add(cap);
                     }
-                    Log.e(TAG, "Cap : " + deviceCapabilities);
+                    Log.e(TAG, "Capabilities : " + deviceCapabilities);
 
                 } catch (JSONException e) {
                     e.printStackTrace();

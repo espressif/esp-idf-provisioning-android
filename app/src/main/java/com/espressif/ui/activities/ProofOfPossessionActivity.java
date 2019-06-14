@@ -12,14 +12,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
-import com.espressif.provision.session.Session;
-import com.espressif.AppConstants;
-import com.espressif.ui.ProvisionActivity;
 
 // TODO start in only Sec1 condition
 public class ProofOfPossessionActivity extends AppCompatActivity {
@@ -28,9 +23,6 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
 
     private Button btnNext;
     private EditText etDeviceKey;
-
-    private Session session;
-    private Security security;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,32 +77,22 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
 
             final String pop = etDeviceKey.getText().toString();
             Log.e(TAG, "POP : " + pop);
-            final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-                security = new Security1(pop);
+            if (BLEProvisionLanding.bleTransport.deviceCapabilities.contains("wifi_scan")) {
+                goToWiFiScanListActivity();
             } else {
-                security = new Security0();
+                goToProvisionActivity();
             }
-
-            session = new Session(BLEProvisionLanding.bleTransport, security);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-                    Log.d(TAG, "Session established");
-                    goToProvisionActivity();
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.d(TAG, "Session failed");
-                }
-            };
-            session.init(null);
         }
     };
+
+    private void goToWiFiScanListActivity() {
+
+        Intent launchWiFiScanList = new Intent(getApplicationContext(), WiFiScanActivity.class);
+        launchWiFiScanList.putExtras(getIntent());
+        launchWiFiScanList.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
+        startActivity(launchWiFiScanList);
+    }
 
     private void goToProvisionActivity() {
 
