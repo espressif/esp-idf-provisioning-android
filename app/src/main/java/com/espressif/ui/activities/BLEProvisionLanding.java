@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.Manifest;
 import android.app.Activity;
@@ -26,7 +26,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -39,12 +38,12 @@ import android.widget.Toast;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.transport.BLETransport;
+import com.espressif.ui.ProvisionActivity;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.UUID;
 
 public class BLEProvisionLanding extends AppCompatActivity {
+
     private static final String TAG = "Espressif::" + BLEProvisionLanding.class.getSimpleName();
 
     private BluetoothAdapter bleAdapter;
@@ -59,7 +58,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bleprovision_landing);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.connect_to_device_title);
         setSupportActionBar(toolbar);
         progressBar = findViewById(R.id.ble_landing_progress_indicator);
@@ -96,18 +95,14 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
         });
 
-        final String serviceUUID = getIntent().getStringExtra(BLETransport.SERVICE_UUID_KEY);
-        final String sessionUUID = getIntent().getStringExtra(BLETransport.SESSION_UUID_KEY);
-        final String configUUID = getIntent().getStringExtra(BLETransport.CONFIG_UUID_KEY);
         final String deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-        final Activity thisActivity = this;
 
         transportListener = new BLETransport.BLETransportListener() {
             @Override
             public void onPeripheralsFound(ArrayList<BluetoothDevice> devices) {
                 boolean deviceExists = false;
-                for(BluetoothDevice device:devices) {
-                    for(BluetoothDevice alreadyHere: bluetoothDevices) {
+                for (BluetoothDevice device : devices) {
+                    for (BluetoothDevice alreadyHere : bluetoothDevices) {
                         if (device.equals(alreadyHere)) {
                             deviceExists = true;
                             break;
@@ -125,10 +120,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
             @Override
             public void onPeripheralsNotFound() {
                 progressBar.setVisibility(View.GONE);
-                thisActivity.runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "No Bluetooth devices found!",
                                 Toast.LENGTH_LONG)
                                 .show();
@@ -148,10 +143,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
             @Override
             public void onPeripheralDisconnected(Exception e) {
-                thisActivity.runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "Bluetooth device disconnected.",
                                 Toast.LENGTH_LONG)
                                 .show();
@@ -161,10 +156,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
             @Override
             public void onFailure(final Exception e) {
-                thisActivity.runOnUiThread(new Runnable() {
+                runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(thisActivity,
+                        Toast.makeText(BLEProvisionLanding.this,
                                 "Bluetooth connection failed : " + e.getMessage(),
                                 Toast.LENGTH_LONG)
                                 .show();
@@ -179,12 +174,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
             requestBluetoothEnable();
         } else {
             rescanButton.setEnabled(true);
-            HashMap<String, String> configUUIDMap = new HashMap<>();
-            configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
             bleTransport = new BLETransport(this,
-                    UUID.fromString(serviceUUID),
-                    UUID.fromString(sessionUUID),
-                    configUUIDMap,
                     deviceNamePrefix,
                     3000);
             bleTransport.scan(transportListener);
@@ -194,7 +184,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if(isDeviceConnected) {
+        if (isDeviceConnected) {
             bleTransport.disconnect();
             final TextView bleInstructions = findViewById(R.id.bluetooth_status_message);
             bleInstructions.setText(R.string.enable_bluetooth_instructions);
@@ -209,7 +199,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
                 final TextView bleInstructions = findViewById(R.id.bluetooth_status_message);
                 bleInstructions.setText(isConfigured ? R.string.enabled_bluetooth_action : R.string.enable_bluetooth_instructions);
-                if(isConfigured) {
+                if (isConfigured) {
                     isDeviceConnected = true;
                     goToProvisionActivity();
                 } else {

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.Manifest;
 import android.content.Context;
@@ -35,8 +35,10 @@ import android.widget.TextView;
 
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
+import com.espressif.ui.ProvisionActivity;
 
 public class ProvisionLanding extends AppCompatActivity {
+
     private static final String TAG = "Espressif::" + ProvisionLanding.class.getSimpleName();
 
     private String currentSSID;
@@ -46,12 +48,12 @@ public class ProvisionLanding extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision_landing);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.connect_to_device_title);
         setSupportActionBar(toolbar);
 
         wifiAPPrefix = getIntent().getStringExtra(Provision.CONFIG_WIFI_AP_KEY);
-        if(wifiAPPrefix == null) {
+        if (wifiAPPrefix == null) {
             wifiAPPrefix = "ESP-Alexa-";
         }
 
@@ -60,7 +62,7 @@ public class ProvisionLanding extends AppCompatActivity {
         TextView noInternetInstructions = findViewById(R.id.no_internet_note);
 
         currentSSID = this.fetchWifiSSID();
-        if(currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
+        if (currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
             connectButton.setText(R.string.connected_to_device_action);
             wifiInstructions.setText(R.string.connected_to_device_instructions);
             noInternetInstructions.setVisibility(View.VISIBLE);
@@ -76,12 +78,11 @@ public class ProvisionLanding extends AppCompatActivity {
             public void onClick(View view) {
                 currentSSID = fetchWifiSSID();
 
-                if(currentSSID != null && currentSSID.startsWith(wifiAPPrefix)) {
+                if (currentSSID != null && currentSSID.startsWith(wifiAPPrefix)) {
                     Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
                     launchProvisionInstructions.putExtras(getIntent());
                     startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
-                }
-                else {
+                } else {
                     startActivityForResult(new Intent(Settings.ACTION_WIFI_SETTINGS), 100);
                 }
             }
@@ -99,7 +100,7 @@ public class ProvisionLanding extends AppCompatActivity {
             TextView wifiInstructions = findViewById(R.id.start_provisioning_message);
             TextView noInternetInstructions = findViewById(R.id.no_internet_note);
             currentSSID = this.fetchWifiSSID();
-            if(currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
+            if (currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
                 connectButton.setText(R.string.connected_to_device_action);
                 wifiInstructions.setText(R.string.connected_to_device_instructions);
                 noInternetInstructions.setVisibility(View.VISIBLE);
@@ -109,7 +110,6 @@ public class ProvisionLanding extends AppCompatActivity {
                 wifiInstructions.setText(instructions);
                 noInternetInstructions.setVisibility(View.GONE);
             }
-
         }
     }
 
@@ -125,7 +125,7 @@ public class ProvisionLanding extends AppCompatActivity {
                     TextView wifiInstructions = findViewById(R.id.start_provisioning_message);
                     TextView noInternetInstructions = findViewById(R.id.no_internet_note);
                     currentSSID = this.fetchWifiSSID();
-                    if(currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
+                    if (currentSSID != null && (currentSSID.startsWith(wifiAPPrefix) || currentSSID.equals(wifiAPPrefix))) {
                         connectButton.setText(R.string.connected_to_device_action);
                         wifiInstructions.setText(R.string.connected_to_device_instructions);
                         noInternetInstructions.setVisibility(View.VISIBLE);
@@ -143,7 +143,7 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private String fetchWifiSSID() {
         String ssid = null;
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo networkInfo = cm.getActiveNetworkInfo();
@@ -167,7 +167,7 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private SpannableStringBuilder getWifiInstructions() {
         String instructions = getResources().getString(R.string.connect_to_device_instructions);
-        SpannableStringBuilder str = new SpannableStringBuilder(  instructions +
+        SpannableStringBuilder str = new SpannableStringBuilder(instructions +
                 " : " +
                 "\n" +
                 wifiAPPrefix +
