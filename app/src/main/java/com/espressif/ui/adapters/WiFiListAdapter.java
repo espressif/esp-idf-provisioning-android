@@ -10,7 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.espressif.provision.R;
-import com.espressif.ui.AppConstants;
+import com.espressif.AppConstants;
 import com.espressif.ui.models.WiFiAccessPoint;
 
 import java.util.ArrayList;
