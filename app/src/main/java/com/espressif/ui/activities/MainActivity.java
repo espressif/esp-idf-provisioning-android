@@ -13,30 +13,34 @@
 // limitations under the License.
 package com.espressif.ui.activities;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.transport.BLETransport;
 
 import java.util.HashMap;
-import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + MainActivity.class.getSimpleName();
 
-    private String BASE_URL, NETWORK_NAME_PREFIX, DEVICE_NAME_PREFIX;
+    private String BASE_URL;
+    private String wifiNamePrefix, bleDevicePrefix;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,11 +50,28 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         Button btnProvision = findViewById(R.id.provision_button);
-        final String productDSN = generateProductDSN();
 
         BASE_URL = getResources().getString(R.string.wifi_base_url);
-        NETWORK_NAME_PREFIX = getResources().getString(R.string.wifi_network_name_prefix);
-        DEVICE_NAME_PREFIX = getResources().getString(R.string.ble_device_name_prefix);
+
+        SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        wifiNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
+        bleDevicePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
+
+        if (TextUtils.isEmpty(wifiNamePrefix)) {
+
+            wifiNamePrefix = getResources().getString(R.string.wifi_network_name_prefix);
+            editor.putString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, wifiNamePrefix);
+        }
+
+        if (TextUtils.isEmpty(bleDevicePrefix)) {
+
+            bleDevicePrefix = getResources().getString(R.string.ble_device_name_prefix);
+            editor.putString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, bleDevicePrefix);
+        }
+
+        editor.commit();
 
         final String transportVersion, securityVersion;
 
@@ -79,9 +100,9 @@ public class MainActivity extends AppCompatActivity {
                 config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
 
                 config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                config.put(Provision.CONFIG_WIFI_AP_KEY, NETWORK_NAME_PREFIX);
+                config.put(Provision.CONFIG_WIFI_AP_KEY, wifiNamePrefix);
 
-                config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
+                config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, bleDevicePrefix);
                 Provision.showProvisioningUI(MainActivity.this, config);
             }
         });
@@ -116,10 +137,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private String generateProductDSN() {
-        return UUID.randomUUID().toString();
     }
 
     @Override
