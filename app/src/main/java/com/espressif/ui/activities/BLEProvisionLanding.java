@@ -19,28 +19,34 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.espressif.AppConstants;
+import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
 import com.espressif.ui.adapters.BleDeviceListAdapter;
 
@@ -56,20 +62,20 @@ public class BLEProvisionLanding extends AppCompatActivity {
     public static BLETransport bleTransport;
     public static boolean isBleWorkDone = false;
 
-    private Button btnScan;
+    private Button btnScan, btnPrefix;
     private ListView listView;
+    private TextView textPrefix;
     private ProgressBar progressBar;
+    private RelativeLayout prefixLayout;
 
     private BleDeviceListAdapter adapter;
     private BluetoothAdapter bleAdapter;
     private BLETransport.BLETransportListener transportListener;
     private ArrayList<BluetoothDevice> deviceList;
     private HashMap<BluetoothDevice, String> bluetoothDevices;
+    private SharedPreferences sharedPreferences;
 
-    private Session session;
-    private Security security;
-    // FIXME : Remove static BLE_TRANSPORT and think for another solution.
-
+    private int position = -1;
     private String deviceNamePrefix;
     private boolean isScanning = false, isDeviceConnected = false, isConnecting = false;
 
@@ -102,33 +108,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
         isConnecting = false;
         isDeviceConnected = false;
         bluetoothDevices = new HashMap<>();
-        deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-
-        btnScan = findViewById(R.id.btn_scan);
-        listView = findViewById(R.id.ble_devices_list);
-        progressBar = findViewById(R.id.ble_landing_progress_indicator);
-
         Collection<BluetoothDevice> keySet = bluetoothDevices.keySet();
         deviceList = new ArrayList<>(keySet);
+        sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
 
-        adapter = new BleDeviceListAdapter(this, R.layout.item_ble_scan, deviceList);
-
-        // Assign adapter to ListView
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(btDeviceCLickListener);
-
-        btnScan.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-
-                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-                bluetoothDevices.clear();
-                adapter.clear();
-                startScan();
-            }
-        });
+        initViews();
+        bleTransport = new BLETransport(this, 3000);
 
         transportListener = new BLETransport.BLETransportListener() {
 
@@ -144,7 +130,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
                     deviceExists = true;
                 }
 
-                if (!deviceExists) {
+                if (!deviceExists && device.getName().startsWith(deviceNamePrefix)) {
                     listView.setVisibility(View.VISIBLE);
                     bluetoothDevices.put(device, serviceUuid);
                     deviceList.add(device);
@@ -163,15 +149,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
             @Override
             public void onPeripheralsNotFound() {
                 scanningStopAction();
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(BLEProvisionLanding.this,
-                                "No Bluetooth devices found!",
-                                Toast.LENGTH_LONG)
-                                .show();
-                    }
-                });
             }
 
             @Override
@@ -210,10 +187,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 });
             }
         };
-
-        bleTransport = new BLETransport(this,
-                deviceNamePrefix,
-                3000);
     }
 
     @Override
@@ -235,13 +208,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
             if (isBleWorkDone) {
                 bleTransport.disconnect();
                 btnScan.setVisibility(View.VISIBLE);
+                startScan();
             }
         }
     }
 
     @Override
     public void onBackPressed() {
-        Log.e(TAG, "ON BACK PRESSED");
         isBleWorkDone = true;
         bleTransport.disconnect();
         super.onBackPressed();
@@ -250,7 +223,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        Log.e(TAG, "onActivityResult, requestCode : " + requestCode + ", resultCode : " + resultCode);
+        Log.d(TAG, "onActivityResult, requestCode : " + requestCode + ", resultCode : " + resultCode);
+
         // User chose not to enable Bluetooth.
         if (requestCode == AppConstants.REQUEST_ENABLE_BT && resultCode == Activity.RESULT_CANCELED) {
             finish();
@@ -268,7 +242,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 
-        Log.e(TAG, "onRequestPermissionsResult : requestCode : " + requestCode);
+        Log.d(TAG, "onRequestPermissionsResult : requestCode : " + requestCode);
 
         switch (requestCode) {
 
@@ -276,10 +250,41 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     startScan();
+                } else if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                    finish();
                 }
             }
             break;
         }
+    }
+
+    private void initViews() {
+
+        btnScan = findViewById(R.id.btn_scan);
+        btnPrefix = findViewById(R.id.btn_change_prefix);
+        listView = findViewById(R.id.ble_devices_list);
+        textPrefix = findViewById(R.id.prefix_value);
+        progressBar = findViewById(R.id.ble_landing_progress_indicator);
+        prefixLayout = findViewById(R.id.prefix_layout);
+
+        // Set visibility of Prefix layout
+        if (BuildConfig.IS_ALLOWED_FILTERING_BY_PREFIX) {
+
+            prefixLayout.setVisibility(View.VISIBLE);
+
+        } else {
+            prefixLayout.setVisibility(View.GONE);
+        }
+
+        adapter = new BleDeviceListAdapter(this, R.layout.item_ble_scan, deviceList);
+
+        // Assign adapter to ListView
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(onDeviceCLickListener);
+
+        textPrefix.setText(deviceNamePrefix);
+        btnScan.setOnClickListener(btnScanClickListener);
+        btnPrefix.setOnClickListener(btnPrefixChangeClickListener);
     }
 
     private boolean hasPermissions() {
@@ -335,6 +340,14 @@ public class BLEProvisionLanding extends AppCompatActivity {
         Log.e(TAG, "Stop Scanning...");
         isScanning = false;
         updateProgressAndScanBtn();
+
+        if (deviceList.size() <= 0) {
+
+            Toast.makeText(BLEProvisionLanding.this,
+                    "No Bluetooth devices found!",
+                    Toast.LENGTH_SHORT)
+                    .show();
+        }
     }
 
     private void bleDeviceConfigured(final Boolean isConfigured) {
@@ -352,7 +365,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
                     isDeviceConnected = true;
                     final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-                    bleTransport.deviceCapabilities.remove("wifi_scan");
                     if (!bleTransport.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
 
                         goToPopActivity();
@@ -400,9 +412,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private void goToPopActivity() {
 
-        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
-        alexaProvisioningIntent.putExtras(getIntent());
-        startActivity(alexaProvisioningIntent);
+        Intent popIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
+        popIntent.putExtra(AppConstants.KEY_DEVICE_NAME, deviceList.get(position).getName());
+        popIntent.putExtras(getIntent());
+        startActivity(popIntent);
     }
 
     private void goToWifiScanListActivity() {
@@ -421,7 +434,75 @@ public class BLEProvisionLanding extends AppCompatActivity {
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
     }
 
-    private AdapterView.OnItemClickListener btDeviceCLickListener = new AdapterView.OnItemClickListener() {
+    private void askForPrefix() {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(true);
+
+        LayoutInflater layoutInflaterAndroid = LayoutInflater.from(this);
+        View view = layoutInflaterAndroid.inflate(R.layout.dialog_prefix, null);
+        builder.setView(view);
+        final EditText etPrefix = view.findViewById(R.id.et_prefix);
+        etPrefix.setText(deviceNamePrefix);
+        etPrefix.setSelection(etPrefix.getText().length());
+
+        // Set up the buttons
+        builder.setPositiveButton(R.string.btn_save, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                String prefix = etPrefix.getText().toString();
+
+                if (prefix != null) {
+                    prefix = prefix.trim();
+                }
+
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, prefix);
+                editor.apply();
+                deviceNamePrefix = prefix;
+                textPrefix.setText(prefix);
+                startScan();
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+
+        builder.show();
+    }
+
+    private View.OnClickListener btnScanClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+            bluetoothDevices.clear();
+            adapter.clear();
+            startScan();
+        }
+    };
+
+    private View.OnClickListener btnPrefixChangeClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+            askForPrefix();
+        }
+    };
+
+    private AdapterView.OnItemClickListener onDeviceCLickListener = new AdapterView.OnItemClickListener() {
 
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
@@ -432,9 +513,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
             btnScan.setVisibility(View.GONE);
             listView.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
+            BLEProvisionLanding.this.position = position;
             BluetoothDevice device = adapter.getItem(position);
             String uuid = bluetoothDevices.get(device);
-            Log.e(TAG, "=================== Connect to device : " + device.getName() + " UUID : " + uuid);
+            Log.d(TAG, "=================== Connect to device : " + device.getName() + " UUID : " + uuid);
 
             bleTransport.connect(device, UUID.fromString(uuid));
         }

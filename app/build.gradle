@@ -19,6 +19,7 @@ android {
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
+            buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
         }
 
         debug {
@@ -27,6 +28,7 @@ android {
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
+            buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
         }
     }
 

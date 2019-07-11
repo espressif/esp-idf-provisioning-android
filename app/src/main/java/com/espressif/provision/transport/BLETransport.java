@@ -62,10 +62,7 @@ public class BLETransport implements Transport {
 
     private static final String TAG = "Espressif::" + BLETransport.class.getSimpleName();
 
-    public static final String DEVICE_NAME_PREFIX_KEY = "deviceNamePrefix";
-
     private Activity context;
-    private String deviceNamePrefix;
     private BluetoothAdapter bleAdapter;
     private HashMap<BluetoothDevice, String> bluetoothDevices;
     private long scanTimeoutInMillis;
@@ -83,26 +80,25 @@ public class BLETransport implements Transport {
     private boolean isReadingDescriptors = false;
     public ArrayList<String> deviceCapabilities = new ArrayList<>();
 
-    /***
+    /**
      * Create BLETransport implementation
+     *
      * @param context
-     * @param deviceNamePrefix device name prefix
      * @param scanTimeoutInMillis timeout in milliseconds for which BLE scan should happen
      */
     public BLETransport(Activity context,
-                        String deviceNamePrefix,
                         long scanTimeoutInMillis) {
         this.context = context;
-        this.deviceNamePrefix = deviceNamePrefix;
         this.transportToken = new Semaphore(1);
         this.dispatcherThreadPool = Executors.newSingleThreadExecutor();
         this.bluetoothDevices = new HashMap<>();
         this.scanTimeoutInMillis = scanTimeoutInMillis;
     }
 
-    /***
+    /**
      * BLE implementation of Transport protocol
-     * @param data data to be sent
+     *
+     * @param data     data to be sent
      * @param listener listener implementation which receives events when response is received.
      */
     @Override
@@ -111,6 +107,10 @@ public class BLETransport implements Transport {
         if (uuidMap.containsKey(AppConstants.HANDLER_PROV_SESSION)) {
 
             BluetoothGattCharacteristic sessionCharacteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(AppConstants.HANDLER_PROV_SESSION)));
+
+            if (sessionCharacteristic == null) {
+                sessionCharacteristic = service.getCharacteristic(UUID.fromString("0000ff51-0000-1000-8000-00805f9b34fb"));
+            }
 
             if (sessionCharacteristic != null) {
                 try {
@@ -129,10 +129,11 @@ public class BLETransport implements Transport {
         }
     }
 
-    /***
+    /**
      * BLE implementation of Transport protocol
-     * @param path path of the config endpoint.
-     * @param data config data to be sent
+     *
+     * @param path     path of the config endpoint.
+     * @param data     config data to be sent
      * @param listener listener implementation which receives events when response is received.
      */
     @Override
@@ -141,6 +142,10 @@ public class BLETransport implements Transport {
         if (uuidMap.containsKey(path)) {
 
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(path)));
+
+            if (characteristic == null) {
+                characteristic = service.getCharacteristic(UUID.fromString("0000ff52-0000-1000-8000-00805f9b34fb"));
+            }
 
             if (characteristic != null) {
                 try {
@@ -159,18 +164,25 @@ public class BLETransport implements Transport {
         }
     }
 
-    /***
+    /**
      * Scan for BLE bluetoothDevices
+     *
      * @param transportListener listener implementation which will receive resulting events
      */
     public void scan(BLETransportListener transportListener) {
+
         this.transportListener = transportListener;
         this.scanForPeripherals();
     }
 
-    /***
+    public HashMap<BluetoothDevice, String> getScannedDevices() {
+        return bluetoothDevices;
+    }
+
+    /**
      * Connect to a BLE peripheral device.
-     * @param bluetoothDevice The peripheral device
+     *
+     * @param bluetoothDevice    The peripheral device
      * @param primaryServiceUuid Primary Service UUID
      */
     public void connect(BluetoothDevice bluetoothDevice, UUID primaryServiceUuid) {
@@ -183,7 +195,7 @@ public class BLETransport implements Transport {
         }
     }
 
-    /***
+    /**
      * Disconnect from the current connected peripheral
      */
     public void disconnect() {
@@ -225,18 +237,15 @@ public class BLETransport implements Transport {
                             bluetoothDevices.put(result.getDevice(), uuids.get(0).toString());
                         }
                     } else {
-                        Log.e(TAG, "Device is empty");
+                        // Log.e(TAG, "Device is empty");
                     }
 
                     if (!deviceExists) {
 
-                        if (!TextUtils.isEmpty(deviceName) && deviceName.startsWith(deviceNamePrefix)) {
+                        if (uuids != null && uuids.size() > 0 && !TextUtils.isEmpty(deviceName)) {
 
-                            if (uuids != null && uuids.size() > 0 && !TextUtils.isEmpty(deviceName)) {
-
-                                Log.d(TAG, "Add device : " + deviceName);
-                                bluetoothDevices.put(result.getDevice(), uuids.get(0).toString());
-                            }
+                            Log.d(TAG, "Add device : " + deviceName);
+                            bluetoothDevices.put(result.getDevice(), uuids.get(0).toString());
                         }
                     }
 
@@ -261,20 +270,20 @@ public class BLETransport implements Transport {
 
             scanner.startScan(filters, settings, scanCallback);
             Handler someHandler = new Handler();
-            someHandler.postDelayed(new
+            someHandler.postDelayed(new Runnable() {
 
-                                            Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    if (bluetoothDevices.size() == 0 && transportListener != null) {
-                                                        transportListener.onPeripheralsNotFound();
-                                                    } else if (transportListener != null) {
-                                                        transportListener.onPeripheralsFound(bluetoothDevices);
-                                                    }
-                                                    scanner.stopScan(scanCallback);
-                                                    bluetoothDevices.clear();
-                                                }
-                                            }, this.scanTimeoutInMillis);
+                @Override
+                public void run() {
+
+                    if (bluetoothDevices.size() == 0 && transportListener != null) {
+                        transportListener.onPeripheralsNotFound();
+                    } else if (transportListener != null) {
+                        transportListener.onPeripheralsFound(bluetoothDevices);
+                    }
+                    scanner.stopScan(scanCallback);
+//                    bluetoothDevices.clear();
+                }
+            }, this.scanTimeoutInMillis);
         }
     }
 
@@ -310,7 +319,7 @@ public class BLETransport implements Transport {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
 
             super.onConnectionStateChange(gatt, status, newState);
-            Log.e(TAG, "onConnectionStateChange, New state : " + newState + ", Status : " + status);
+            Log.d(TAG, "onConnectionStateChange, New state : " + newState + ", Status : " + status);
 
             if (status == BluetoothGatt.GATT_FAILURE) {
                 if (transportListener != null) {
@@ -356,7 +365,7 @@ public class BLETransport implements Transport {
                 }
 
                 String uuid = characteristic.getUuid().toString();
-                Log.e(TAG, "Characteristic UUID : " + uuid);
+                Log.d(TAG, "Characteristic UUID : " + uuid);
                 charUuidList.add(uuid);
 
                 characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
@@ -369,7 +378,7 @@ public class BLETransport implements Transport {
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                Log.e(TAG, "Read Descriptor : " + bluetoothGatt.readDescriptor(descriptor));
+                Log.d(TAG, "Read Descriptor : " + bluetoothGatt.readDescriptor(descriptor));
             } else {
                 Log.e(TAG, "Fail to read descriptor");
             }
@@ -378,7 +387,7 @@ public class BLETransport implements Transport {
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
 
-            Log.e(TAG, "DescriptorRead, : Status " + status + " Data : " + new String(descriptor.getValue(), StandardCharsets.UTF_8));
+            Log.d(TAG, "DescriptorRead, : Status " + status + " Data : " + new String(descriptor.getValue(), StandardCharsets.UTF_8));
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.e(TAG, "Failed to read descriptor");
@@ -389,7 +398,7 @@ public class BLETransport implements Transport {
 
             String value = new String(data, StandardCharsets.UTF_8);
             uuidMap.put(value, descriptor.getCharacteristic().getUuid().toString());
-            Log.e(TAG, "Value : " + value + " for UUID : " + descriptor.getCharacteristic().getUuid().toString());
+            Log.d(TAG, "Value : " + value + " for UUID : " + descriptor.getCharacteristic().getUuid().toString());
 
             if (isReadingDescriptors) {
 
@@ -417,7 +426,7 @@ public class BLETransport implements Transport {
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            Log.e(TAG, "onCharacteristicChanged");
+            Log.d(TAG, "onCharacteristicChanged");
             super.onCharacteristicChanged(gatt, characteristic);
         }
 
@@ -426,13 +435,13 @@ public class BLETransport implements Transport {
                                          final BluetoothGattCharacteristic characteristic,
                                          int status) {
 
-            Log.e(TAG, "onCharacteristicRead, status " + status + " UUID : " + characteristic.getUuid().toString());
+            Log.d(TAG, "onCharacteristicRead, status " + status + " UUID : " + characteristic.getUuid().toString());
             super.onCharacteristicRead(gatt, characteristic, status);
 
             if (uuidMap.get((AppConstants.HANDLER_PROTO_VER)).equals(characteristic.getUuid().toString())) {
 
                 String data = new String(characteristic.getValue(), StandardCharsets.UTF_8);
-                Log.e(TAG, "Value : " + data);
+                Log.d(TAG, "Value : " + data);
 
                 try {
                     JSONObject jsonObject = new JSONObject(data);
@@ -447,10 +456,11 @@ public class BLETransport implements Transport {
                         String cap = capabilities.getString(i);
                         deviceCapabilities.add(cap);
                     }
-                    Log.e(TAG, "Capabilities : " + deviceCapabilities);
+                    Log.d(TAG, "Capabilities : " + deviceCapabilities);
 
                 } catch (JSONException e) {
                     e.printStackTrace();
+                    Log.d(TAG, "Capabilities JSON not available.");
                 }
 
                 if (transportListener != null) {
@@ -467,6 +477,7 @@ public class BLETransport implements Transport {
             }
 
             if (currentResponseListener != null) {
+
                 if (status == BluetoothGatt.GATT_SUCCESS) {
                     /*
                      * Need to dispatch this on another thread since the caller
@@ -483,6 +494,7 @@ public class BLETransport implements Transport {
                     });
                     currentResponseListener = null;
                 } else {
+
                     currentResponseListener.onFailure(new Exception("Read from BLE failed"));
                 }
             }
@@ -492,8 +504,8 @@ public class BLETransport implements Transport {
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
 
-            Log.e(TAG, "onCharacteristicWrite, status : " + status);
-            Log.e(TAG, "UUID : " + characteristic.getUuid().toString());
+            Log.d(TAG, "onCharacteristicWrite, status : " + status);
+            Log.d(TAG, "UUID : " + characteristic.getUuid().toString());
 //            super.onCharacteristicWrite(gatt, characteristic, status);
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -526,8 +538,8 @@ public class BLETransport implements Transport {
 
                 for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
 
-                    Log.e(TAG, "Descriptor : " + descriptor.getUuid().toString());
-                    Log.e(TAG, "Des read : " + bluetoothGatt.readDescriptor(descriptor));
+                    Log.d(TAG, "Descriptor : " + descriptor.getUuid().toString());
+                    Log.d(TAG, "Des read : " + bluetoothGatt.readDescriptor(descriptor));
                 }
                 found = true;
                 break;
@@ -549,56 +561,62 @@ public class BLETransport implements Transport {
         }
     }
 
-    /***
+    /**
      * Listener which will receive events relating to BLE device scanning
      */
     public interface BLETransportListener {
 
-        /***
+        /**
          * Peripheral bluetoothDevice found with matching Service UUID
          * Callers should call the BLETransport.connect method with
          * one of the peripheral found here
+         *
          * @param device
          * @param serviceUuid
          */
         void onPeripheralFound(BluetoothDevice device, String serviceUuid);
 
-        /***
+        /**
          * Peripheral bluetoothDevices found with matching Service UUID
          * Callers should call the BLETransport.connect method with
          * one of the peripherals found here
+         *
          * @param devices
          */
         void onPeripheralsFound(HashMap<BluetoothDevice, String> devices);
 
-        /***
+        /**
          * No peripherals found with matching Service UUID
          */
         void onPeripheralsNotFound();
 
-        /***
+        /**
          * Peripheral device configured.
          * This tells the caller that the connected BLE device is now configured
          * and can be provisioned
+         *
          * @param device
          */
         void onPeripheralConfigured(BluetoothDevice device);
 
-        /***
+        /**
          * Peripheral device could not be configured.
          * This tells the called that the connected device cannot be configured for provisioning
+         *
          * @param device
          */
         void onPeripheralNotConfigured(BluetoothDevice device);
 
-        /***
+        /**
          * Peripheral device disconnected
+         *
          * @param e
          */
         void onPeripheralDisconnected(Exception e);
 
-        /***
+        /**
          * Failed to scan for BLE bluetoothDevices
+         *
          * @param e
          */
         void onFailure(Exception e);
