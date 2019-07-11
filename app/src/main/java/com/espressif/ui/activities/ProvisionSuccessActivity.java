@@ -58,6 +58,9 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         BLEProvisionLanding.isBleWorkDone = true;
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
         super.onBackPressed();
     }
 }
