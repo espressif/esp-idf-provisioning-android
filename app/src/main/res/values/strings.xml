@@ -36,6 +36,9 @@
     <string name="btn_sign_out">Sign Out</string>
     <string name="btn_skip">Skip</string>
     <string name="btn_next">Next</string>
+    <string name="btn_change_prefix">Change</string>
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
 
     <!-- Strings used for Progress -->
     <string name="progress_scanning">Scanning Devices...</string>
@@ -53,5 +56,13 @@
     <string name="title_activity_login_with_amazon">Login With Amazon</string>
     <string name="title_activity_alexa">Do More With Alexa</string>
     <string name="title_activity_pop">Proof Of Possession</string>
+
+    <string name="prefix">Prefix :</string>
+    <string name="hint_prefix">Enter Prefix</string>
+    <string name="hint_key">Enter Key</string>
+    <string name="devices_title">Devices</string>
+    <string name="enter_device_key">Enter Your Device Key</string>
+
+    <string name="join_other_network">Join Other Network</string>
 
 </resources>
