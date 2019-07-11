@@ -11,17 +11,17 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.espressif.AppConstants;
-import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 
-// TODO start in only Sec1 condition
 public class ProofOfPossessionActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + ProofOfPossessionActivity.class.getSimpleName();
 
     private Button btnNext;
+    private TextView textDeviceName;
     private EditText etDeviceKey;
 
     @Override
@@ -34,7 +34,11 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         btnNext = findViewById(R.id.btn_next);
+        textDeviceName = findViewById(R.id.device_name);
         etDeviceKey = findViewById(R.id.et_pop);
+
+        String deviceName = getIntent().getStringExtra(AppConstants.KEY_DEVICE_NAME);
+        textDeviceName.setText(deviceName);
         btnNext.setEnabled(false);
         btnNext.setAlpha(0.5f);
         btnNext.setOnClickListener(nextBtnClickListener);
@@ -68,6 +72,20 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
                 }
             }
         });
+
+        String key = getString(R.string.proof_of_possesion);
+
+        if (!TextUtils.isEmpty(key)) {
+
+            etDeviceKey.setText(key);
+            etDeviceKey.setSelection(etDeviceKey.getText().length());
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        BLEProvisionLanding.isBleWorkDone = true;
+        super.onBackPressed();
     }
 
     private View.OnClickListener nextBtnClickListener = new View.OnClickListener() {
@@ -76,7 +94,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         public void onClick(View v) {
 
             final String pop = etDeviceKey.getText().toString();
-            Log.e(TAG, "POP : " + pop);
+            Log.d(TAG, "POP : " + pop);
 
             if (BLEProvisionLanding.bleTransport.deviceCapabilities.contains("wifi_scan")) {
                 goToWiFiScanListActivity();
@@ -92,6 +110,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         launchWiFiScanList.putExtras(getIntent());
         launchWiFiScanList.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
         startActivity(launchWiFiScanList);
+        finish();
     }
 
     private void goToProvisionActivity() {
@@ -99,6 +118,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
-        startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
+        startActivity(launchProvisionInstructions);
+        finish();
     }
 }
