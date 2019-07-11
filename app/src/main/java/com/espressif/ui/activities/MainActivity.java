@@ -14,7 +14,6 @@
 package com.espressif.ui.activities;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -31,7 +30,6 @@ import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.transport.BLETransport;
 
 import java.util.HashMap;
 
@@ -40,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "Espressif::" + MainActivity.class.getSimpleName();
 
     private String BASE_URL;
-    private String wifiNamePrefix, bleDevicePrefix;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
-        wifiNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
-        bleDevicePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
+        String wifiNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
+        String bleDevicePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
 
         if (TextUtils.isEmpty(wifiNamePrefix)) {
 
@@ -71,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
             editor.putString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, bleDevicePrefix);
         }
 
-        editor.commit();
+        editor.apply();
 
         final String transportVersion, securityVersion;
 
@@ -100,9 +97,6 @@ public class MainActivity extends AppCompatActivity {
                 config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
 
                 config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                config.put(Provision.CONFIG_WIFI_AP_KEY, wifiNamePrefix);
-
-                config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, bleDevicePrefix);
                 Provision.showProvisioningUI(MainActivity.this, config);
             }
         });
@@ -137,14 +131,5 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == Provision.REQUEST_PROVISIONING_CODE &&
-                resultCode == RESULT_OK) {
-            setResult(resultCode);
-            finish();
-        }
     }
 }

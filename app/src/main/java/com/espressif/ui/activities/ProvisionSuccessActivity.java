@@ -23,6 +23,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.R;
 
 public class ProvisionSuccessActivity extends AppCompatActivity {
@@ -35,7 +36,7 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.provision_activity_title);
         setSupportActionBar(toolbar);
 
-        String status = getIntent().getStringExtra("status");
+        String status = getIntent().getStringExtra(AppConstants.KEY_STATUS_MSG);
         TextView successTextView = findViewById(R.id.success_textview);
         successTextView.setText(status);
 
