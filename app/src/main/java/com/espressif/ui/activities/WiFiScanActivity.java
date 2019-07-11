@@ -38,7 +38,6 @@ public class WiFiScanActivity extends AppCompatActivity {
     public Security security;
     public Transport transport;
     private Intent intent;
-    boolean isGettingWiFiList;
     private int totalCount;
     private int startIndex;
 
@@ -50,30 +49,32 @@ public class WiFiScanActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.title_activity_wifi_scan_list);
         setSupportActionBar(toolbar);
 
+        ListView listView = findViewById(R.id.wifi_ap_list);
         progressBar = findViewById(R.id.wifi_progress_indicator);
+
         progressBar.setVisibility(View.VISIBLE);
         session = null;
 
         apDevices = new ArrayList<>();
         intent = getIntent();
         final String pop = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
-        Log.e("WiFiScanActivity", "POP : " + pop);
+        Log.d(TAG, "POP : " + pop);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-        ListView listView = findViewById(R.id.wifi_ap_list);
         adapter = new WiFiListAdapter(this, R.id.tv_wifi_name, apDevices);
 
         // Assign adapter to ListView
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
 
                 progressBar.setVisibility(View.VISIBLE);
-                Log.d("WiFiScanActivity", "Device to be connected -" + apDevices.get(pos));
-                callProvision(apDevices.get(pos).getWifiName());
+                Log.d(TAG, "Device to be connected -" + apDevices.get(pos));
+                callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
             }
         });
 
@@ -106,20 +107,20 @@ public class WiFiScanActivity extends AppCompatActivity {
 
     private void fetchScanList() {
 
-        Log.e("WiFiScanActivity", "Fetch Scan List");
+        Log.d(TAG, "Fetch Scan List");
 
         session = new Session(this.transport, this.security);
         session.sessionListener = new Session.SessionListener() {
 
             @Override
             public void OnSessionEstablished() {
-                Log.e("WiFiScanActivity", "Session established");
+                Log.e(TAG, "Session established");
                 startWifiScan();
             }
 
             @Override
             public void OnSessionEstablishFailed(Exception e) {
-                Log.e("WiFiScanActivity", "Session failed");
+                Log.e(TAG, "Session failed");
                 e.printStackTrace();
             }
         };
@@ -147,7 +148,7 @@ public class WiFiScanActivity extends AppCompatActivity {
             public void onSuccess(byte[] returnData) {
 
                 processStartScan(returnData);
-                Log.d("WiFiScan", "Successfully sent start scan");
+                Log.d(TAG, "Successfully sent start scan");
                 getWifiScanStatus();
             }
 
@@ -184,7 +185,7 @@ public class WiFiScanActivity extends AppCompatActivity {
         transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
-                Log.d("WiFiScan", "Successfully got scan result");
+                Log.d(TAG, "Successfully got scan result");
                 processGetWifiStatus(returnData);
             }
 
@@ -240,8 +241,15 @@ public class WiFiScanActivity extends AppCompatActivity {
             } else {
 
                 runOnUiThread(new Runnable() {
+
                     @Override
                     public void run() {
+
+                        // Add "Join network" Option as a list item
+                        WiFiAccessPoint wifiAp = new WiFiAccessPoint();
+                        wifiAp.setWifiName(getString(R.string.join_other_network));
+                        apDevices.add(wifiAp);
+
                         progressBar.setVisibility(View.GONE);
                         adapter.notifyDataSetChanged();
                     }
@@ -266,7 +274,7 @@ public class WiFiScanActivity extends AppCompatActivity {
         transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
-                Log.d("WiFiScan", "Successfully got SSID list");
+                Log.d(TAG, "Successfully got SSID list");
                 processGetSSIDs(returnData);
             }
 
@@ -299,7 +307,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
                     for (int i = 0; i < response.getEntriesCount(); i++) {
 
-                        Log.e("WifiScan", "Response : " + response.getEntries(i).getSsid().toStringUtf8());
+                        Log.e(TAG, "Response : " + response.getEntries(i).getSsid().toStringUtf8());
                         String ssid = response.getEntries(i).getSsid().toStringUtf8();
                         int rssi = response.getEntries(i).getRssi();
                         boolean isAvailable = false;
@@ -341,13 +349,17 @@ public class WiFiScanActivity extends AppCompatActivity {
         }
     }
 
-    private void callProvision(String ssid) {
+    private void callProvision(String ssid, int security) {
 
-        Log.e("WiFiScanActivity", "Selected AP -" + ssid);
+        Log.e(TAG, "Selected AP -" + ssid);
         finish();
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
-        launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
+
+        if (!ssid.equals(getString(R.string.join_other_network))) {
+            launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
+            launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
+        }
         startActivity(launchProvisionInstructions);
     }
 }
