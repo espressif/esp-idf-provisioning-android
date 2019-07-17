@@ -102,7 +102,6 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         View loginButton = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
-        loginButton.setOnClickListener(loginBtnClickListener);
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
@@ -126,6 +125,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         session.init(null);
 
         requestContext.registerListener(amazonAuthorizeListener);
+        loginButton.setOnClickListener(loginBtnClickListener);
     }
 
     @Override
@@ -206,11 +206,6 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void onClick(View v) {
 
             Log.d(TAG, "Login button Clicked");
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 

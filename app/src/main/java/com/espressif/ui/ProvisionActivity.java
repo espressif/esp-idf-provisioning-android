@@ -366,7 +366,11 @@ public class ProvisionActivity extends AppCompatActivity {
                             @Override
                             public void run() {
 
-                                goToSuccessPage(finalStatusText);
+                                if (newStatus == WifiConstants.WifiStationState.Connected) {
+                                    goToAlexaScreen();
+                                } else {
+                                    goToSuccessPage(finalStatusText);
+                                }
                             }
                         });
                     }
@@ -448,13 +452,22 @@ public class ProvisionActivity extends AppCompatActivity {
         }
     }
 
+    private void goToAlexaScreen() {
+
+        toggleFormState(true);
+        finish();
+        Intent goToAlexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
+        goToAlexaIntent.putExtra("is_prov", true);
+        goToAlexaIntent.putExtras(getIntent());
+        startActivity(goToAlexaIntent);
+    }
+
     private void goToSuccessPage(String statusText) {
 
         toggleFormState(true);
         finish();
-        Intent goToSuccessPage = new Intent(getApplicationContext(), AlexaActivity.class);
+        Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
         goToSuccessPage.putExtra("status", statusText);
-        goToSuccessPage.putExtra("is_prov", true);
         goToSuccessPage.putExtras(getIntent());
         startActivity(goToSuccessPage);
     }
