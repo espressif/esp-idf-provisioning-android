@@ -13,7 +13,6 @@
 // limitations under the License.
 package com.espressif.ui;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.graphics.Color;
@@ -108,15 +107,16 @@ public class ProvisionActivity extends AppCompatActivity {
             ssid.setVisibility(View.VISIBLE);
             ssid.setText(wifiSSID);
 
-            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
-
-                passwordInput.setVisibility(View.GONE);
-                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
-                btnProvision.setEnabled(false);
-                btnProvision.setAlpha(0.5f);
-                btnProvision.setTextColor(Color.WHITE);
-                doProvisioning();
-            }
+            // Security feature is not available in Alexa release. Uncomment below code once firmware sends wifi sec type.
+//            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
+//
+//                passwordInput.setVisibility(View.GONE);
+//                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
+//                btnProvision.setEnabled(false);
+//                btnProvision.setAlpha(0.5f);
+//                btnProvision.setTextColor(Color.WHITE);
+//                doProvisioning();
+//            }
         }
 
         ssidValue = wifiSSID;
@@ -452,8 +452,9 @@ public class ProvisionActivity extends AppCompatActivity {
 
         toggleFormState(true);
         finish();
-        Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
+        Intent goToSuccessPage = new Intent(getApplicationContext(), AlexaActivity.class);
         goToSuccessPage.putExtra("status", statusText);
+        goToSuccessPage.putExtra("is_prov", true);
         goToSuccessPage.putExtras(getIntent());
         startActivity(goToSuccessPage);
     }
