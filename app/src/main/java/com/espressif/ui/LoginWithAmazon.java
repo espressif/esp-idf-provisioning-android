@@ -206,6 +206,11 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void onClick(View v) {
 
             Log.d(TAG, "Login button Clicked");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 
@@ -466,6 +471,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private void goToWifiScanListActivity() {
 
         Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanList.class);
+        wifiListIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         wifiListIntent.putExtras(getIntent());
         startActivity(wifiListIntent);
     }

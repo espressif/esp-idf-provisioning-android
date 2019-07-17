@@ -80,6 +80,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private String avsConfigUUID;
     private String serviceUUID;
     private String sessionUUID;
+    private String deviceName;
     private String deviceNamePrefix;
     private boolean isScanning;
     private boolean isDeviceConnected;
@@ -122,6 +123,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 btnScan.setVisibility(View.GONE);
                 listView.setVisibility(View.GONE);
                 progressBar.setVisibility(View.VISIBLE);
+                deviceName = bluetoothDevices.get(pos).getName();
                 bleTransport.connect(bluetoothDevices.get(pos));
             }
         });
@@ -262,7 +264,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private void bleDeviceConfigured(final Boolean isConfigured) {
 
-        this.runOnUiThread(new Runnable() {
+        runOnUiThread(new Runnable() {
             @Override
             public void run() {
 
@@ -460,6 +462,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
         alexaProvisioningIntent.putExtras(getIntent());
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
         alexaProvisioningIntent.putExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION, PROOF_OF_POSSESSION);
         startActivity(alexaProvisioningIntent);
