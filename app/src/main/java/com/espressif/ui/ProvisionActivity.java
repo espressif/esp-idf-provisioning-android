@@ -366,10 +366,14 @@ public class ProvisionActivity extends AppCompatActivity {
                             @Override
                             public void run() {
 
-                                if (newStatus == WifiConstants.WifiStationState.Connected) {
-                                    goToAlexaScreen();
-                                } else {
+                                if (newStatus != WifiConstants.WifiStationState.Connected) {
                                     goToSuccessPage(finalStatusText);
+                                } else {
+                                    if (LoginWithAmazon.isLoginSkipped) {
+                                        goToSuccessPage(finalStatusText);
+                                    } else {
+                                        goToAlexaScreen();
+                                    }
                                 }
                             }
                         });
@@ -413,7 +417,6 @@ public class ProvisionActivity extends AppCompatActivity {
                         toggleFormState(true);
                     }
                 });
-
             }
         };
         session.init(null);

@@ -63,6 +63,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     public static final String KEY_HOST_ADDRESS = "host_address";
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_IS_PROVISIONING = "is_provisioning";
+    public static boolean isLoginSkipped = false;
     private static final String DEVICE_SERIAL_NUMBER_KEY = "deviceSerialNumber";
     private static final String PRODUCT_INSTANCE_ATTRIBUTES_KEY = "productInstanceAttributes";
     private static final String ALEXA_SCOPE = "alexa:all";
@@ -102,6 +103,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         View loginButton = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
+        isLoginSkipped = false;
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
@@ -162,6 +164,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_skip) {
+            isLoginSkipped = true;
             finish();
             if (isProvisioning) {
                 goToWifiScanListActivity();
