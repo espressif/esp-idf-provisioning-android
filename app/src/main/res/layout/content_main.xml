@@ -24,8 +24,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:visibility="gone"
-            android:elevation="4dp"/>
+            android:elevation="4dp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 
@@ -44,11 +44,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:layout_marginEnd="16dp"
             android:layout_marginStart="16dp"
-            android:background="@color/colorPrimary"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_btn"
             android:enabled="true"
-            android:text="@string/start_provisioning"/>
+            android:text="@string/start_provisioning" />
 
         <ProgressBar
             android:id="@+id/ble_progress_indicator"
@@ -56,8 +56,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:visibility="gone"
-            android:elevation="4dp"/>
+            android:elevation="4dp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 
