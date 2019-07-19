@@ -18,6 +18,7 @@ import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
+import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.espressif.ui.adapters.WiFiListAdapter;
 import com.espressif.ui.models.WiFiAccessPoint;
@@ -90,13 +91,20 @@ public class WiFiScanActivity extends AppCompatActivity {
         } else {
             this.security = new Security0();
         }
-        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+
+        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
+
+            transport = new SoftAPTransport(baseUrl);
+
+        } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+
             if (BLEProvisionLanding.bleTransport == null) {
+
             } else {
                 transport = BLEProvisionLanding.bleTransport;
-                fetchScanList();
             }
         }
+        fetchScanList();
     }
 
     @Override
@@ -329,7 +337,8 @@ public class WiFiScanActivity extends AppCompatActivity {
                         if (!isAvailable) {
 
                             WiFiAccessPoint wifiAp = new WiFiAccessPoint();
-                            wifiAp.setWifiName(response.getEntries(i).getSsid().toStringUtf8());
+
+                            wifiAp.setWifiName(ssid);
                             wifiAp.setRssi(response.getEntries(i).getRssi());
                             wifiAp.setSecurity(response.getEntries(i).getAuthValue());
                             apDevices.add(wifiAp);
