@@ -26,6 +26,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,6 +64,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     public static final String KEY_HOST_ADDRESS = "host_address";
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_IS_PROVISIONING = "is_provisioning";
+    public static boolean isLoginSkipped = false;
     private static final String DEVICE_SERIAL_NUMBER_KEY = "deviceSerialNumber";
     private static final String PRODUCT_INSTANCE_ATTRIBUTES_KEY = "productInstanceAttributes";
     private static final String ALEXA_SCOPE = "alexa:all";
@@ -72,7 +74,6 @@ public class LoginWithAmazon extends AppCompatActivity {
     private Transport transport;
 
     public String[] DeviceDetails = new String[3];
-    int galat_hai = 0;
     private String hostAddress;
     private String deviceName;
     private boolean isProvisioning = false;
@@ -81,6 +82,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private String codeVerifier;
 
     private TextView txtDeviceName;
+    private Button btnLogin;
 
     private RequestContext requestContext;
 
@@ -100,9 +102,12 @@ public class LoginWithAmazon extends AppCompatActivity {
         toolbar.setTitle(deviceName);
         setSupportActionBar(toolbar);
 
-        View loginButton = findViewById(R.id.login_with_amazon);
+        btnLogin = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
-        loginButton.setOnClickListener(loginBtnClickListener);
+        isLoginSkipped = false;
+
+        btnLogin.setEnabled(false);
+        btnLogin.setAlpha(0.5f);
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
@@ -126,6 +131,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         session.init(null);
 
         requestContext.registerListener(amazonAuthorizeListener);
+        btnLogin.setOnClickListener(loginBtnClickListener);
     }
 
     @Override
@@ -162,6 +168,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_skip) {
+            isLoginSkipped = true;
             finish();
             if (isProvisioning) {
                 goToWifiScanListActivity();
@@ -190,6 +197,8 @@ public class LoginWithAmazon extends AppCompatActivity {
                     codeVerifier = DeviceDetails[2];
                 }
             });
+            btnLogin.setAlpha(1f);
+            btnLogin.setEnabled(true);
         }
 
         @Override
@@ -466,6 +475,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private void goToWifiScanListActivity() {
 
         Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanList.class);
+        wifiListIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         wifiListIntent.putExtras(getIntent());
         startActivity(wifiListIntent);
     }

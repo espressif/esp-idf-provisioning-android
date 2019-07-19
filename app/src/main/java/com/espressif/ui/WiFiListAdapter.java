@@ -40,11 +40,11 @@ public class WiFiListAdapter extends ArrayAdapter<WiFiAccessPoint> {
         wifiNameText.setText(wiFiAccessPoint.getWifiName());
         rssiImage.setImageLevel(getRssiLevel(wiFiAccessPoint.getRssi()));
 
-        if (wiFiAccessPoint.getSecurity() == AppConstants.WIFI_OPEN) {
-            lockImage.setVisibility(View.GONE);
-        } else {
-            lockImage.setVisibility(View.VISIBLE);
-        }
+//        if (wiFiAccessPoint.getSecurity() == AppConstants.WIFI_OPEN) {
+        lockImage.setVisibility(View.GONE);
+//        } else {
+//            lockImage.setVisibility(View.VISIBLE);
+//        }
 
         return view;
     }

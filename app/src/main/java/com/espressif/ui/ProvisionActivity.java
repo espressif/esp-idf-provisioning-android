@@ -13,7 +13,6 @@
 // limitations under the License.
 package com.espressif.ui;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.graphics.Color;
@@ -108,15 +107,16 @@ public class ProvisionActivity extends AppCompatActivity {
             ssid.setVisibility(View.VISIBLE);
             ssid.setText(wifiSSID);
 
-            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
-
-                passwordInput.setVisibility(View.GONE);
-                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
-                btnProvision.setEnabled(false);
-                btnProvision.setAlpha(0.5f);
-                btnProvision.setTextColor(Color.WHITE);
-                doProvisioning();
-            }
+            // Security feature is not available in Alexa release. Uncomment below code once firmware sends wifi sec type.
+//            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
+//
+//                passwordInput.setVisibility(View.GONE);
+//                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
+//                btnProvision.setEnabled(false);
+//                btnProvision.setAlpha(0.5f);
+//                btnProvision.setTextColor(Color.WHITE);
+//                doProvisioning();
+//            }
         }
 
         ssidValue = wifiSSID;
@@ -366,7 +366,15 @@ public class ProvisionActivity extends AppCompatActivity {
                             @Override
                             public void run() {
 
-                                goToSuccessPage(finalStatusText);
+                                if (newStatus != WifiConstants.WifiStationState.Connected) {
+                                    goToSuccessPage(finalStatusText);
+                                } else {
+                                    if (LoginWithAmazon.isLoginSkipped) {
+                                        goToSuccessPage(finalStatusText);
+                                    } else {
+                                        goToAlexaScreen();
+                                    }
+                                }
                             }
                         });
                     }
@@ -409,7 +417,6 @@ public class ProvisionActivity extends AppCompatActivity {
                         toggleFormState(true);
                     }
                 });
-
             }
         };
         session.init(null);
@@ -446,6 +453,16 @@ public class ProvisionActivity extends AppCompatActivity {
             ssidInput.setEnabled(false);
             passwordInput.setEnabled(false);
         }
+    }
+
+    private void goToAlexaScreen() {
+
+        toggleFormState(true);
+        finish();
+        Intent goToAlexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
+        goToAlexaIntent.putExtra("is_prov", true);
+        goToAlexaIntent.putExtras(getIntent());
+        startActivity(goToAlexaIntent);
     }
 
     private void goToSuccessPage(String statusText) {

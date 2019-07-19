@@ -41,6 +41,7 @@
     <string name="btn_sign_out">Sign Out</string>
     <string name="btn_skip">Skip</string>
     <string name="btn_next">Next</string>
+    <string name="btn_done">Done</string>
 
     <!-- Strings used for Alexa screens -->
     <string name="title_activity_login_with_amazon">Login With Amazon</string>

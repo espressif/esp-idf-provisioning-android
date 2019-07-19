@@ -1,7 +1,6 @@
 package com.espressif.ui;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
@@ -19,7 +18,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -49,6 +47,7 @@ public class AlexaActivity extends AppCompatActivity {
     private String deviceName;
 
     private TextView txtDeviceName;
+    private boolean isProv = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -61,37 +60,46 @@ public class AlexaActivity extends AppCompatActivity {
         Intent intent = getIntent();
         hostAddress = intent.getStringExtra(LoginWithAmazon.KEY_HOST_ADDRESS);
         deviceName = intent.getStringExtra(LoginWithAmazon.KEY_DEVICE_NAME);
-
+        isProv = intent.getBooleanExtra("is_prov", false);
         initViews();
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
         }
 
-        transport = new SoftAPTransport(hostAddress + ":80");
-        security = new Security0();
-        session = new Session(transport, security);
-        Log.e(TAG, hostAddress);
-        session.init(null);
+        if (!isProv) {
 
-        session.sessionListener = new Session.SessionListener() {
+            transport = new SoftAPTransport(hostAddress + ":80");
+            security = new Security0();
+            session = new Session(transport, security);
 
-            @Override
-            public void OnSessionEstablished() {
-                Log.d(TAG, "Session established");
-            }
+            session.init(null);
 
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                Log.d(TAG, "Session failed");
-            }
-        };
+            session.sessionListener = new Session.SessionListener() {
+
+                @Override
+                public void OnSessionEstablished() {
+                    Log.d(TAG, "Session established");
+                }
+
+                @Override
+                public void OnSessionEstablishFailed(Exception e) {
+                    Log.d(TAG, "Session failed");
+                }
+            };
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_alexa, menu);
+
+        if (isProv) {
+            getMenuInflater().inflate(R.menu.menu_alexa_prov, menu);
+        } else {
+            getMenuInflater().inflate(R.menu.menu_alexa, menu);
+        }
+
         return true;
     }
 
@@ -108,6 +116,10 @@ public class AlexaActivity extends AppCompatActivity {
             if (session.isEstablished()) {
                 sendSignOutCommand();
             }
+            return true;
+        } else if (id == R.id.action_done) {
+
+            finish();
             return true;
         }
 
