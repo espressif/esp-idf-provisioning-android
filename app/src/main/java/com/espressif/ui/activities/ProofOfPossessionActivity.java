@@ -4,9 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -14,6 +12,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.espressif.AppConstants;
+import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 
 public class ProofOfPossessionActivity extends AppCompatActivity {
@@ -23,6 +22,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
     private Button btnNext;
     private TextView textDeviceName;
     private EditText etDeviceKey;
+    private String securityVersion, transportVersion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,41 +38,11 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         etDeviceKey = findViewById(R.id.et_pop);
 
         String deviceName = getIntent().getStringExtra(AppConstants.KEY_DEVICE_NAME);
+        transportVersion = getIntent().getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
+        securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+
         textDeviceName.setText(deviceName);
-        btnNext.setEnabled(false);
-        btnNext.setAlpha(0.5f);
         btnNext.setOnClickListener(nextBtnClickListener);
-
-        etDeviceKey.addTextChangedListener(new TextWatcher() {
-
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-                String pop = s.toString();
-
-                if (TextUtils.isEmpty(pop)) {
-
-                    btnNext.setEnabled(false);
-                    btnNext.setAlpha(0.5f);
-
-                } else {
-
-                    btnNext.setEnabled(true);
-                    btnNext.setAlpha(1f);
-                }
-            }
-        });
-
         String key = getString(R.string.proof_of_possesion);
 
         if (!TextUtils.isEmpty(key)) {
@@ -96,10 +66,21 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
             final String pop = etDeviceKey.getText().toString();
             Log.d(TAG, "POP : " + pop);
 
-            if (BLEProvisionLanding.bleTransport.deviceCapabilities.contains("wifi_scan")) {
-                goToWiFiScanListActivity();
-            } else {
-                goToProvisionActivity();
+            if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
+
+                if (ProvisionLanding.deviceCapabilities.contains("wifi_scan")) {
+                    goToWiFiScanListActivity();
+                } else {
+                    goToProvisionActivity();
+                }
+
+            } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+
+                if (BLEProvisionLanding.bleTransport.deviceCapabilities.contains("wifi_scan")) {
+                    goToWiFiScanListActivity();
+                } else {
+                    goToProvisionActivity();
+                }
             }
         }
     };

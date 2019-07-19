@@ -123,7 +123,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
                 Log.d(TAG, "====== onPeripheralFound =====");
                 boolean deviceExists = false;
-
+                deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
                 Log.d(TAG, "Add service UUID : " + serviceUuid);
 
                 if (bluetoothDevices.containsKey(device)) {
@@ -332,6 +332,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
         isScanning = true;
         updateProgressAndScanBtn();
+        deviceList.clear();
         bleTransport.scan(transportListener);
     }
 
@@ -471,7 +472,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
             }
         });
 
