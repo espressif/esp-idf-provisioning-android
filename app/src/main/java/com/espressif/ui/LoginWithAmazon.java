@@ -26,6 +26,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,7 +74,6 @@ public class LoginWithAmazon extends AppCompatActivity {
     private Transport transport;
 
     public String[] DeviceDetails = new String[3];
-    int galat_hai = 0;
     private String hostAddress;
     private String deviceName;
     private boolean isProvisioning = false;
@@ -82,6 +82,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private String codeVerifier;
 
     private TextView txtDeviceName;
+    private Button btnLogin;
 
     private RequestContext requestContext;
 
@@ -101,9 +102,12 @@ public class LoginWithAmazon extends AppCompatActivity {
         toolbar.setTitle(deviceName);
         setSupportActionBar(toolbar);
 
-        View loginButton = findViewById(R.id.login_with_amazon);
+        btnLogin = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
         isLoginSkipped = false;
+
+        btnLogin.setEnabled(false);
+        btnLogin.setAlpha(0.5f);
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
@@ -127,7 +131,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         session.init(null);
 
         requestContext.registerListener(amazonAuthorizeListener);
-        loginButton.setOnClickListener(loginBtnClickListener);
+        btnLogin.setOnClickListener(loginBtnClickListener);
     }
 
     @Override
@@ -193,6 +197,8 @@ public class LoginWithAmazon extends AppCompatActivity {
                     codeVerifier = DeviceDetails[2];
                 }
             });
+            btnLogin.setAlpha(1f);
+            btnLogin.setEnabled(true);
         }
 
         @Override
