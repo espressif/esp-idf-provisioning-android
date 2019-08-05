@@ -33,9 +33,9 @@ import com.espressif.provision.R;
 
 import java.util.HashMap;
 
-public class MainActivity extends AppCompatActivity {
+public class EspMainActivity extends AppCompatActivity {
 
-    private static final String TAG = "Espressif::" + MainActivity.class.getSimpleName();
+    private static final String TAG = "Espressif::" + EspMainActivity.class.getSimpleName();
 
     private String BASE_URL;
 
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_esp_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         Button btnProvision = findViewById(R.id.provision_button);
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
 
                 config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                Provision.showProvisioningUI(MainActivity.this, config);
+                Provision.showProvisioningUI(EspMainActivity.this, config);
             }
         });
     }
