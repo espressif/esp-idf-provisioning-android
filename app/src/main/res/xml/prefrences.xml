@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference
+        android:key="change_password"
+        android:title="Change Password" />
+
+    <Preference
+        android:key="sign_out"
+        android:title="Sign Out" />
+
+    <!-- preference opens url in browser -->
+    <!--<Preference-->
+    <!--android:summary="@string/summary_faq"-->
+    <!--android:title="@string/title_faq">-->
+    <!--<intent-->
+    <!--android:action="android.intent.action.VIEW"-->
+    <!--android:data="@string/url_faq" />-->
+    <!--</Preference>-->
+
+</PreferenceScreen>
