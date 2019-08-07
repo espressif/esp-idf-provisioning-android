@@ -32,15 +32,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.espressif.AppConstants;
+import com.espressif.cloudapi.ApiManager;
+import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
+import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
+import com.google.protobuf.InvalidProtocolBufferException;
 
+import cloud.Cloud;
 import espressif.Constants;
 import espressif.WifiConstants;
 
@@ -57,6 +62,10 @@ public class ProvisionActivity extends AppCompatActivity {
     private int wifiSecurityType;
     private String ssidValue, passphraseValue = "";
     private String pop, baseUrl, transportVersion, securityVersion;
+
+    private Session session;
+    private Security security;
+    private Transport transport;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,19 +180,20 @@ public class ProvisionActivity extends AppCompatActivity {
         passwordInput.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
 
-        final Security security;
-        final Transport transport;
+        security = WiFiScanActivity.security;
 
-        if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-            security = new Security1(pop);
-        } else {
-            security = new Security0();
+        if (security == null) {
+            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+                security = new Security1(pop);
+            } else {
+                security = new Security0();
+            }
         }
 
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
 
             transport = new SoftAPTransport(baseUrl);
-            provision(transport, security);
+            provision();
 
         } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
 
@@ -194,15 +204,16 @@ public class ProvisionActivity extends AppCompatActivity {
                 finish();
 
             } else {
-                provision(BLEProvisionLanding.bleTransport, security);
+                transport = BLEProvisionLanding.bleTransport;
+                provision();
             }
         }
     }
 
-    private void provision(Transport transport, Security security) {
+    private void provision() {
 
         Log.d(TAG, "================== PROVISION +++++++++++++++++++++++++++++");
-        Session session = WiFiScanActivity.session;
+        session = WiFiScanActivity.session;
 
         if (session == null) {
 
@@ -288,24 +299,17 @@ public class ProvisionActivity extends AppCompatActivity {
                 String statusText = "";
                 if (e != null) {
                     statusText = e.getMessage();
+                    goToSuccessPage(statusText);
                 } else if (newStatus == WifiConstants.WifiStationState.Connected) {
-                    statusText = getResources().getString(R.string.success_text);
+//                    statusText = getResources().getString(R.string.success_text);
+                    associateDevice();
                 } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
                     statusText = getResources().getString(R.string.wifi_disconnected_text);
+                    goToSuccessPage(statusText);
                 } else {
                     statusText = "Device provisioning failed.\nReason : " + failedReason + "\nPlease try again";
+                    goToSuccessPage(statusText);
                 }
-
-                Log.e(TAG, "OnWifiConnectionStatusUpdated, statusText : " + statusText);
-                final String finalStatusText = statusText;
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        goToSuccessPage(finalStatusText);
-                    }
-                });
             }
 
             @Override
@@ -365,6 +369,103 @@ public class ProvisionActivity extends AppCompatActivity {
             btnProvision.setTextColor(Color.WHITE);
             ssidInput.setEnabled(false);
             passwordInput.setEnabled(false);
+        }
+    }
+
+    private void associateDevice() {
+
+        Log.d(TAG, "Associate device");
+
+        final String secretKey = "espressif"; // TODO generate key
+
+        Cloud.CmdGetSetDetails deviceSecretRequest = Cloud.CmdGetSetDetails.newBuilder()
+                .setUserID(ApiManager.userId)
+                .setSecretKey(secretKey)
+                .build();
+        Cloud.CloudConfigMsgType msgType = Cloud.CloudConfigMsgType.TypeCmdGetSetDetails;
+        Cloud.CloudConfigPayload payload = Cloud.CloudConfigPayload.newBuilder()
+                .setMsg(msgType)
+                .setCmdGetSetDetails(deviceSecretRequest)
+                .build();
+
+        byte[] data = security.encrypt(payload.toByteArray());
+        Log.d(TAG, "Send config data");
+
+        transport.sendConfigData(AppConstants.HANDLER_CLOUD_USER_ASSOC, data, new ResponseListener() {
+
+            @Override
+            public void onSuccess(byte[] returnData) {
+
+                Log.d(TAG, "Successfully sent user id and secrete key");
+                processDetails(returnData, secretKey);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                e.printStackTrace();
+                String statusText = "Add Device Failed";
+                goToSuccessPage(statusText);
+            }
+        });
+    }
+
+    private void processDetails(byte[] responseData, String secretKey) {
+
+        byte[] decryptedData = this.security.decrypt(responseData);
+
+        try {
+            Cloud.CloudConfigPayload payload = Cloud.CloudConfigPayload.parseFrom(decryptedData);
+            Cloud.RespGetSetDetails response = payload.getRespGetSetDetails();
+
+            Log.e(TAG, "Response : " + decryptedData);
+            Log.e(TAG, "Response : " + new String(decryptedData));
+            Log.e(TAG, "Status : " + response.getStatus());
+            Log.e(TAG, "Device Secret : " + response.getDeviceSecret());
+
+            if (response.getStatus() == Cloud.CloudConfigStatus.Success) {
+
+                String deviceSecret = response.getDeviceSecret();
+
+                // TODO Send device secret to cloud
+                ApiManager apiManager = new ApiManager(getApplicationContext());
+                apiManager.addDevice(deviceSecret, secretKey, new ApiResponseListener() {
+
+                    @Override
+                    public void onSuccess(Bundle data) {
+                        goToSuccessPage(getString(R.string.success_text));
+                    }
+
+                    @Override
+                    public void onFailure(Exception exception) {
+                        exception.printStackTrace();
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(ProvisionActivity.this,
+                                        "Add Device Failed",
+                                        Toast.LENGTH_LONG)
+                                        .show();
+                            }
+                        });
+                        String statusText = "Add Device Failed";
+                        goToSuccessPage(statusText);
+                    }
+                });
+            }
+
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(ProvisionActivity.this,
+                            "Add Device Failed",
+                            Toast.LENGTH_LONG)
+                            .show();
+                }
+            });
+            String statusText = "Add Device Failed";
+            goToSuccessPage(statusText);
         }
     }
 
