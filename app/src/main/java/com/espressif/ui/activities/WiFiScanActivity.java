@@ -36,7 +36,7 @@ public class WiFiScanActivity extends AppCompatActivity {
     private ArrayList<WiFiAccessPoint> apDevices;
     private WiFiListAdapter adapter;
     public static Session session;
-    public Security security;
+    public static Security security;
     public Transport transport;
     private Intent intent;
     private int totalCount;
