@@ -38,6 +38,7 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserAttribu
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserCodeDeliveryDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
 import com.espressif.provision.R;
+import com.espressif.ui.Utils;
 
 public class RegisterUser extends AppCompatActivity {
 
@@ -266,6 +267,11 @@ public class RegisterUser extends AppCompatActivity {
                     view.setText(username.getHint() + " cannot be empty");
                     username.setBackground(getDrawable(R.drawable.text_border_error));
                     return;
+                } else if (!Utils.isValidEmail(usernameInput)) {
+                    TextView view = (TextView) findViewById(R.id.textViewRegUserIdMessage);
+                    view.setText("Please enter valid email");
+                    username.setBackground(getDrawable(R.drawable.text_border_error));
+                    return;
                 }
 
                 String userpasswordInput = password.getText().toString();
@@ -305,6 +311,8 @@ public class RegisterUser extends AppCompatActivity {
                     if (userInput.length() > 0) {
                         userAttributes.addAttribute(AppHelper.getSignUpFieldsC2O().get(email.getHint()).toString(), userInput);
                     }
+                } else {
+                    userAttributes.addAttribute(AppHelper.getSignUpFieldsC2O().get(email.getHint()).toString(), usernameInput);
                 }
 
                 userInput = phone.getText().toString();

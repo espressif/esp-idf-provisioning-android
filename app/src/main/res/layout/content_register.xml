@@ -54,8 +54,8 @@
         android:layout_below="@+id/textViewRegUserIdLabel"
         android:layout_centerHorizontal="true"
         android:background="@drawable/text_border_selector"
-        android:hint="Username"
-        android:inputType="textPersonName"
+        android:hint="Email"
+        android:inputType="textEmailAddress"
         android:paddingLeft="@dimen/activity_text_padding"
         android:paddingRight="@dimen/activity_text_padding" />
 
@@ -145,7 +145,8 @@
         android:layout_centerHorizontal="true"
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textSize="@dimen/activity_text_size_small" />
+        android:textSize="@dimen/activity_text_size_small"
+        android:visibility="gone" />
 
     <EditText
         android:id="@+id/editTextRegGivenName"
@@ -157,7 +158,8 @@
         android:hint="Given Name"
         android:inputType="textPersonName"
         android:paddingLeft="@dimen/activity_text_padding"
-        android:paddingRight="@dimen/activity_text_padding" />
+        android:paddingRight="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewRegGivenNameMessage"
@@ -168,7 +170,8 @@
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@color/alert"
-        android:textSize="@dimen/activity_text_padding" />
+        android:textSize="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewRegEmailLabel"
@@ -178,7 +181,8 @@
         android:layout_centerHorizontal="true"
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textSize="@dimen/activity_text_size_small" />
+        android:textSize="@dimen/activity_text_size_small"
+        android:visibility="gone" />
 
     <EditText
         android:id="@+id/editTextRegEmail"
@@ -190,7 +194,8 @@
         android:hint="Email"
         android:inputType="textEmailAddress"
         android:paddingLeft="@dimen/activity_text_padding"
-        android:paddingRight="@dimen/activity_text_padding" />
+        android:paddingRight="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewRegEmailMessage"
@@ -201,7 +206,8 @@
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@color/alert"
-        android:textSize="@dimen/activity_text_padding" />
+        android:textSize="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewRegPhoneLabel"
@@ -211,7 +217,8 @@
         android:layout_centerHorizontal="true"
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textSize="@dimen/activity_text_size_small" />
+        android:textSize="@dimen/activity_text_size_small"
+        android:visibility="gone" />
 
     <EditText
         android:id="@+id/editTextRegPhone"
@@ -223,7 +230,8 @@
         android:hint="Phone Number"
         android:inputType="phone"
         android:paddingLeft="@dimen/activity_text_padding"
-        android:paddingRight="@dimen/activity_text_padding" />
+        android:paddingRight="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/textViewRegPhoneMessage"
@@ -234,7 +242,8 @@
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textColor="@color/alert"
-        android:textSize="@dimen/activity_text_padding" />
+        android:textSize="@dimen/activity_text_padding"
+        android:visibility="gone" />
 
     <Space
         android:id="@+id/space_about_2"
