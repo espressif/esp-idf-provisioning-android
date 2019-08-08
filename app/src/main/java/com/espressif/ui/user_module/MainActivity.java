@@ -106,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
         // Initialize application
         AppHelper.init(getApplicationContext());
         initApp();
-//        findCurrent();
+        findCurrent();
     }
 
     @Override

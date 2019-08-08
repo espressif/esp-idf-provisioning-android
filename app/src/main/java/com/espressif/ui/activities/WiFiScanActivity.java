@@ -87,9 +87,9 @@ public class WiFiScanActivity extends AppCompatActivity {
         });
 
         if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-            this.security = new Security1(pop);
+            security = new Security1(pop);
         } else {
-            this.security = new Security0();
+            security = new Security0();
         }
 
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
@@ -117,13 +117,17 @@ public class WiFiScanActivity extends AppCompatActivity {
 
         Log.d(TAG, "Fetch Scan List");
 
-        session = new Session(this.transport, this.security);
+        session = new Session(this.transport, security);
         session.sessionListener = new Session.SessionListener() {
 
             @Override
             public void OnSessionEstablished() {
                 Log.e(TAG, "Session established");
-                startWifiScan();
+                try {
+                    startWifiScan();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -137,6 +141,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
     private void startWifiScan() {
 
+        Log.e(TAG, "startWifiScan 1");
         WifiScan.CmdScanStart configRequest = WifiScan.CmdScanStart.newBuilder()
                 .setBlocking(true)
                 .setPassive(false)
@@ -149,27 +154,34 @@ public class WiFiScanActivity extends AppCompatActivity {
                 .setCmdScanStart(configRequest)
                 .build();
 
-        byte[] data = this.security.encrypt(payload.toByteArray());
-        transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
+        Log.e(TAG, "startWifiScan 2");
+        try {
+            Log.e(TAG, "startWifiScan 3");
+            byte[] data = security.encrypt(payload.toByteArray());
+            Log.e(TAG, "startWifiScan 4");
+            transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
 
-            @Override
-            public void onSuccess(byte[] returnData) {
+                @Override
+                public void onSuccess(byte[] returnData) {
 
-                processStartScan(returnData);
-                Log.d(TAG, "Successfully sent start scan");
-                getWifiScanStatus();
-            }
+                    Log.d(TAG, "Successfully sent start scan");
+                    processStartScan(returnData);
+                    getWifiScanStatus();
+                }
 
-            @Override
-            public void onFailure(Exception e) {
+                @Override
+                public void onFailure(Exception e) {
 
-            }
-        });
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void processStartScan(byte[] responseData) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = security.decrypt(responseData);
 
         try {
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
@@ -189,7 +201,7 @@ public class WiFiScanActivity extends AppCompatActivity {
                 .setMsg(msgType)
                 .setCmdScanStatus(configRequest)
                 .build();
-        byte[] data = this.security.encrypt(payload.toByteArray());
+        byte[] data = security.encrypt(payload.toByteArray());
         transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
@@ -206,7 +218,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
     private void processGetWifiStatus(byte[] responseData) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = security.decrypt(responseData);
 
         try {
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
@@ -278,7 +290,7 @@ public class WiFiScanActivity extends AppCompatActivity {
                 .setMsg(msgType)
                 .setCmdScanResult(configRequest)
                 .build();
-        byte[] data = this.security.encrypt(payload.toByteArray());
+        byte[] data = security.encrypt(payload.toByteArray());
         transport.sendConfigData(AppConstants.HANDLER_PROV_SCAN, data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
@@ -295,9 +307,10 @@ public class WiFiScanActivity extends AppCompatActivity {
 
     private void processGetSSIDs(byte[] responseData) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = security.decrypt(responseData);
         try {
 
+            Log.e(TAG, "Data : " + decryptedData);
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
             final WifiScan.RespScanResult response = payload.getRespScanResult();
 

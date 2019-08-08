@@ -13,31 +13,55 @@
 // limitations under the License.
 package com.espressif.ui.activities;
 
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.espressif.AppConstants;
+import com.espressif.cloudapi.ApiManager;
+import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
+import com.espressif.ui.adapters.EspDeviceAdapter;
+import com.espressif.ui.user_module.EspDevice;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class EspMainActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + EspMainActivity.class.getSimpleName();
 
+    private Button btnProvision;
+    private ProgressDialog progressDialog;
+    private RecyclerView recyclerView;
+    private TextView tvNoDevice, tvTitleDevices;
+    private SwipeRefreshLayout swipeRefreshLayout;
+
     private String BASE_URL;
+    private String transportVersion, securityVersion;
+    private ApiManager apiManager;
+    private EspDeviceAdapter deviceAdapter;
+    private ArrayList<EspDevice> devices;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,9 +70,10 @@ public class EspMainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_esp_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        Button btnProvision = findViewById(R.id.provision_button);
 
+        devices = new ArrayList<>();
         BASE_URL = getResources().getString(R.string.wifi_base_url);
+        initViews();
 
         SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -70,8 +95,6 @@ public class EspMainActivity extends AppCompatActivity {
 
         editor.apply();
 
-        final String transportVersion, securityVersion;
-
         if (BuildConfig.FLAVOR_security.equals("sec1")) {
             securityVersion = Provision.CONFIG_SECURITY_SECURITY1;
         } else {
@@ -84,22 +107,13 @@ public class EspMainActivity extends AppCompatActivity {
             transportVersion = Provision.CONFIG_TRANSPORT_WIFI;
         }
 
-        btnProvision.setOnClickListener(new View.OnClickListener() {
+        tvNoDevice.setVisibility(View.GONE);
+        tvTitleDevices.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.GONE);
 
-            @Override
-            public void onClick(View view) {
-
-                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-
-                HashMap<String, String> config = new HashMap<>();
-                config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
-                config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
-
-                config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                Provision.showProvisioningUI(EspMainActivity.this, config);
-            }
-        });
+        showWaitDialog("Getting devices...");
+        apiManager = new ApiManager(getApplicationContext());
+        getUserId();
     }
 
     @Override
@@ -127,9 +141,130 @@ public class EspMainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    View.OnClickListener provisionBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
+            HashMap<String, String> config = new HashMap<>();
+            config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
+            config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
+            config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+
+            Provision.showProvisioningUI(EspMainActivity.this, config);
+        }
+    };
+
+    private void initViews() {
+
+        btnProvision = findViewById(R.id.btn_provision);
+        tvNoDevice = findViewById(R.id.tv_no_device);
+        tvTitleDevices = findViewById(R.id.txt_devices);
+//        progressBar = findViewById(R.id.progress_indicator);
+        recyclerView = findViewById(R.id.rv_device_list);
+        swipeRefreshLayout = findViewById(R.id.swipe_container);
+        btnProvision.setOnClickListener(provisionBtnClickListener);
+
+        // set a LinearLayoutManager with default orientation
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getApplicationContext());
+        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        recyclerView.setLayoutManager(linearLayoutManager); // set LayoutManager to RecyclerView
+        recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
+
+        deviceAdapter = new EspDeviceAdapter(this, devices);
+        recyclerView.setAdapter(deviceAdapter);
+
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                getDevices();
+            }
+        });
+    }
+
+    private void getUserId() {
+
+        apiManager.getUserId(ApiManager.userName, new ApiResponseListener() {
+
+            @Override
+            public void onSuccess(Bundle data) {
+
+                getDevices();
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                closeWaitDialog();
+                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void getDevices() {
+
+        apiManager.getDevices(new ApiResponseListener() {
+
+            @Override
+            public void onSuccess(Bundle data) {
+
+//                progressBar.setVisibility(View.GONE);
+                closeWaitDialog();
+                swipeRefreshLayout.setRefreshing(false);
+                devices = data.getParcelableArrayList("devices");
+                Log.e(TAG, "Device list size : " + devices.size());
+
+                if (devices.size() > 0) {
+
+                    tvNoDevice.setVisibility(View.GONE);
+                    tvTitleDevices.setVisibility(View.VISIBLE);
+                    recyclerView.setVisibility(View.VISIBLE);
+
+                } else {
+                    tvNoDevice.setVisibility(View.VISIBLE);
+                    tvTitleDevices.setVisibility(View.GONE);
+                    recyclerView.setVisibility(View.GONE);
+                }
+                deviceAdapter.updateList(devices);
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                exception.printStackTrace();
+                closeWaitDialog();
+                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showWaitDialog(String message) {
+
+        closeWaitDialog();
+
+        if (progressDialog == null) {
+            progressDialog = new ProgressDialog(this);
+        }
+        progressDialog.setTitle(message);
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+    }
+
+    private void closeWaitDialog() {
+        try {
+            if (progressDialog != null) {
+                progressDialog.dismiss();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
