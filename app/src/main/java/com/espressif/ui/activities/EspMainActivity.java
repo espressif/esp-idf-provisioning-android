@@ -206,6 +206,7 @@ public class EspMainActivity extends AppCompatActivity {
             public void onFailure(Exception exception) {
                 closeWaitDialog();
                 Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+                swipeRefreshLayout.setRefreshing(false);
             }
         });
     }
@@ -242,6 +243,7 @@ public class EspMainActivity extends AppCompatActivity {
                 exception.printStackTrace();
                 closeWaitDialog();
                 Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+                swipeRefreshLayout.setRefreshing(false);
             }
         });
     }
