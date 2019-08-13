@@ -1,12 +1,15 @@
 package com.espressif.ui.activities;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
@@ -35,12 +38,15 @@ public class WiFiScanActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private ArrayList<WiFiAccessPoint> apDevices;
     private WiFiListAdapter adapter;
+    private Button btnRefresh;
+    private ListView wifiListView;
     public static Session session;
     public static Security security;
     public Transport transport;
     private Intent intent;
     private int totalCount;
     private int startIndex;
+    private Handler handler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +56,19 @@ public class WiFiScanActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.title_activity_wifi_scan_list);
         setSupportActionBar(toolbar);
 
-        ListView listView = findViewById(R.id.wifi_ap_list);
+        wifiListView = findViewById(R.id.wifi_ap_list);
         progressBar = findViewById(R.id.wifi_progress_indicator);
+
+        btnRefresh = findViewById(R.id.btn_refresh);
+        btnRefresh.setEnabled(false);
+        btnRefresh.setAlpha(0.5f);
+        btnRefresh.setTextColor(Color.WHITE);
 
         progressBar.setVisibility(View.VISIBLE);
         session = null;
 
         apDevices = new ArrayList<>();
+        handler = new Handler();
         intent = getIntent();
         final String pop = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
         Log.d(TAG, "POP : " + pop);
@@ -67,8 +79,8 @@ public class WiFiScanActivity extends AppCompatActivity {
         adapter = new WiFiListAdapter(this, R.id.tv_wifi_name, apDevices);
 
         // Assign adapter to ListView
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        wifiListView.setAdapter(adapter);
+        wifiListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
@@ -79,7 +91,7 @@ public class WiFiScanActivity extends AppCompatActivity {
             }
         });
 
-        listView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+        wifiListView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
 
@@ -104,7 +116,19 @@ public class WiFiScanActivity extends AppCompatActivity {
                 transport = BLEProvisionLanding.bleTransport;
             }
         }
+
         fetchScanList();
+
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                progressBar.setVisibility(View.VISIBLE);
+                wifiListView.setVisibility(View.GONE);
+                startWifiScan();
+            }
+        });
     }
 
     @Override
@@ -142,6 +166,19 @@ public class WiFiScanActivity extends AppCompatActivity {
     private void startWifiScan() {
 
         Log.e(TAG, "startWifiScan 1");
+        totalCount = 0;
+        startIndex = 0;
+        apDevices.clear();
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                updateProgressAndScanBtn(true);
+            }
+        });
+
+        handler.postDelayed(stopScanningTask, 15000);
+
         WifiScan.CmdScanStart configRequest = WifiScan.CmdScanStart.newBuilder()
                 .setBlocking(true)
                 .setPassive(false)
@@ -171,7 +208,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
                 @Override
                 public void onFailure(Exception e) {
-
+                    e.printStackTrace();
                 }
             });
         } catch (Exception e) {
@@ -242,6 +279,7 @@ public class WiFiScanActivity extends AppCompatActivity {
     private void getFullWiFiList() {
 
         Log.e(TAG, "Total count : " + totalCount + " and start index is : " + startIndex);
+
         if (totalCount < 4) {
 
             getWiFiScanList(0, totalCount);
@@ -383,5 +421,37 @@ public class WiFiScanActivity extends AppCompatActivity {
             launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
         }
         startActivity(launchProvisionInstructions);
+    }
+
+    private Runnable stopScanningTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            updateProgressAndScanBtn(false);
+        }
+    };
+
+    /**
+     * This method will update UI (Scan button enable / disable and progressbar visibility)
+     */
+    private void updateProgressAndScanBtn(boolean isScanning) {
+
+        if (isScanning) {
+
+            btnRefresh.setEnabled(false);
+            btnRefresh.setAlpha(0.5f);
+            btnRefresh.setTextColor(Color.WHITE);
+            progressBar.setVisibility(View.VISIBLE);
+            wifiListView.setVisibility(View.GONE);
+
+        } else {
+
+            btnRefresh.setEnabled(true);
+            btnRefresh.setAlpha(1f);
+            progressBar.setVisibility(View.GONE);
+            wifiListView.setVisibility(View.VISIBLE);
+            adapter.notifyDataSetChanged();
+        }
     }
 }
