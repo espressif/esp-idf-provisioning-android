@@ -26,6 +26,17 @@
             android:layout_centerInParent="true"
             android:visibility="visible" />
 
+        <Button
+            android:id="@+id/btn_refresh"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="20dp"
+            android:background="@drawable/bg_btn"
+            android:visibility="visible"
+            android:text="Refresh" />
+
     </RelativeLayout>
 
 </RelativeLayout>
