@@ -13,8 +13,12 @@ android {
     }
     buildTypes {
         release {
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            resValue "string", "user_pool_id", "us-east-1_rU8JgOyt0"
+            resValue "string", "client_id", "2f1c1ievo1hllgso0m2apkacek"
+            resValue "string", "client_secret", "137eseadtta9kmh0v81o6t07rm5b7chjuhuiji2bs0m6hnl7ac5q"
             resValue "string", "proof_of_possesion", "abcd1234"
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_network_name_prefix", "PROV_"
@@ -24,6 +28,9 @@ android {
 
         debug {
             debuggable true
+            resValue "string", "user_pool_id", "us-east-1_rU8JgOyt0"
+            resValue "string", "client_id", "2f1c1ievo1hllgso0m2apkacek"
+            resValue "string", "client_secret", "137eseadtta9kmh0v81o6t07rm5b7chjuhuiji2bs0m6hnl7ac5q"
             resValue "string", "proof_of_possesion", "abcd1234"
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_network_name_prefix", "PROV_"
@@ -83,4 +90,9 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     implementation 'com.google.protobuf:protobuf-lite:3.0.1'
     implementation 'com.google.crypto.tink:tink-android:1.1.0'
+    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.13.6'
+    implementation 'com.squareup.retrofit2:retrofit:2.6.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
+    implementation 'com.google.code.gson:gson:2.8.2'
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
 }

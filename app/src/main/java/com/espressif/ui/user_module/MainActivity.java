@@ -536,7 +536,6 @@ public class MainActivity extends AppCompatActivity {
 
             Log.d(TAG, " -- Auth Success");
             AppHelper.setCurrSession(cognitoUserSession);
-            ApiManager.AUTH_TOKEN = cognitoUserSession.getIdToken().getJWTToken();
             ApiManager.userName = username;
 
             Log.d(TAG, "Username : " + cognitoUserSession.getUsername());

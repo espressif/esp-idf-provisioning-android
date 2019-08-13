@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.espressif.provision.R;
+import com.espressif.ui.user_module.AppHelper;
 import com.espressif.ui.user_module.EspDevice;
 
 import org.json.JSONArray;
@@ -24,7 +25,6 @@ public class ApiManager {
 
     private static final String TAG = ApiManager.class.getSimpleName();
 
-    public static String AUTH_TOKEN = "";
     public static String userName = "";
     public static String userId = "";
 
@@ -45,9 +45,10 @@ public class ApiManager {
     public void getUserId(final String email, final ApiResponseListener listener) {
 
         Log.d(TAG, "Get User Id for user name : " + email);
-        Log.d(TAG, "Auth token : " + AUTH_TOKEN);
+        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        Log.d(TAG, "Auth token : " + authToken);
 
-        apiInterface.getUserId(AUTH_TOKEN, context.getString(R.string.user_pool_id), email)
+        apiInterface.getUserId(authToken, context.getString(R.string.user_pool_id), email)
 
                 .enqueue(new Callback<ResponseBody>() {
 
@@ -106,9 +107,10 @@ public class ApiManager {
     public void getDevices(final ApiResponseListener listener) {
 
         Log.d(TAG, "Get Devices");
-        Log.d(TAG, "Auth token : " + AUTH_TOKEN);
+        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        Log.d(TAG, "Auth token : " + authToken);
 
-        apiInterface.getDevicesForUser(AUTH_TOKEN, context.getString(R.string.user_pool_id), userId).enqueue(new Callback<ResponseBody>() {
+        apiInterface.getDevicesForUser(authToken, context.getString(R.string.user_pool_id), userId).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -163,6 +165,16 @@ public class ApiManager {
                     }
 
                 } else {
+
+                    if (response.body() != null) {
+
+                        try {
+                            String jsonResponse = response.body().string();
+                            Log.e(TAG, "onResponse Success : " + jsonResponse);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
                     listener.onFailure(new RuntimeException("Failed to get User device mapping"));
                 }
             }
@@ -185,7 +197,8 @@ public class ApiManager {
     public void addDevice(String deviceId, String secretKey, final ApiResponseListener listener) {
 
         Log.d(TAG, "Add Device");
-        Log.d(TAG, "Auth token : " + AUTH_TOKEN);
+        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        Log.d(TAG, "Auth token : " + authToken);
 
         AddDeviceRequest req = new AddDeviceRequest();
         req.setUserId(userId);
@@ -193,7 +206,7 @@ public class ApiManager {
         req.setSecretKey(secretKey);
         req.setOperation("add");
 
-        apiInterface.addDevice(AUTH_TOKEN, context.getString(R.string.user_pool_id), req).enqueue(new Callback<ResponseBody>() {
+        apiInterface.addDevice(authToken, context.getString(R.string.user_pool_id), req).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
