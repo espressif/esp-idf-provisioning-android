@@ -191,7 +191,7 @@ public class BLETransport implements Transport {
                 }
                 service = gatt.getService(serviceUuid);
                 bluetoothGatt = gatt;
-                bluetoothGatt.requestMtu(400);
+//                bluetoothGatt.requestMtu(400);
 
                 for (BluetoothGattCharacteristic characteristic:service.getCharacteristics()) {
                     characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);

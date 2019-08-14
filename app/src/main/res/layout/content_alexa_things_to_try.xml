@@ -35,8 +35,10 @@
         android:layout_below="@id/iv_alexa_logo"
         android:layout_centerHorizontal="true"
         android:layout_gravity="center"
-        android:layout_margin="30dp"
-        android:layout_marginBottom="90px"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="30dp"
+        android:layout_marginBottom="15dp"
         android:text="@string/alexa_examples"
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
@@ -91,7 +93,8 @@
         android:layout_marginBottom="10dp"
         android:text="@string/alexa_example_4"
         android:textAlignment="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:visibility="gone" />
 
     <com.espressif.ui.BookerlyItalicText
         android:id="@+id/alexa_example_5"
@@ -132,7 +135,7 @@
             android:layout_marginStart="20dp"
             android:layout_marginTop="15dp"
             android:layout_marginEnd="20dp"
-            android:layout_marginBottom="30dp"
+            android:layout_marginBottom="25dp"
             android:gravity="center"
             android:text="To learn more and access additional features, download the Alexa App." />
 
