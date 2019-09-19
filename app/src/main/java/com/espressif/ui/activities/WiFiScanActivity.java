@@ -1,12 +1,14 @@
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
@@ -19,29 +21,37 @@ import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.Transport;
+import com.espressif.ui.adapters.WiFiListAdapter;
+import com.espressif.ui.models.WiFiAccessPoint;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
 
 import espressif.WifiScan;
 
-public class WiFiScanList extends AppCompatActivity {
+public class WiFiScanActivity extends AppCompatActivity {
 
-    private static final String TAG = WiFiScanList.class.getSimpleName();
+    private static final String TAG = WiFiScanActivity.class.getSimpleName();
 
-    private ProgressBar progressBar;
+    private static final long WIFI_SCAN_TIMEOUT = 15000;
+
     private ArrayList<WiFiAccessPoint> apDevices;
     private WiFiListAdapter adapter;
     public Session session;
     public Security security;
     public Transport transport;
     private Intent intent;
+    private Handler handler;
+
+    private ImageView ivRefresh;
+    private ListView wifiListView;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.wifi_scan_list);
+        setContentView(R.layout.activity_wifi_scan_list);
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(R.string.title_activity_wifi_scan_list);
         setSupportActionBar(toolbar);
@@ -49,30 +59,34 @@ public class WiFiScanList extends AppCompatActivity {
         progressBar = findViewById(R.id.wifi_progress_indicator);
         progressBar.setVisibility(View.VISIBLE);
 
+        ivRefresh = findViewById(R.id.btn_refresh);
+        wifiListView = findViewById(R.id.wifi_ap_list);
+
         apDevices = new ArrayList<>();
+        handler = new Handler();
         intent = getIntent();
-        final String pop = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
-        Log.e("WiFiScanList", "POP : " + pop);
+        final String pop = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
+        Log.d(TAG, "POP : " + pop);
         final String baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         final String transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         final String securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-        ListView listView = findViewById(R.id.wifi_ap_list);
+        ivRefresh.setOnClickListener(refreshClickListener);
         adapter = new WiFiListAdapter(this, R.id.tv_wifi_name, apDevices);
 
         // Assign adapter to ListView
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        wifiListView.setAdapter(adapter);
+        wifiListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
 
-                progressBar.setVisibility(View.VISIBLE);
-                Log.d("WiFiScanList", "Device to be connected -" + apDevices.get(pos));
+                Log.d(TAG, "Device to be connected -" + apDevices.get(pos));
                 callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
             }
         });
 
-        listView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+        wifiListView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
 
@@ -88,26 +102,15 @@ public class WiFiScanList extends AppCompatActivity {
             if (BLEProvisionLanding.bleTransport == null) {
             } else {
                 transport = BLEProvisionLanding.bleTransport;
-                fetchScanList();
             }
         }
+        fetchScanList();
     }
 
     @Override
     public void onBackPressed() {
-//        BLEProvisionLanding.isBleWorkDone = true;
+        BLEProvisionLanding.isBleWorkDone = true;
         super.onBackPressed();
-    }
-
-    private void callProvision(String ssid, int security) {
-
-        Log.e("WiFiScanList", "Selected AP -" + ssid);
-        finish();
-        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
-        launchProvisionInstructions.putExtras(getIntent());
-        launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
-        launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
-        startActivity(launchProvisionInstructions);
     }
 
     private void fetchScanList() {
@@ -116,19 +119,38 @@ public class WiFiScanList extends AppCompatActivity {
         session.sessionListener = new Session.SessionListener() {
             @Override
             public void OnSessionEstablished() {
-                Log.d("WiFiScanList", "Session established");
+                Log.d(TAG, "Session established");
                 startWifiScan();
             }
 
             @Override
             public void OnSessionEstablishFailed(Exception e) {
-                Log.d("WiFiScanList", "Session failed");
+                Log.e(TAG, "Session failed");
+                e.printStackTrace();
+                String statusText = getResources().getString(R.string.error_pop_incorrect);
+                finish();
+                Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
+                goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
+                goToSuccessPage.putExtras(getIntent());
+                startActivity(goToSuccessPage);
             }
         };
         session.init(null);
     }
 
     public void startWifiScan() {
+
+        apDevices.clear();
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                updateProgressAndScanBtn(true);
+            }
+        });
+
+        handler.postDelayed(stopScanningTask, WIFI_SCAN_TIMEOUT);
+
         WifiScan.CmdScanStart configRequest = WifiScan.CmdScanStart.newBuilder()
                 .setBlocking(true)
                 .setPassive(false)
@@ -142,18 +164,18 @@ public class WiFiScanList extends AppCompatActivity {
                 .build();
         byte[] data = this.security.encrypt(payload.toByteArray());
         transport.sendConfigData("prov-scan", data, new ResponseListener() {
+
             @Override
             public void onSuccess(byte[] returnData) {
+
                 processStartScan(returnData);
-                Log.d("WiFiScan", "Successfully sent start scan");
-
+                Log.d(TAG, "Successfully sent start scan");
                 getWifiScanStatus();
-
             }
 
             @Override
             public void onFailure(Exception e) {
-
+                e.printStackTrace();
             }
         });
     }
@@ -182,13 +204,13 @@ public class WiFiScanList extends AppCompatActivity {
         transport.sendConfigData("prov-scan", data, new ResponseListener() {
             @Override
             public void onSuccess(byte[] returnData) {
-                Log.d("WiFiScan", "Successfully got scan result");
+                Log.d(TAG, "Successfully got scan result");
                 processGetWifiStatus(returnData);
             }
 
             @Override
             public void onFailure(Exception e) {
-
+                e.printStackTrace();
             }
         });
     }
@@ -210,7 +232,6 @@ public class WiFiScanList extends AppCompatActivity {
 //                getWifiScanStatus();
 //            }
 
-
         } catch (InvalidProtocolBufferException e) {
 
             e.printStackTrace();
@@ -219,7 +240,7 @@ public class WiFiScanList extends AppCompatActivity {
 
     private void getWiFiScanList(int count) {
 
-        Log.d("WIFIScanList", "Getting " + count + " SSIDs");
+        Log.d(TAG, "Getting " + count + " SSIDs");
         WifiScan.CmdScanResult configRequest = WifiScan.CmdScanResult.newBuilder()
                 .setStartIndex(0)
                 .setCount(count)
@@ -231,30 +252,28 @@ public class WiFiScanList extends AppCompatActivity {
                 .build();
         byte[] data = this.security.encrypt(payload.toByteArray());
         transport.sendConfigData("prov-scan", data, new ResponseListener() {
+
             @Override
             public void onSuccess(byte[] returnData) {
-                Log.d("WiFiScan", "Successfully got SSID list");
+                Log.d(TAG, "Successfully got SSID list");
                 processGetSSIDs(returnData);
             }
 
             @Override
             public void onFailure(Exception e) {
-
+                e.printStackTrace();
             }
         });
-
     }
 
     private void processGetSSIDs(byte[] responseData) {
 
         byte[] decryptedData = this.security.decrypt(responseData);
+
         try {
+
             WifiScan.WiFiScanPayload payload = WifiScan.WiFiScanPayload.parseFrom(decryptedData);
             final WifiScan.RespScanResult response = payload.getRespScanResult();
-
-            for (int i = 0; i < response.getEntriesCount(); i++) {
-//                apDevices.add(response.getEntries(i).getSsid().toStringUtf8());
-            }
 
             runOnUiThread(new Runnable() {
 
@@ -264,7 +283,7 @@ public class WiFiScanList extends AppCompatActivity {
 
                     for (int i = 0; i < response.getEntriesCount(); i++) {
 
-                        Log.e("WifiScan", "Response : " + response.getEntries(i).getSsid().toStringUtf8());
+                        Log.e(TAG, "Response : " + response.getEntries(i).getSsid().toStringUtf8());
                         String ssid = response.getEntries(i).getSsid().toStringUtf8();
                         int rssi = response.getEntries(i).getRssi();
                         boolean isAvailable = false;
@@ -294,14 +313,85 @@ public class WiFiScanList extends AppCompatActivity {
                         }
                     }
 
-                    progressBar.setVisibility(View.INVISIBLE);
-                    adapter.notifyDataSetChanged();
+                    completeWifiList();
                 }
             });
 
         } catch (InvalidProtocolBufferException e) {
 
             e.printStackTrace();
+        }
+    }
+
+    private void completeWifiList() {
+
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                // Add "Join network" Option as a list item
+                WiFiAccessPoint wifiAp = new WiFiAccessPoint();
+                wifiAp.setWifiName(getString(R.string.join_other_network));
+                apDevices.add(wifiAp);
+
+                updateProgressAndScanBtn(false);
+                handler.removeCallbacks(stopScanningTask);
+            }
+        });
+    }
+
+    private void callProvision(String ssid, int security) {
+
+        Log.e(TAG, "Selected AP -" + ssid);
+        finish();
+        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
+        launchProvisionInstructions.putExtras(getIntent());
+
+        if (!ssid.equals(getString(R.string.join_other_network))) {
+
+            progressBar.setVisibility(View.VISIBLE);
+            launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
+            launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
+        }
+        startActivity(launchProvisionInstructions);
+    }
+
+    private View.OnClickListener refreshClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            startWifiScan();
+        }
+    };
+
+    private Runnable stopScanningTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            updateProgressAndScanBtn(false);
+        }
+    };
+
+    /**
+     * This method will update UI (Scan button enable / disable and progressbar visibility)
+     */
+    private void updateProgressAndScanBtn(boolean isScanning) {
+
+        if (isScanning) {
+
+            progressBar.setVisibility(View.VISIBLE);
+            wifiListView.setVisibility(View.GONE);
+            ivRefresh.setVisibility(View.GONE);
+
+        } else {
+
+            progressBar.setVisibility(View.GONE);
+            wifiListView.setVisibility(View.VISIBLE);
+            ivRefresh.setVisibility(View.VISIBLE);
+            adapter.notifyDataSetChanged();
         }
     }
 }

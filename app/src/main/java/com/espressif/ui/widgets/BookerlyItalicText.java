@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.widgets;
 
 import android.content.Context;
 import android.graphics.Typeface;

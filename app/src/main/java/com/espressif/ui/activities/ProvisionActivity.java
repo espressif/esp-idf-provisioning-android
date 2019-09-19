@@ -11,9 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -44,10 +43,6 @@ import com.espressif.provision.transport.BLETransport;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.UUID;
-
 import espressif.Constants;
 import espressif.WifiConstants;
 
@@ -72,7 +67,7 @@ public class ProvisionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision);
         Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setTitle(R.string.provision_activity_title);
+        toolbar.setTitle(R.string.title_activity_provision);
         setSupportActionBar(toolbar);
 
         Intent intent = getIntent();
@@ -122,9 +117,10 @@ public class ProvisionActivity extends AppCompatActivity {
         ssidValue = wifiSSID;
         Log.d("ProvisionActivity", "Selected AP -" + wifiSSID);
 
-        btnProvision.setEnabled(false);
-        btnProvision.setAlpha(0.5f);
-        btnProvision.setTextColor(Color.WHITE);
+//        btnProvision.setEnabled(false);
+//        btnProvision.setAlpha(0.5f);
+//        btnProvision.setTextColor(Color.WHITE);
+        enableProvisionBtn();
 
         ssidInput.addTextChangedListener(new TextWatcher() {
 
@@ -173,8 +169,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        Log.e(TAG, "ON BACK PRESSED");
-//        BLEProvisionLanding.isBleWorkDone = true;
+        BLEProvisionLanding.isBleWorkDone = true;
         super.onBackPressed();
     }
 
@@ -203,98 +198,13 @@ public class ProvisionActivity extends AppCompatActivity {
 
         } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
 
-            Log.e(TAG, "transportVersion is BLE");
-
             if (BLEProvisionLanding.bleTransport == null) {
 
-                Log.e(TAG, "BLE TRANSPORT IS NULL ");
+                Log.e(TAG, "BLE Transport is Null. It should not be null.");
+                BLEProvisionLanding.isBleWorkDone = true;
+                finish();
 
-                //  TODO Check this. This condition should not come.
-                HashMap<String, String> configUUIDMap = new HashMap<>();
-                configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
-                if (avsconfigUUID != null) {
-                    configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsconfigUUID);
-                }
-                configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
-                final BLETransport bleTransport = new BLETransport(ProvisionActivity.this,
-                        UUID.fromString(deviceUUID),
-                        UUID.fromString(sessionUUID),
-                        configUUIDMap,
-                        deviceNamePrefix,
-                        3000);
-                transport = bleTransport;
-
-                bleTransport.scan(new BLETransport.BLETransportListener() {
-
-                    @Override
-                    public void onPeripheralsFound(ArrayList<BluetoothDevice> devices) {
-                        bleTransport.connect(devices.get(0));
-                    }
-
-                    @Override
-                    public void onPeripheralsNotFound() {
-                        Log.d(TAG, "Peripherals not found!");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Peripherals not found!",
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                                toggleFormState(true);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onPeripheralConfigured(BluetoothDevice device) {
-                        provision(transport, security);
-                    }
-
-                    @Override
-                    public void onPeripheralNotConfigured(final BluetoothDevice device) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Peripherals cannot be configured for : " + device.getName(),
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                                toggleFormState(true);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onPeripheralDisconnected(final Exception e) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Bluetooth device disconnected.",
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                                toggleFormState(true);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onFailure(final Exception e) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Bluetooth connection failed : " + e.getMessage(),
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                                toggleFormState(true);
-                            }
-                        });
-                    }
-                });
             } else {
-                Log.e(TAG, "BLE TRANSPORT IS NOT NULL ");
                 provision(BLEProvisionLanding.bleTransport, security);
             }
         }
@@ -358,7 +268,13 @@ public class ProvisionActivity extends AppCompatActivity {
                         } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
                             statusText = getResources().getString(R.string.wifi_disconnected_text);
                         } else {
-                            statusText = "Device provisioning failed.\nReason : " + failedReason + "\nPlease try again";
+                            if (failedReason == WifiConstants.WifiConnectFailedReason.AuthError) {
+                                statusText = getResources().getString(R.string.error_authentication_failed);
+                            } else if (failedReason == WifiConstants.WifiConnectFailedReason.NetworkNotFound) {
+                                statusText = getResources().getString(R.string.error_network_not_found);
+                            } else {
+                                statusText = getResources().getString(R.string.error_unknown);
+                            }
                         }
                         final String finalStatusText = statusText;
 
@@ -395,6 +311,7 @@ public class ProvisionActivity extends AppCompatActivity {
                         finish();
                     }
                 };
+
                 provision.configureWifi(ssidValue, passphraseValue, new Provision.ProvisionActionListener() {
 
                     @Override
@@ -424,7 +341,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private void enableProvisionBtn() {
 
-        if (!TextUtils.isEmpty(ssidValue) && !TextUtils.isEmpty(passphraseValue)) {
+        if (!TextUtils.isEmpty(ssidValue)/* && !TextUtils.isEmpty(passphraseValue) */) {
             btnProvision.setEnabled(true);
             btnProvision.setAlpha(1f);
         } else {
@@ -470,7 +387,7 @@ public class ProvisionActivity extends AppCompatActivity {
         toggleFormState(true);
         finish();
         Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
-        goToSuccessPage.putExtra("status", statusText);
+        goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
         goToSuccessPage.putExtras(getIntent());
         startActivity(goToSuccessPage);
     }

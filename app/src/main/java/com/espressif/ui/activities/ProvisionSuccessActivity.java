@@ -11,8 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
@@ -22,6 +23,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.R;
 
 public class ProvisionSuccessActivity extends AppCompatActivity {
@@ -31,13 +33,14 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision_success);
         Toolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setTitle(R.string.title_activity_provision);
         setSupportActionBar(toolbar);
 
-        String status = getIntent().getStringExtra("status");
+        String status = getIntent().getStringExtra(AppConstants.KEY_STATUS_MSG);
         TextView successTextView = findViewById(R.id.success_textview);
         successTextView.setText(status);
 
-        Button doneButton = findViewById(R.id.done_button);
+        Button doneButton = findViewById(R.id.btn_done);
         doneButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -46,8 +49,20 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
                 Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
                 vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
                 finish();
+                BLEProvisionLanding.isBleWorkDone = true;
+                Intent intent = new Intent(getApplicationContext(), EspMainActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
             }
         });
     }
 
+    @Override
+    public void onBackPressed() {
+        BLEProvisionLanding.isBleWorkDone = true;
+        Intent intent = new Intent(getApplicationContext(), EspMainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        super.onBackPressed();
+    }
 }

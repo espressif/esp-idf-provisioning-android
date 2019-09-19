@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.models;
 
 public class WiFiAccessPoint {
 

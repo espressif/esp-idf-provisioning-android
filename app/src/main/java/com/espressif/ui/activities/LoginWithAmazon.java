@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.graphics.Color;
@@ -26,7 +26,9 @@ import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,6 +40,7 @@ import com.amazon.identity.auth.device.api.authorization.AuthorizeRequest;
 import com.amazon.identity.auth.device.api.authorization.AuthorizeResult;
 import com.amazon.identity.auth.device.api.authorization.ScopeFactory;
 import com.amazon.identity.auth.device.api.workflow.RequestContext;
+import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
@@ -85,6 +88,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private Button btnLogin;
 
     private RequestContext requestContext;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +108,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         btnLogin = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
+        progressBar = findViewById(R.id.loading_alexa_login);
         isLoginSkipped = false;
 
         btnLogin.setEnabled(false);
@@ -116,7 +121,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         if (isProvisioning) {
 
             transport = BLEProvisionLanding.bleTransport;
-            String proofOfPossession = intent.getStringExtra(ProofOfPossessionActivity.KEY_PROOF_OF_POSSESSION);
+            String proofOfPossession = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
             security = new Security1(proofOfPossession);
 
         } else {
@@ -146,6 +151,12 @@ public class LoginWithAmazon extends AppCompatActivity {
         super.onDestroy();
         Log.e(TAG, "Login With Amazon onDestroy");
         requestContext.unregisterListener(amazonAuthorizeListener);
+    }
+
+    @Override
+    public void onBackPressed() {
+        BLEProvisionLanding.isBleWorkDone = true;
+        super.onBackPressed();
     }
 
     @Override
@@ -217,6 +228,7 @@ public class LoginWithAmazon extends AppCompatActivity {
             Log.d(TAG, "Login button Clicked");
             Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+            progressBar.setVisibility(View.VISIBLE);
 
             final JSONObject scopeData = new JSONObject();
             final JSONObject productInstanceAttributes = new JSONObject();
@@ -292,7 +304,7 @@ public class LoginWithAmazon extends AppCompatActivity {
             Log.d(TAG, "codeVerifier : " + codeVerifier);
 
             Log.d(TAG, "Do Amazon Login");
-            if (clientId != null && BuildConfig.FLAVOR_avs.equals("avs")) {
+            if (clientId != null && BuildConfig.FLAVOR_transport.equals("ble")) {
 
                 configureAmazonLogin(clientId,
                         authCode,
@@ -302,14 +314,23 @@ public class LoginWithAmazon extends AppCompatActivity {
                             public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
 
                                 Log.d(TAG, "Amazon Login Completed Successfully");
-                                finish();
 
-                                if (isProvisioning) {
+                                runOnUiThread(new Runnable() {
 
-                                    goToWifiScanListActivity();
-                                } else {
-                                    goToAlexaActivity();
-                                }
+                                    @Override
+                                    public void run() {
+
+                                        progressBar.setVisibility(View.GONE);
+                                        finish();
+
+                                        if (isProvisioning) {
+
+                                            goToWifiScanListActivity();
+                                        } else {
+                                            goToAlexaActivity();
+                                        }
+                                    }
+                                });
                             }
                         });
             }
@@ -319,9 +340,13 @@ public class LoginWithAmazon extends AppCompatActivity {
         public void LoginFailed() {
 
             runOnUiThread(new Runnable() {
+
                 @Override
                 public void run() {
+                    
                     Toast.makeText(LoginWithAmazon.this, "SignIn failed!", Toast.LENGTH_SHORT).show();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                    progressBar.setVisibility(View.GONE);
                 }
             });
         }
@@ -474,7 +499,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
     private void goToWifiScanListActivity() {
 
-        Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanList.class);
+        Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanActivity.class);
         wifiListIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         wifiListIntent.putExtras(getIntent());
         startActivity(wifiListIntent);

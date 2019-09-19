@@ -5,28 +5,32 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.espressif.ui.activities.ProvisionSuccessActivity"
-    tools:showIn="@layout/activity_provision_success">
-
-    <TextView
-        android:id="@+id/success_textview"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@id/btn_done"
-        android:layout_centerHorizontal="true"
-        android:text="@string/success_text"
-        android:textSize="18sp" />
+    tools:context="com.espressif.ui.activities.EspMainActivity"
+    tools:showIn="@layout/activity_esp_main">
 
     <Button
-        android:id="@+id/btn_done"
+        android:id="@+id/manageButton"
+        style="@style/Widget.AppCompat.Button.Colored"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/btn_start_provision"
+        android:layout_marginStart="30dp"
+        android:layout_marginEnd="30dp"
+        android:background="@drawable/bg_btn"
+        android:enabled="true"
+        android:text="@string/btn_manage"
+        android:textAllCaps="false" />
+
+    <Button
+        android:id="@+id/btn_start_provision"
         style="@style/Widget.AppCompat.Button.Colored"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerInParent="true"
         android:layout_margin="30dp"
         android:background="@drawable/bg_btn"
-        android:text="@string/btn_done"
+        android:enabled="true"
+        android:text="@string/btn_add_device"
         android:textAllCaps="false" />
 
 </RelativeLayout>

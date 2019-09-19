@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.graphics.Color;
@@ -27,6 +27,7 @@ import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.espressif.provision.utils.UPnPDevice;
 import com.espressif.provision.utils.UPnPDiscovery;
+import com.espressif.ui.models.AlexaLocalDevices;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
@@ -88,7 +89,7 @@ public class ScanLocalDevices extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
 
 //                progressBar.setVisibility(View.VISIBLE);
-//                Log.d("WiFiScanList","Device to be connected -"+SSDPdevices.get(pos));
+//                Log.d("WiFiScanActivity","Device to be connected -"+SSDPdevices.get(pos));
                 deviceList.setVisibility(View.GONE);
                 btnScanDevices.setVisibility(View.GONE);
                 progressBar.setVisibility(View.VISIBLE);
