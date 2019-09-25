@@ -247,6 +247,7 @@ public class LoginWithAmazon extends AppCompatActivity {
             } catch (JSONException e) {
                 e.printStackTrace();
             } catch (Exception e) {
+                e.printStackTrace();
                 if (amazonLoginListener != null) {
                     amazonLoginListener.LoginFailed();
                 }
@@ -276,7 +277,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         application. */
         @Override
         public void onError(AuthError ae) {
-            Log.d(TAG, "Amazon Auth error :" + ae.toString());
+            Log.e(TAG, "Amazon Auth error :" + ae.toString());
             if (amazonLoginListener != null) {
                 amazonLoginListener.LoginFailed();
             }
@@ -285,7 +286,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         /* Authorization was cancelled before it could be completed. */
         @Override
         public void onCancel(AuthCancellation cancellation) {
-            Log.d(TAG, "Amazon Auth error :" + cancellation.getDescription());
+            Log.e(TAG, "Amazon Auth error :" + cancellation.getDescription());
             if (amazonLoginListener != null) {
                 amazonLoginListener.LoginFailed();
             }
@@ -343,7 +344,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
                 @Override
                 public void run() {
-                    
+
                     Toast.makeText(LoginWithAmazon.this, "SignIn failed!", Toast.LENGTH_SHORT).show();
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                     progressBar.setVisibility(View.GONE);

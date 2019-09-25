@@ -74,7 +74,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private static final int REQUEST_FINE_LOCATION = 2;
 
     // Time out
-    private static final long SCAN_TIMEOUT = 3000;
+    private static final long SCAN_TIMEOUT = 5000;
     private static final long DEVICE_CONNECT_TIMEOUT = 20000;
 
     public static boolean isBleWorkDone = false;

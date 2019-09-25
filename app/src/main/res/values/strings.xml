@@ -64,9 +64,9 @@
     <!--Error Messages-->
     <string name="error_ble_not_supported">Sorry! BLE is not supported.</string>
     <string name="error_bluetooth_not_supported">Sorry! Bluetooth is not supported.</string>
-    <string name="error_network_not_found">Device provisioning failed. Reason : Network not found. Please reset device to factory settings and retry.</string>
-    <string name="error_authentication_failed">Device provisioning failed. Reason : Wi-Fi Authentication failed. Please reset device to factory settings and retry.</string>
-    <string name="error_unknown">Device provisioning failed. Reason : Unknown. Please reset device to factory settings and retry.</string>
+    <string name="error_network_not_found">Device provisioning failed. \n Reason : Network not found. Please reset device to factory settings and retry.</string>
+    <string name="error_authentication_failed">Device provisioning failed. \n Reason : Wi-Fi Authentication failed. Please reset device to factory settings and retry.</string>
+    <string name="error_unknown">Device provisioning failed. \n Reason : Unknown. Please reset device to factory settings and retry.</string>
     <string name="error_pop_incorrect">Error establishing session.\n Check if Proof of Possession(POP) is correct!</string>
     <string name="error_device_not_supported">Failed to connect with Device.</string>
 
@@ -78,6 +78,7 @@
     <string name="title_activity_login_with_amazon">Login With Amazon</string>
     <string name="title_activity_alexa">Do More With Alexa</string>
     <string name="title_activity_pop">Proof Of Possession</string>
+    <string name="title_activity_manage_devices">Devices</string>
 
     <string name="join_other_network">Join Other Network</string>
     <string name="networks">Networks</string>

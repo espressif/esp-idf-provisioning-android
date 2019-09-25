@@ -1,7 +1,6 @@
 package com.espressif.ui.activities;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -13,7 +12,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -44,7 +43,6 @@ public class ScanLocalDevices extends AppCompatActivity {
     private static int DISCOVERY_TIMEOUT = 5000;
 
     private ListView deviceList;
-    private Button btnScanDevices;
     private TextView progressText;
     private ProgressBar progressBar;
 
@@ -61,6 +59,7 @@ public class ScanLocalDevices extends AppCompatActivity {
     private boolean isScanning = false;
     private String deviceHostAddress;
     private String deviceName;
+    private ImageView btnScan;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +67,7 @@ public class ScanLocalDevices extends AppCompatActivity {
         setContentView(R.layout.activity_manage_devices);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.scantoolbar);
-        toolbar.setTitle("Devices on Local Network");
+        toolbar.setTitle(R.string.title_activity_manage_devices);
 
         SSDPdevices = new ArrayList<>();
         ArrayList<String> devNames = new ArrayList<>();
@@ -91,7 +90,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 //                progressBar.setVisibility(View.VISIBLE);
 //                Log.d("WiFiScanActivity","Device to be connected -"+SSDPdevices.get(pos));
                 deviceList.setVisibility(View.GONE);
-                btnScanDevices.setVisibility(View.GONE);
+                btnScan.setVisibility(View.GONE);
                 progressBar.setVisibility(View.VISIBLE);
 
                 String progressMsg = getString(R.string.progress_get_status) + " " + SSDPdevices.get(position).getFriendlyName();
@@ -102,8 +101,8 @@ public class ScanLocalDevices extends AppCompatActivity {
             }
         });
 
-        btnScanDevices = findViewById(R.id.devices_scan);
-        btnScanDevices.setOnClickListener(new View.OnClickListener() {
+        btnScan = findViewById(R.id.btn_refresh);
+        btnScan.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
@@ -254,7 +253,7 @@ public class ScanLocalDevices extends AppCompatActivity {
             @Override
             public void OnFoundNewDevice(UPnPDevice device) {
 
-//                Log.d("ScanLocalDevices", "Found  device: " + device.toString());
+                Log.d("ScanLocalDevices", "Found  device: " + device.toString());
                 final UPnPDevice foundDevice = device;
 
                 runOnUiThread(new Runnable() {
@@ -346,20 +345,17 @@ public class ScanLocalDevices extends AppCompatActivity {
 
         if (isScanning) {
 
-            btnScanDevices.setEnabled(false);
-            btnScanDevices.setAlpha(0.5f);
-            btnScanDevices.setTextColor(Color.WHITE);
             progressBar.setVisibility(View.VISIBLE);
             progressText.setVisibility(View.VISIBLE);
             deviceList.setVisibility(View.GONE);
+            btnScan.setVisibility(View.GONE);
 
         } else {
 
-            btnScanDevices.setEnabled(true);
-            btnScanDevices.setAlpha(1f);
             progressBar.setVisibility(View.GONE);
             progressText.setVisibility(View.GONE);
             deviceList.setVisibility(View.VISIBLE);
+            btnScan.setVisibility(View.VISIBLE);
         }
     }
 

@@ -17,11 +17,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
         <activity
-            android:name="com.espressif.ui.MainActivity"
+            android:name="com.espressif.ui.activities.EspMainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -33,6 +35,7 @@
             android:name="com.amazon.identity.auth.device.workflow.WorkflowActivity"
             android:allowTaskReparenting="true"
             android:launchMode="singleTask"
+            android:screenOrientation="portrait"
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -46,44 +49,54 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="com.espressif.ui.ProvisionLanding"
+            android:name="com.espressif.ui.activities.ProvisionLanding"
             android:label="@string/title_activity_provision_landing"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ProvisionActivity"
-            android:label="@string/provision_activity_title"
+            android:name="com.espressif.ui.activities.ProvisionActivity"
+            android:label="@string/title_activity_provision"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.WiFiScanList"
-            android:label="Wi-Fi Scan List"
+            android:name="com.espressif.ui.activities.WiFiScanActivity"
+            android:label="@string/title_activity_wifi_scan_list"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ScanLocalDevices"
-            android:label="Manage Devices"
+            android:name="com.espressif.ui.activities.ScanLocalDevices"
+            android:label="@string/title_activity_manage_devices"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ManageDevices"
-            android:label="Manage Devices"
+            android:name="com.espressif.ui.activities.ManageDevices"
+            android:label="@string/title_activity_manage_devices"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.LoginWithAmazon"
+            android:name="com.espressif.ui.activities.LoginWithAmazon"
             android:label="@string/title_activity_login_with_amazon"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.AlexaActivity"
+            android:name="com.espressif.ui.activities.AlexaActivity"
             android:label="@string/title_activity_alexa"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ProvisionSuccessActivity"
+            android:name="com.espressif.ui.activities.ProvisionSuccessActivity"
             android:label="@string/title_activity_provision_success"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.BLEProvisionLanding"
-            android:label="@string/title_activity_bleprovision_landing"
+            android:name="com.espressif.ui.activities.BLEProvisionLanding"
+            android:label="@string/title_activity_connect_device"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.ProofOfPossessionActivity"
+            android:name="com.espressif.ui.activities.ProofOfPossessionActivity"
             android:label="@string/title_activity_pop"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
     </application>
