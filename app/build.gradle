@@ -10,18 +10,20 @@ android {
             keyPassword 'password'
         }
     }
-    compileSdkVersion 27
+    compileSdkVersion 28
+
     defaultConfig {
-        applicationId "com.espressif.provavsble"
+        applicationId "com.espressif.provbleavs"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 5
-        versionName "1.3"
+        versionCode 7
+        versionName "1.3.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         signingConfig signingConfigs.config
     }
     buildTypes {
         release {
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             resValue "string", "proof_of_possesion", "abcd1234"
@@ -34,10 +36,11 @@ android {
             resValue "string", "ble_scanconfig_uuid", "0000ff50-0000-1000-8000-00805f9b34fb"
             resValue "string", "ble_device_name_prefix", "ESP-Alexa-"
             signingConfig signingConfigs.config
-            debuggable true
         }
         debug {
             debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             resValue "string", "proof_of_possesion", "abcd1234"
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_network_name_prefix", "ESP-Alexa-"
@@ -100,9 +103,9 @@ protobuf {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation 'com.android.support.constraint:constraint-layout:1.1.0'
-    implementation 'com.android.support:design:27.1.1'
+    implementation 'com.android.support:design:28.0.0'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'

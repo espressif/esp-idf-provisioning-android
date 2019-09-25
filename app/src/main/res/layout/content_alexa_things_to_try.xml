@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.espressif.ui.AlexaActivity"
+    tools:context="com.espressif.ui.activities.AlexaActivity"
     tools:showIn="@layout/activity_alexa">
 
     <TextView
@@ -28,7 +28,7 @@
         android:contentDescription="TODO"
         android:src="@drawable/ic_alexa_logo_vertical_with_text" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.widgets.AvsEmberLightText
         android:id="@+id/alexa_examples_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -44,7 +44,7 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:textSize="52px" />
 
-    <com.espressif.ui.BookerlyItalicText
+    <com.espressif.ui.widgets.BookerlyItalicText
         android:id="@+id/alexa_example_1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -56,7 +56,7 @@
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.BookerlyItalicText
+    <com.espressif.ui.widgets.BookerlyItalicText
         android:id="@+id/alexa_example_2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -68,7 +68,7 @@
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.BookerlyItalicText
+    <com.espressif.ui.widgets.BookerlyItalicText
         android:id="@+id/alexa_example_3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -80,7 +80,7 @@
         android:textAlignment="center"
         android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
 
-    <com.espressif.ui.BookerlyItalicText
+    <com.espressif.ui.widgets.BookerlyItalicText
         android:id="@+id/alexa_example_4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -96,7 +96,7 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:visibility="gone" />
 
-    <com.espressif.ui.BookerlyItalicText
+    <com.espressif.ui.widgets.BookerlyItalicText
         android:id="@+id/alexa_example_5"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -127,7 +127,7 @@
             android:layout_marginEnd="25dp"
             android:background="#777777" />
 
-        <com.espressif.ui.AvsEmberLightText
+        <com.espressif.ui.widgets.AvsEmberLightText
             android:id="@+id/alexa_app_link"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.espressif.ui.ProvisionActivity"
+    tools:context="com.espressif.ui.activities.ProvisionActivity"
     tools:showIn="@layout/activity_provision">
 
     <TextView
@@ -93,6 +93,7 @@
             android:background="@drawable/bg_btn"
             android:enabled="false"
             android:text="@string/provision"
+            android:textAllCaps="false"
             android:textColor="#FFFFFF" />
 
         <ProgressBar

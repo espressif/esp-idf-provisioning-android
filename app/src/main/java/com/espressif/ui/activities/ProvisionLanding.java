@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.Manifest;
 import android.content.Context;
@@ -47,7 +47,7 @@ public class ProvisionLanding extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision_landing);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        toolbar.setTitle(R.string.connect_to_device_title);
+        toolbar.setTitle(R.string.title_activity_connect_device);
         setSupportActionBar(toolbar);
 
         wifiAPPrefix = getIntent().getStringExtra(Provision.CONFIG_WIFI_AP_KEY);

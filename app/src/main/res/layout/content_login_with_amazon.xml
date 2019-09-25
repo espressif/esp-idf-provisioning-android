@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:layout_margin="10dp"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context="com.espressif.ui.LoginWithAmazon"
+    tools:context="com.espressif.ui.activities.LoginWithAmazon"
     tools:showIn="@layout/activity_login_with_amazon">
 
     <TextView
@@ -32,18 +32,25 @@
         android:contentDescription="TODO"
         android:src="@drawable/ic_alexa_logo_vertical_with_text" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <ProgressBar
+        android:id="@+id/loading_alexa_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+
+    <com.espressif.ui.widgets.AvsEmberLightText
         android:id="@+id/alexa_text_1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/iv_alexa_logo"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="10dp"
         android:gravity="center"
         android:text="@string/alexa_sign_in_string_1"
         android:textSize="19sp" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.widgets.AvsEmberLightText
         android:id="@+id/alexa_text_2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -55,7 +62,7 @@
         android:text="@string/alexa_sign_in_string_2"
         android:textSize="19sp" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.widgets.AvsEmberLightText
         android:id="@+id/alexa_text_3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -68,7 +75,7 @@
         android:text="@string/alexa_sign_in_string_3"
         android:textSize="17sp" />
 
-    <com.espressif.ui.AvsEmberLightText
+    <com.espressif.ui.widgets.AvsEmberLightText
         android:id="@+id/alexa_text_4"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

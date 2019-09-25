@@ -1,5 +1,3 @@
-.DS_Store
-
 # Built application files
 *.apk
 *.ap_
@@ -67,3 +65,32 @@ fastlane/test_output
 fastlane/readme.md
 
 app/src/main/assets/api_key.txt
+
+# Built application files
+/*/build/
+
+# Crashlytics configuations
+com_crashlytics_export_strings.xml
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Gradle generated files
+.gradle/
+
+# Signing files
+.signing/
+
+# User-specific configurations
+.idea/*
+*.iml
+
+# OS-specific files
+.DS_Storegit add
+.DS_Store
+.D
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

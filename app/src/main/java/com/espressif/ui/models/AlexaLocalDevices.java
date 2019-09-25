@@ -1,6 +1,4 @@
-package com.espressif.ui;
-
-import android.util.Log;
+package com.espressif.ui.models;
 
 import java.io.Serializable;
 
@@ -11,41 +9,46 @@ public class AlexaLocalDevices implements Serializable {
     private String softwareVersion;
     private String friendlyName;
 
-    AlexaLocalDevices(String hostAddr){
+    public AlexaLocalDevices(String hostAddr) {
         this.hostAddr = hostAddr;
         this.friendlyName = null;
     }
+
     public String getHostAddress() {
         return hostAddr;
     }
+
     public String getFriendlyName() {
         return friendlyName;
     }
-    public String getStatus(){
+
+    public String getStatus() {
         return status;
     }
-    public String getSoftwareVersion(){
+
+    public String getSoftwareVersion() {
         return softwareVersion;
     }
-    public String getModelno(){
+
+    public String getModelno() {
         return modelno;
     }
 
 
-    public void setModelno (String modelno){
+    public void setModelno(String modelno) {
         this.modelno = modelno;
     }
 
-    public void setStatus(String status){
+    public void setStatus(String status) {
         this.status = status;
     }
 
 
-    public void setSoftwareVersion(String softwareVersion){
+    public void setSoftwareVersion(String softwareVersion) {
         this.softwareVersion = softwareVersion;
     }
 
-    public void setFriendlyName(String friendlyName){
+    public void setFriendlyName(String friendlyName) {
         this.friendlyName = friendlyName;
     }
 }

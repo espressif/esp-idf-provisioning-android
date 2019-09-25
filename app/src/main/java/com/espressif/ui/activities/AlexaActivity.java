@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.net.Uri;
@@ -26,6 +26,7 @@ import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
+import com.espressif.ui.widgets.AvsEmberLightText;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import avs.Avsconfig;
@@ -36,7 +37,6 @@ public class AlexaActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif:" + AlexaActivity.class.getSimpleName();
 
-    //    private Button btnSignOut;
     private AvsEmberLightText txtAlexaAppLink;
 
     private Session session;
@@ -120,6 +120,10 @@ public class AlexaActivity extends AppCompatActivity {
         } else if (id == R.id.action_done) {
 
             finish();
+            BLEProvisionLanding.isBleWorkDone = true;
+            Intent intent = new Intent(getApplicationContext(), EspMainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(intent);
             return true;
         }
 
@@ -127,9 +131,6 @@ public class AlexaActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-
-//        btnSignOut = findViewById(R.id.btn_sign_out);
-//        btnSignOut.setOnClickListener(signOutBtnClickListener);
 
         txtDeviceName = findViewById(R.id.txt_device_name);
         txtAlexaAppLink = findViewById(R.id.alexa_app_link);

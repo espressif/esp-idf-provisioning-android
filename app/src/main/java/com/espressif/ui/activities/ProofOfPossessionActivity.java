@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -29,8 +30,6 @@ import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
 public class ProofOfPossessionActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + ProofOfPossessionActivity.class.getSimpleName();
-
-    public static final String KEY_PROOF_OF_POSSESSION = "proof_of_possession";
 
     private Button btnNext;
     private EditText etDeviceKey;
@@ -179,7 +178,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
         alexaProvisioningIntent.putExtras(getIntent());
-        alexaProvisioningIntent.putExtra(KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
+        alexaProvisioningIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
         startActivity(alexaProvisioningIntent);
     }
 
@@ -187,7 +186,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
 
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
-        launchProvisionInstructions.putExtra(KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
+        launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, etDeviceKey.getText().toString());
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
     }
 }

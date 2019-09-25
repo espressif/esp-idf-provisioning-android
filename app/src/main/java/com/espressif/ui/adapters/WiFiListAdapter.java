@@ -1,4 +1,4 @@
-package com.espressif.ui;
+package com.espressif.ui.adapters;
 
 import android.app.Activity;
 import android.content.Context;
@@ -9,8 +9,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.espressif.AppConstants;
 import com.espressif.provision.R;
+import com.espressif.ui.models.WiFiAccessPoint;
 
 import java.util.ArrayList;
 
