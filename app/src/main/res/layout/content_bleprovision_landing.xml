@@ -35,6 +35,7 @@
             android:layout_height="wrap_content"
             android:text="@string/devices_title"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textSize="20sp"
             android:textStyle="bold" />
 
         <ImageView

@@ -15,19 +15,19 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BleScanner {
+public class BLEScanner {
 
-    private static final String TAG = BleScanner.class.getSimpleName();
+    private static final String TAG = BLEScanner.class.getSimpleName();
 
     private Context context;
-    private BleScanListener bleScanListener;
+    private BLEScanListener bleScanListener;
     private BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
 
     private long scanTimeout;
     private boolean isScanning = false;
 
-    public BleScanner(Context context, long scanTimeoutInMillis, BleScanListener bleScannerListener) {
+    public BLEScanner(Context context, long scanTimeoutInMillis, BLEScanListener bleScannerListener) {
 
         this.context = context;
         this.scanTimeout = scanTimeoutInMillis;

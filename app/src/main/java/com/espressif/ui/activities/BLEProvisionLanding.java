@@ -41,8 +41,8 @@ import android.widget.Toast;
 
 import com.espressif.AppConstants;
 import com.espressif.avs.ConfigureAVS;
-import com.espressif.ble_scanner.BleScanListener;
-import com.espressif.ble_scanner.BleScanner;
+import com.espressif.ble_scanner.BLEScanListener;
+import com.espressif.ble_scanner.BLEScanner;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
@@ -100,7 +100,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private BleDeviceListAdapter adapter;
     private BluetoothAdapter bleAdapter;
-    private BleScanner bleScanner;
+    private BLEScanner bleScanner;
     private ArrayList<BluetoothDevice> deviceList;
     private HashMap<BluetoothDevice, String> bluetoothDevices;
     private Handler handler;
@@ -145,7 +145,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
         deviceList = new ArrayList<>(keySet);
 
         initViews();
-        bleScanner = new BleScanner(this, SCAN_TIMEOUT, bleScanListener);
+        bleScanner = new BLEScanner(this, SCAN_TIMEOUT, bleScanListener);
 
         transportListener = new BLETransport.BLETransportListener() {
 
@@ -382,17 +382,12 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
         if (bleScanner.isScanning()) {
 
-//            btnScan.setEnabled(false);
-//            btnScan.setAlpha(0.5f);
-//            btnScan.setTextColor(Color.WHITE);
             btnScan.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
             listView.setVisibility(View.GONE);
 
         } else {
 
-//            btnScan.setEnabled(true);
-//            btnScan.setAlpha(1f);
             btnScan.setVisibility(View.VISIBLE);
             progressBar.setVisibility(View.GONE);
             listView.setVisibility(View.VISIBLE);
@@ -534,7 +529,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
         builder.show();
     }
 
-    private BleScanListener bleScanListener = new BleScanListener() {
+    private BLEScanListener bleScanListener = new BLEScanListener() {
 
         @Override
         public void onPeripheralFound(BluetoothDevice device, ScanResult scanResult) {
@@ -596,10 +591,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
             isDeviceConnected = false;
             btnScan.setVisibility(View.GONE);
             listView.setVisibility(View.GONE);
-            progressBar.setVisibility(View.VISIBLE);
             BluetoothDevice device = adapter.getItem(position);
             deviceName = device.getName();
             Log.d(TAG, "=================== Connect to device : " + deviceName);
+            progressBar.setVisibility(View.VISIBLE);
             bleTransport.connect(device);
             handler.postDelayed(disconnectDeviceTask, DEVICE_CONNECT_TIMEOUT);
         }
