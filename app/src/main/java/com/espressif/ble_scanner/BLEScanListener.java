@@ -6,7 +6,7 @@ import android.bluetooth.le.ScanResult;
 /**
  * Interface for BLE device scanning.
  */
-public interface BleScanListener {
+public interface BLEScanListener {
 
     /**
      * Called when any BLE peripheral will be found.

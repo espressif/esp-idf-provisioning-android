@@ -46,6 +46,12 @@ public class WiFiListAdapter extends ArrayAdapter<WiFiAccessPoint> {
 //            lockImage.setVisibility(View.VISIBLE);
 //        }
 
+        if (wiFiAccessPoint.getWifiName().equals(context.getString(R.string.join_other_network))) {
+
+            rssiImage.setVisibility(View.VISIBLE);
+            rssiImage.setImageResource(R.drawable.ic_right_arrow);
+        }
+
         return view;
     }
 
