@@ -297,21 +297,7 @@ public class WiFiScanActivity extends AppCompatActivity {
                 }
 
             } else {
-
-                runOnUiThread(new Runnable() {
-
-                    @Override
-                    public void run() {
-
-                        // Add "Join network" Option as a list item
-                        WiFiAccessPoint wifiAp = new WiFiAccessPoint();
-                        wifiAp.setWifiName(getString(R.string.join_other_network));
-                        apDevices.add(wifiAp);
-
-                        progressBar.setVisibility(View.GONE);
-                        adapter.notifyDataSetChanged();
-                    }
-                });
+                Log.e(TAG, "Nothing to do. Wifi list completed.");
             }
         }
     }
@@ -399,7 +385,32 @@ public class WiFiScanActivity extends AppCompatActivity {
                     }
 
                     startIndex = startIndex + 4;
-                    getFullWiFiList();
+
+                    int temp = totalCount - startIndex;
+
+                    if (temp > 0) {
+
+                        getFullWiFiList();
+
+                    } else {
+
+                        Log.e(TAG, "WIFi LIST Completed");
+
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+
+                                // Add "Join network" Option as a list item
+                                WiFiAccessPoint wifiAp = new WiFiAccessPoint();
+                                wifiAp.setWifiName(getString(R.string.join_other_network));
+                                apDevices.add(wifiAp);
+
+                                updateProgressAndScanBtn(false);
+                                handler.removeCallbacks(stopScanningTask);
+                            }
+                        });
+                    }
                 }
             });
 

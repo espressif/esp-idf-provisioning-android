@@ -22,6 +22,7 @@
             android:name="com.espressif.ui.user_module.MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -32,62 +33,77 @@
         <activity
             android:name="com.espressif.ui.activities.ProvisionLanding"
             android:label="@string/title_activity_provision_landing"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.ProvisionActivity"
             android:label="@string/provision_activity_title"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.ProvisionSuccessActivity"
             android:label="@string/title_activity_provision_success"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.BLEProvisionLanding"
             android:label="@string/title_activity_bleprovision_landing"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.WiFiScanActivity"
             android:label="@string/title_activity_wifi_scan_list"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.ProofOfPossessionActivity"
             android:label="@string/title_activity_pop"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.EspMainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.SettingsActivity"
-            android:label="@string/title_activity_settings" />
+            android:label="@string/title_activity_settings"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="com.espressif.ui.user_module.RegisterUser"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.SignUpConfirm"
             android:label="@string/title_activity_sign_up_confirm"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.MFAActivity"
             android:label="@string/title_activity_mfa"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.ForgotPasswordActivity"
             android:label="@string/title_activity_forgot_password"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.ChangePasswordActivity"
             android:label="@string/title_activity_change_password"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.NewPassword"
             android:label="@string/title_activity_new_password"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.user_module.ChooseMFA"
             android:label="@string/title_activity_choose_mfa"
+            android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
     </application>

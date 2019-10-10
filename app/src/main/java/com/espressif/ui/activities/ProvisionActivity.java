@@ -432,6 +432,12 @@ public class ProvisionActivity extends AppCompatActivity {
 
                     @Override
                     public void onSuccess(Bundle data) {
+
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         goToSuccessPage(getString(R.string.success_text));
                     }
 
