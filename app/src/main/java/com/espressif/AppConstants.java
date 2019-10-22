@@ -14,6 +14,7 @@ public class AppConstants {
     public static final String HANDLER_PROV_SCAN = "prov-scan";
     public static final String HANDLER_PROTO_VER = "proto-ver";
     public static final String HANDLER_PROV_SESSION = "prov-session";
+    public static final String HANDLER_CLOUD_USER_ASSOC = "cloud_user_assoc";
 
     // Keys used to pass data between activities and to store data in SharedPreference.
     public static final String KEY_WIFI_SECURITY_TYPE = "wifi_security";

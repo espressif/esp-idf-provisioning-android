@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Espressif</string>
+    <string name="app_name">ESP Demo</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_provision_landing">Connect to device</string>
     <string name="connect_to_device_instructions">To provision your new device, please make sure that your device is turned on. Now connect your phone to the Wi-Fi network with a name like</string>
@@ -56,6 +56,14 @@
     <string name="title_activity_wifi_scan_list">Wi-Fi List</string>
     <string name="title_activity_provision">Provision</string>
     <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="title_activity_sign_up_confirm">SignUpConfirm</string>
+    <string name="title_activity_mfa">MFAActivity</string>
+    <string name="title_activity_choose_mfa">ChooseMFA</string>
+    <string name="title_activity_forgot_password">ForgotPasswordActivity</string>
+    <string name="title_activity_change_password">ChangePasswordActivity</string>
+    <string name="title_activity_new_password">NewPassword</string>
+
 
     <string name="prefix">Prefix :</string>
     <string name="hint_prefix">Enter Prefix</string>
@@ -65,5 +73,13 @@
 
     <string name="join_other_network">Join Other Network</string>
     <string name="networks">Networks</string>
+
+    <string name="nav_drawer_open">Open navigation drawer</string>
+    <string name="nav_drawer_close">Close navigation drawer</string>
+    <string name="Username">Username</string>
+    <string name="Password">Password</string>
+    <string name="Menu">Menu</string>
+    <string name="app_main_desc">A sample app to showcase Cognito Identity and the SDK for Android.</string>
+    <string name="pick_MFA">MFA Options</string>
 
 </resources>
