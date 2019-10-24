@@ -13,7 +13,8 @@ enum AVSConfigStatus {
 message CmdGetDetails {
     uint32 Dummy = 1;
 }
-message RespGetDetails{
+
+message RespGetDetails {
     AVSConfigStatus Status = 1;
     string Version = 2;
     string CodeChallenge = 3;
@@ -27,7 +28,7 @@ message CmdSetConfig {
     string RedirectURI = 3;
 }
 
-message RespSetConfig{
+message RespSetConfig {
     AVSConfigStatus Status = 1;
     uint32 Dummy = 2;
 }
@@ -48,15 +49,110 @@ message RespSignOut {
     AVSConfigStatus Status = 1;
 }
 
+enum Locale {
+    de_DE = 0;
+    en_AU = 1;
+    en_CA = 2;
+    en_GB = 3;
+    en_IN = 4;
+    en_US = 5;
+    es_ES = 6;
+    es_MX = 7;
+    es_US = 8;
+    fr_CA = 9;
+    fr_FR = 10;
+    hi_IN = 11;
+    it_IT = 12;
+    ja_JP = 13;
+    pt_BR = 14;
+}
+
+message CmdSetAssistantLang {
+    Locale AssistantLang = 1;
+}
+
+message RespSetAssistantLang {
+    AVSConfigStatus Status = 1;
+}
+
+message CmdSetSORAudioCue {
+    bool AudioCue = 1;
+}
+
+message CmdSetEORAudioCue {
+    bool AudioCue = 1;
+}
+
+message RespSetSORAudioCue {
+    AVSConfigStatus Status = 1;
+}
+
+message RespSetEORAudioCue {
+    AVSConfigStatus Status = 1;
+}
+
+message CmdSetUserVisibleName {
+    string Name = 1;
+}
+
+message RespSetUserVisibleName {
+    AVSConfigStatus Status = 1;
+}
+
+message CmdGetDeviceInfo {
+    uint32 Dummy = 1;
+}
+
+message CmdSetVolume {
+    uint32 Level = 1;
+}
+
+message RespSetVolume {
+    AVSConfigStatus Status = 1;
+}
+
+message AVSGenericDeviceInfo {
+    string FwVersion = 1;
+    string MAC = 2;
+    string SerialNum = 3;
+    string UserVisibleName = 4;
+    string WiFi = 5;
+}
+
+message AVSSpecificDeviceInfo {
+    Locale AssistantLang = 1;
+    bool SORAudioCue = 2;
+    bool EORAudioCue = 3;
+    uint32 Volume = 4;
+}
+
+message RespGetDeviceInfo {
+    AVSConfigStatus Status = 1;
+    AVSGenericDeviceInfo GenericInfo = 2;
+    AVSSpecificDeviceInfo AVSSpecificInfo = 3;
+}
+
 enum AVSConfigMsgType {
     TypeCmdGetDetails = 0;
     TypeRespGetDetails = 1;
     TypeCmdSetConfig = 2;
-    TypeRespSetConfig =3;
+    TypeRespSetConfig = 3;
     TypeCmdSignInStatus = 4;
     TypeRespSignInStatus = 5;
     TypeCmdSignOut = 6;
     TypeRespSignOut = 7;
+    TypeCmdGetDeviceInfo = 8;
+    TypeRespGetDeviceInfo = 9;
+    TypeCmdSetSORAudioCue = 10;
+    TypeRespSetSORAudioCue = 12;
+    TypeCmdSetEORAudioCue = 13;
+    TypeRespSetEORAudioCue = 14;
+    TypeCmdSetAssistantLang = 15;
+    TypeRespSetAssistantLang = 16;
+    TypeCmdSetUserVisibleName = 17;
+    TypeRespSetUserVisibleName = 18;
+    TypeCmdSetVolume = 19;
+    TypeRespSetVolume = 20;
 }
 
 message AVSConfigPayload {
@@ -66,9 +162,21 @@ message AVSConfigPayload {
         RespGetDetails resp_get_details = 11;
         CmdSetConfig cmd_set_config = 12;
         RespSetConfig resp_set_config = 13;
-	CmdSignInStatus cmd_signin_status = 14;
-	RespSignInStatus resp_signin_status = 15;
-	CmdSignOut cmd_sign_out = 16;
-	RespSignOut resp_sign_out = 17;
+        CmdSignInStatus cmd_signin_status = 14;
+        RespSignInStatus resp_signin_status = 15;
+        CmdSignOut cmd_sign_out = 16;
+        RespSignOut resp_sign_out = 17;
+        CmdGetDeviceInfo cmd_get_device_info = 18;
+        RespGetDeviceInfo resp_get_device_info = 19;
+        CmdSetAssistantLang cmd_assistant_lang = 20;
+        RespSetAssistantLang resp_assistant_lang = 21;
+        CmdSetSORAudioCue cmd_sor_audio_cue = 22;
+        RespSetSORAudioCue resp_sor_audio_cue = 23;
+        CmdSetEORAudioCue cmd_eor_audio_cue = 24;
+        RespSetEORAudioCue resp_eor_audio_cue = 25;
+        CmdSetUserVisibleName cmd_user_visible_name = 26;
+        RespSetUserVisibleName resp_user_visible_name = 27;
+        CmdSetVolume cmd_set_volume = 28;
+        RespSetVolume resp_set_volume = 29;
     }
 }

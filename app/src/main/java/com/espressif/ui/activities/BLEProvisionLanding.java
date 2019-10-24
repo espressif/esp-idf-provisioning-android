@@ -32,15 +32,16 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.espressif.AppConstants;
-import com.espressif.avs.ConfigureAVS;
 import com.espressif.ble_scanner.BLEScanListener;
 import com.espressif.ble_scanner.BLEScanner;
 import com.espressif.provision.Provision;
@@ -67,8 +68,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + BLEProvisionLanding.class.getSimpleName();
 
-    private static final String PROOF_OF_POSSESSION = "abcd1234";
-
     // Request codes
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int REQUEST_FINE_LOCATION = 2;
@@ -89,12 +88,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private BLETransport.BLETransportListener transportListener;
     // FIXME : Remove static BLE_TRANSPORT and think for another solution.
 
-    private String configUUID;
-    private String avsConfigUUID;
-    private String serviceUUID;
-    private String sessionUUID;
     private String deviceName;
     private String deviceNamePrefix;
+    private String pop;
     private boolean isDeviceConnected;
     private boolean isConnecting = false;
 
@@ -131,11 +127,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
             return;
         }
 
-        serviceUUID = getIntent().getStringExtra(BLETransport.SERVICE_UUID_KEY);
-        sessionUUID = getIntent().getStringExtra(BLETransport.SESSION_UUID_KEY);
-        configUUID = getIntent().getStringExtra(BLETransport.CONFIG_UUID_KEY);
-        avsConfigUUID = getIntent().getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
-        deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
+        deviceNamePrefix = getIntent().getStringExtra(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX);
 
         isConnecting = false;
         isDeviceConnected = false;
@@ -157,8 +149,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
             @Override
             public void onPeripheralNotConfigured(BluetoothDevice device) {
-//                btnScan.setEnabled(true);
-//                btnScan.setAlpha(1f);
                 btnScan.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
                 listView.setVisibility(View.VISIBLE);
@@ -192,18 +182,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
         };
 
-        HashMap<String, String> configUUIDMap = new HashMap<>();
-        configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
-        configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
-        if (avsConfigUUID != null) {
-            configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsConfigUUID);
-        }
-
-        bleTransport = new BLETransport(this,
-                UUID.fromString(serviceUUID),
-                UUID.fromString(sessionUUID),
-                configUUIDMap,
-                transportListener);
+        bleTransport = new BLETransport(this, transportListener);
     }
 
     @Override
@@ -360,10 +339,20 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
                 if (isConfigured) {
 
+                    isConnecting = false;
                     isDeviceConnected = true;
-//                    finish();
-//                    goToProofOfPossessionActivity();
-                    initSession();
+                    final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+
+                    if (bleTransport.deviceCapabilities != null) {
+
+                        if (!bleTransport.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                            askForPop();
+                        }
+                    } else {
+                        pop = getResources().getString(R.string.proof_of_possesion);
+                        initSession();
+                    }
 
                 } else {
                     Toast.makeText(BLEProvisionLanding.this,
@@ -464,7 +453,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
         alexaProvisioningIntent.putExtras(getIntent());
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        alexaProvisioningIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, PROOF_OF_POSSESSION);
+        alexaProvisioningIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
         startActivity(alexaProvisioningIntent);
     }
 
@@ -473,13 +462,12 @@ public class BLEProvisionLanding extends AppCompatActivity {
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, PROOF_OF_POSSESSION);
+        launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
     }
 
     private void initSession() {
 
-        final String pop = PROOF_OF_POSSESSION;
         Log.e(TAG, "POP : " + pop);
         final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
@@ -591,11 +579,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
             isDeviceConnected = false;
             btnScan.setVisibility(View.GONE);
             listView.setVisibility(View.GONE);
-            BluetoothDevice device = adapter.getItem(position);
-            deviceName = device.getName();
-            Log.d(TAG, "=================== Connect to device : " + deviceName);
             progressBar.setVisibility(View.VISIBLE);
-            bleTransport.connect(device);
+            BluetoothDevice device = adapter.getItem(position);
+            String uuid = bluetoothDevices.get(device);
+            deviceName = device.getName();
+            Log.d(TAG, "=================== Connect to device : " + deviceName + " UUID : " + uuid);
+
+            bleTransport.connect(device, UUID.fromString(uuid));
             handler.postDelayed(disconnectDeviceTask, DEVICE_CONNECT_TIMEOUT);
         }
     };
@@ -610,4 +600,36 @@ public class BLEProvisionLanding extends AppCompatActivity {
             alertForDeviceNotSupported();
         }
     };
+
+    private void askForPop() {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+
+        LayoutInflater layoutInflaterAndroid = LayoutInflater.from(this);
+        View view = layoutInflaterAndroid.inflate(R.layout.dialog_pop, null);
+        builder.setView(view);
+        final EditText etPop = view.findViewById(R.id.et_prefix);
+        etPop.setHint(R.string.hint_txt_pop);
+        etPop.setText(getResources().getString(R.string.proof_of_possesion));
+        etPop.setSelection(etPop.getText().length());
+
+        // Set up the buttons
+        builder.setPositiveButton(R.string.btn_save, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                pop = etPop.getText().toString();
+
+                if (pop != null) {
+                    pop = pop.trim();
+                }
+
+                initSession();
+            }
+        });
+
+        builder.show();
+    }
 }

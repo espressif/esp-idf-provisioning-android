@@ -79,12 +79,7 @@ public class ProvisionActivity extends AppCompatActivity {
         baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
-        deviceNamePrefix = intent.getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-
-        deviceUUID = intent.getStringExtra(BLETransport.SERVICE_UUID_KEY);
-        sessionUUID = intent.getStringExtra(BLETransport.SESSION_UUID_KEY);
-        configUUID = intent.getStringExtra(BLETransport.CONFIG_UUID_KEY);
-        avsconfigUUID = intent.getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
+        deviceNamePrefix = intent.getStringExtra(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX);
 
         ssid = findViewById(R.id.ssid_text);
         ssidInput = findViewById(R.id.ssid_input);

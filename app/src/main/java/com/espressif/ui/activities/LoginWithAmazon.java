@@ -88,7 +88,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     private Button btnLogin;
 
     private RequestContext requestContext;
-    private ProgressBar progressBar;
+//    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,7 +108,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         btnLogin = findViewById(R.id.login_with_amazon);
         txtDeviceName = findViewById(R.id.txt_device_name);
-        progressBar = findViewById(R.id.loading_alexa_login);
+//        progressBar = findViewById(R.id.loading_alexa_login);
         isLoginSkipped = false;
 
         btnLogin.setEnabled(false);
@@ -228,7 +228,7 @@ public class LoginWithAmazon extends AppCompatActivity {
             Log.d(TAG, "Login button Clicked");
             Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
             vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-            progressBar.setVisibility(View.VISIBLE);
+//            progressBar.setVisibility(View.VISIBLE);
 
             final JSONObject scopeData = new JSONObject();
             final JSONObject productInstanceAttributes = new JSONObject();
@@ -321,7 +321,7 @@ public class LoginWithAmazon extends AppCompatActivity {
                                     @Override
                                     public void run() {
 
-                                        progressBar.setVisibility(View.GONE);
+//                                        progressBar.setVisibility(View.GONE);
                                         finish();
 
                                         if (isProvisioning) {
@@ -347,7 +347,7 @@ public class LoginWithAmazon extends AppCompatActivity {
 
                     Toast.makeText(LoginWithAmazon.this, "SignIn failed!", Toast.LENGTH_SHORT).show();
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-                    progressBar.setVisibility(View.GONE);
+//                    progressBar.setVisibility(View.GONE);
                 }
             });
         }

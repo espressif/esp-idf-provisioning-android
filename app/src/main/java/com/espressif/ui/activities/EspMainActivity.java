@@ -31,11 +31,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 
-import com.espressif.avs.ConfigureAVS;
+import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.transport.BLETransport;
 import com.espressif.ui.SigningKey;
 
 import java.util.HashMap;
@@ -47,7 +46,7 @@ public class EspMainActivity extends AppCompatActivity {
     private static final int REQUEST_LOCATION = 1;
 
     private String transportVersion, securityVersion;
-    private String BASE_URL, NETWORK_NAME_PREFIX, SERVICE_UUID, SESSION_UUID, CONFIG_UUID, AVS_CONFIG_UUID, DEVICE_NAME_PREFIX, WIFISCAN_CONFIG_UUID;
+    private String BASE_URL, NETWORK_NAME_PREFIX, DEVICE_NAME_PREFIX;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,11 +60,6 @@ public class EspMainActivity extends AppCompatActivity {
         Log.d("MD5", SigningKey.getCertificateMD5Fingerprint(this));
         BASE_URL = getResources().getString(R.string.wifi_base_url);
         NETWORK_NAME_PREFIX = getResources().getString(R.string.wifi_network_name_prefix);
-        SERVICE_UUID = getResources().getString(R.string.ble_service_uuid);
-        SESSION_UUID = getResources().getString(R.string.ble_session_uuid);
-        CONFIG_UUID = getResources().getString(R.string.ble_config_uuid);
-        AVS_CONFIG_UUID = getResources().getString(R.string.ble_avsconfig_uuid);
-        WIFISCAN_CONFIG_UUID = "0000ff50-0000-1000-8000-00805f9b34fb";
         DEVICE_NAME_PREFIX = getResources().getString(R.string.ble_device_name_prefix);
 
         Button manageDevices = findViewById(R.id.manageButton);
@@ -114,15 +108,9 @@ public class EspMainActivity extends AppCompatActivity {
                 config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
                 config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
                 config.put(Provision.CONFIG_WIFI_AP_KEY, NETWORK_NAME_PREFIX);
-                config.put(BLETransport.SERVICE_UUID_KEY, SERVICE_UUID);
-                config.put(BLETransport.SESSION_UUID_KEY, SESSION_UUID);
-                config.put(BLETransport.CONFIG_UUID_KEY, CONFIG_UUID);
-                config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
+                config.put(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, DEVICE_NAME_PREFIX);
 
                 if (BuildConfig.FLAVOR_avs.equals("avs")) {
-
-                    config.put(ConfigureAVS.AVS_CONFIG_UUID_KEY, AVS_CONFIG_UUID);
-                    config.put("prov-scan", WIFISCAN_CONFIG_UUID);
 
                     Provision.showProvisioningWithAmazonUI(EspMainActivity.this,
                             config);
@@ -182,15 +170,9 @@ public class EspMainActivity extends AppCompatActivity {
                     config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
                     config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
                     config.put(Provision.CONFIG_WIFI_AP_KEY, NETWORK_NAME_PREFIX);
-                    config.put(BLETransport.SERVICE_UUID_KEY, SERVICE_UUID);
-                    config.put(BLETransport.SESSION_UUID_KEY, SESSION_UUID);
-                    config.put(BLETransport.CONFIG_UUID_KEY, CONFIG_UUID);
-                    config.put(BLETransport.DEVICE_NAME_PREFIX_KEY, DEVICE_NAME_PREFIX);
+                    config.put(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, DEVICE_NAME_PREFIX);
 
                     if (BuildConfig.FLAVOR_avs.equals("avs")) {
-
-                        config.put(ConfigureAVS.AVS_CONFIG_UUID_KEY, AVS_CONFIG_UUID);
-                        config.put("prov-scan", WIFISCAN_CONFIG_UUID);
 
                         Provision.showProvisioningWithAmazonUI(EspMainActivity.this,
                                 config);

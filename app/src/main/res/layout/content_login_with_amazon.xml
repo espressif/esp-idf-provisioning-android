@@ -33,65 +33,76 @@
         android:src="@drawable/ic_alexa_logo_vertical_with_text" />
 
     <ProgressBar
-        android:id="@+id/loading_alexa_login"
+        android:id="@+id/loading_alexar_login"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:visibility="gone" />
 
-    <com.espressif.ui.widgets.AvsEmberLightText
-        android:id="@+id/alexa_text_1"
-        android:layout_width="wrap_content"
+    <ScrollView
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/iv_alexa_logo"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="10dp"
-        android:gravity="center"
-        android:text="@string/alexa_sign_in_string_1"
-        android:textSize="19sp" />
+        android:layout_marginTop="10dp">
 
-    <com.espressif.ui.widgets.AvsEmberLightText
-        android:id="@+id/alexa_text_2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/alexa_text_1"
-        android:layout_centerHorizontal="true"
-        android:layout_marginStart="50dp"
-        android:layout_marginEnd="50dp"
-        android:gravity="center"
-        android:text="@string/alexa_sign_in_string_2"
-        android:textSize="19sp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-    <com.espressif.ui.widgets.AvsEmberLightText
-        android:id="@+id/alexa_text_3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/alexa_text_2"
-        android:layout_centerHorizontal="true"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="30dp"
-        android:layout_marginEnd="20dp"
-        android:gravity="center"
-        android:text="@string/alexa_sign_in_string_3"
-        android:textSize="17sp" />
+            <com.espressif.ui.widgets.AvsEmberLightText
+                android:id="@+id/alexa_text_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center"
+                android:text="@string/alexa_sign_in_string_1"
+                android:textSize="19sp" />
 
-    <com.espressif.ui.widgets.AvsEmberLightText
-        android:id="@+id/alexa_text_4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/alexa_text_3"
-        android:layout_centerHorizontal="true"
-        android:gravity="center"
-        android:text="@string/alexa_sign_in_string_4"
-        android:textSize="17sp" />
+            <com.espressif.ui.widgets.AvsEmberLightText
+                android:id="@+id/alexa_text_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginStart="50dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="50dp"
+                android:gravity="center"
+                android:text="@string/alexa_sign_in_string_2"
+                android:textSize="19sp" />
+
+            <com.espressif.ui.widgets.AvsEmberLightText
+                android:id="@+id/alexa_text_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="30dp"
+                android:layout_marginEnd="20dp"
+                android:gravity="center"
+                android:text="@string/alexa_sign_in_string_3"
+                android:textSize="17sp" />
+
+            <com.espressif.ui.widgets.AvsEmberLightText
+                android:id="@+id/alexa_text_4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center"
+                android:text="@string/alexa_sign_in_string_4"
+                android:textSize="17sp" />
+        </LinearLayout>
+
+    </ScrollView>
 
     <Button
         android:id="@+id/login_with_amazon"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/alexa_text_4"
+        android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginBottom="30dp"
         android:background="@drawable/bg_alexa_sign_in_btn"
         android:contentDescription="@string/login_with_amazon"
         android:paddingStart="30dp"

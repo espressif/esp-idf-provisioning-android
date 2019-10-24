@@ -41,6 +41,11 @@
     <string name="btn_add_device">Add New Device</string>
     <string name="btn_ok">Ok</string>
     <string name="btn_cancel">Cancel</string>
+    <string name="btn_save">Save</string>
+
+    <!-- Strings used for Hint text -->
+    <string name="hint_txt_device_name">Enter Device Name</string>
+    <string name="hint_txt_pop">Enter Pop</string>
 
     <!-- Strings used for Alexa screens -->
     <string name="alexa_examples">Here are some of the many things you can ask Alexa</string>
@@ -60,6 +65,12 @@
     <string name="progress_scanning">Scanning Devices...</string>
     <string name="progress_get_status">Getting Status</string>
     <string name="progress_loading">Loading...</string>
+    <string name="progress_get_device_info">Getting Device Info...</string>
+    <string name="progress_connect_device">Connecting Device...</string>
+    <string name="progress_set_device_name">Setting Device Name...</string>
+    <string name="progress_set_alexa_tone">Setting Alexa Tone...</string>
+    <string name="progress_set_volume">Setting Volume...</string>
+    <string name="progress_set_language">Setting Language...</string>
 
     <!--Error Messages-->
     <string name="error_ble_not_supported">Sorry! BLE is not supported.</string>
@@ -69,6 +80,13 @@
     <string name="error_unknown">Device provisioning failed. \n Reason : Unknown. Please reset device to factory settings and retry.</string>
     <string name="error_pop_incorrect">Error establishing session.\n Check if Proof of Possession(POP) is correct!</string>
     <string name="error_device_not_supported">Failed to connect with Device.</string>
+    <string name="error_get_device_info">Failed to get device details.</string>
+    <string name="error_get_device_info_not_available">Sorry! Device details not received.</string>
+    <string name="error_device_name_empty">Device name cannot be empty.</string>
+    <string name="error_set_device_name">Failed to set device name.</string>
+    <string name="error_session_init_failed">Failed to establish session.</string>
+    <string name="error_language_change">Failed to change language.</string>
+    <string name="error_alexa_tone">Failed to change alexa tone.</string>
 
     <!--Screen titles-->
     <string name="title_activity_connect_device">Connect to Device</string>
@@ -79,9 +97,45 @@
     <string name="title_activity_alexa">Do More With Alexa</string>
     <string name="title_activity_pop">Proof Of Possession</string>
     <string name="title_activity_manage_devices">Devices</string>
+    <string name="title_activity_device">Device</string>
+    <string name="title_activity_device_info">Device Details</string>
+    <string name="title_activity_language">Languages</string>
+    <string name="title_activity_sound">Sound Settings</string>
 
     <string name="join_other_network">Join Other Network</string>
     <string name="networks">Networks</string>
     <string name="devices_title">Devices</string>
+    <string name="start_request_tone">Start of Request</string>
+    <string name="end_request_tone">End of Request</string>
+    <string name="volume">Volume</string>
+    <string name="sound">Sound</string>
+    <string name="device_name">Device Name</string>
+    <string name="language">Language</string>
+    <string name="about">About</string>
+    <string name="manage_account">Manage Account</string>
+    <string name="about_device_name">Device Name :</string>
+    <string name="ip_addr">IP Address :</string>
+    <string name="mac">MAC :</string>
+    <string name="serial_number">Serial Number :</string>
+    <string name="fw_version">Firmware Version :</string>
+    <string name="connected_wifi">Connected Wi-Fi :</string>
+
+    <string-array name="language_array">
+        <item>Deutsche</item>
+        <item>English (Australia)</item>
+        <item>English (Canada)</item>
+        <item>English (United Kingdom)</item>
+        <item>English (India)</item>
+        <item>English (United States)</item>
+        <item>Español (España)</item>
+        <item>Español (México)</item>
+        <item>Español (United States)</item>
+        <item>Français (Canada)</item>
+        <item>Français (France)</item>
+        <item>हिन्दी</item>
+        <item>Italiano (Italia)</item>
+        <item>日本語</item>
+        <item>Português</item>
+    </string-array>
 
 </resources>
