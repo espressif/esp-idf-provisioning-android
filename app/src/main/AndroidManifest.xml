@@ -99,6 +99,25 @@
             android:label="@string/title_activity_pop"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.DeviceActivity"
+            android:label="@string/title_activity_device"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.LanguageListActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.DeviceInfoActivity"
+            android:label="@string/title_activity_device_info"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.SoundActivity"
+            android:label="@string/title_activity_sound"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
 
     </application>
 

@@ -108,7 +108,7 @@ public class UPnPDiscovery extends AsyncTask {
                 long time = System.currentTimeMillis();
                 long curTime = System.currentTimeMillis();
 
-                while (curTime - time < 1000) {
+                while (curTime - time < 2000) {
 
                     DatagramPacket datagramPacket = new DatagramPacket(new byte[1024], 1024);
                     socket.receive(datagramPacket);
@@ -151,12 +151,17 @@ public class UPnPDiscovery extends AsyncTask {
 
                 if (socket != null) {
                     socket.close();
-                    socket = null;
                 }
             }
             lock.release();
         }
         return null;
+    }
+
+    @Override
+    protected void onPostExecute(Object o) {
+        super.onPostExecute(o);
+        Log.d(TAG, "On Post Execute");
     }
 
     private void getData(final String url, final UPnPDevice device) {

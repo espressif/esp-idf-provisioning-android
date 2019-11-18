@@ -76,28 +76,6 @@ public class DeviceActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         initViews();
-
-        String progressMsg = getString(R.string.progress_get_status);
-        showProgressDialog(progressMsg);
-        transport = new SoftAPTransport(deviceHostAddress + ":80");
-        security = new Security0();
-        session = new Session(transport, security);
-        session.init(null);
-
-        session.sessionListener = new Session.SessionListener() {
-
-            @Override
-            public void OnSessionEstablished() {
-
-                Log.d(TAG, "Session established");
-                getAlexaSignedInStatus();
-            }
-
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                Log.d(TAG, "Session failed");
-            }
-        };
     }
 
     @Override
@@ -128,7 +106,7 @@ public class DeviceActivity extends AppCompatActivity {
             public void OnSessionEstablished() {
 
                 Log.d(TAG, "Session established");
-                getAlexaSignedInStatus();
+                getDeviceInfo();
             }
 
             @Override
@@ -331,10 +309,12 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void setDeviceName(final String newDeviceName) {
 
-        final String progressMsg = getString(R.string.progress_set_device_name);
         runOnUiThread(new Runnable() {
+
             @Override
             public void run() {
+
+                String progressMsg = getString(R.string.progress_set_device_name);
                 showProgressDialog(progressMsg);
             }
         });
@@ -407,10 +387,12 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void changeVolume(final int volume) {
 
-        final String progressMsg = getString(R.string.progress_set_volume);
         runOnUiThread(new Runnable() {
+
             @Override
             public void run() {
+
+                String progressMsg = getString(R.string.progress_set_volume);
                 showProgressDialog(progressMsg);
             }
         });
@@ -449,10 +431,10 @@ public class DeviceActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "Error in getting status");
+                Log.e(TAG, "Error in changing language");
                 e.printStackTrace();
                 hideProgressDialog();
-                Toast.makeText(DeviceActivity.this, R.string.error_get_device_info, Toast.LENGTH_SHORT).show();
+                Toast.makeText(DeviceActivity.this, R.string.error_language_change, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -477,8 +459,15 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void getAlexaSignedInStatus() {
 
-        String progressMsg = getString(R.string.progress_get_status);
-        showProgressDialog(progressMsg);
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                String progressMsg = getString(R.string.progress_get_status);
+                showProgressDialog(progressMsg);
+            }
+        });
 
         Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
                 .setDummy(123)
@@ -512,12 +501,12 @@ public class DeviceActivity extends AppCompatActivity {
                         enableAlexaFeatures();
                     }
                 });
-                getDeviceInfo();
             }
 
             @Override
             public void onFailure(Exception e) {
-                Log.d(TAG, "Error in getting status");
+                Log.e(TAG, "Error in getting status");
+                e.printStackTrace();
             }
         });
     }
@@ -542,8 +531,15 @@ public class DeviceActivity extends AppCompatActivity {
 
     private void getDeviceInfo() {
 
-        String progressMsg = getString(R.string.progress_get_device_info);
-        showProgressDialog(progressMsg);
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                String progressMsg = getString(R.string.progress_get_device_info);
+                showProgressDialog(progressMsg);
+            }
+        });
 
         Avsconfig.CmdGetDeviceInfo deviceInfoRequest = Avsconfig.CmdGetDeviceInfo.newBuilder()
                 .setDummy(123)
@@ -569,8 +565,8 @@ public class DeviceActivity extends AppCompatActivity {
 
                         @Override
                         public void run() {
-                            hideProgressDialog();
                             updateUI();
+                            getAlexaSignedInStatus();
                         }
                     });
 
@@ -671,6 +667,9 @@ public class DeviceActivity extends AppCompatActivity {
             pDialog.getProgressHelper().setBarColor(Color.parseColor("#A5DC86"));
             pDialog.setTitleText(message);
             pDialog.setCancelable(true);
+            pDialog.show();
+        } else {
+            pDialog.setTitleText(message);
             pDialog.show();
         }
     }

@@ -12,8 +12,9 @@ public class AppConstants {
 
     // End point names
     public static final String HANDLER_PROV_SCAN = "prov-scan";
-    public static final String HANDLER_PROTO_VER = "proto-ver";
     public static final String HANDLER_PROV_SESSION = "prov-session";
+    public static final String HANDLER_PROV_CONFIG = "prov-config";
+    public static final String HANDLER_PROTO_VER = "proto-ver";
     public static final String HANDLER_AVS_CONFIG = "avsconfig";
 
     // Keys used to pass data between activities and to store data in SharedPreference.

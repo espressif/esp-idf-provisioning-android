@@ -19,6 +19,6 @@
         android:layout_height="wrap_content"
         android:hint="@string/device_name"
         android:inputType="text"
-        android:maxLength="30"
+        android:maxLength="20"
         android:maxLines="1" />
 </LinearLayout>

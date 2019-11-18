@@ -3,7 +3,6 @@ package com.espressif.ui.activities;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Vibrator;
@@ -37,6 +36,11 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import avs.Avsconfig;
 import cn.pedant.SweetAlert.SweetAlertDialog;
@@ -46,7 +50,7 @@ public class ScanLocalDevices extends AppCompatActivity {
     private static final String TAG = "Espressif::" + ScanLocalDevices.class.getSimpleName();
 
     private static int DISCOVERY_TIMEOUT = 5000;
-    private static int DEVICE_CONNECT_TIMEOUT = 10000;
+    private static int DEVICE_CONNECT_TIMEOUT = 5000;
 
     private ListView deviceList;
     private TextView progressText;
@@ -68,6 +72,8 @@ public class ScanLocalDevices extends AppCompatActivity {
     private String deviceName;
     private ImageView btnScan;
 
+    private Executor threadPoolExecutor;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -84,6 +90,23 @@ public class ScanLocalDevices extends AppCompatActivity {
         progressBar = findViewById(R.id.devices_scan_progress_indicator);
         progressText = findViewById(R.id.text_loading);
         mHandler = new Handler();
+
+        /*
+         * Gets the number of available cores
+         * (not always the same as the maximum number of cores)
+         */
+        int numberOfCores = Runtime.getRuntime().availableProcessors();
+        int corePoolSize = numberOfCores + 7;
+        int maximumPoolSize = numberOfCores + 10;
+        Log.d(TAG, "numberOfCores : " + numberOfCores);
+        // Sets the amount of time an idle thread waits before terminating
+        final int keepAliveTime = 10;
+
+        // Sets the Time Unit to Milliseconds
+        final TimeUnit keepAliveTimeUnit = TimeUnit.SECONDS;
+
+        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>(maximumPoolSize);
+        threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, keepAliveTime, keepAliveTimeUnit, workQueue);
 
         SSDPadapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
@@ -218,7 +241,7 @@ public class ScanLocalDevices extends AppCompatActivity {
             }
         }, customQuery, customAddress, customPort);
 
-        discoveryTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        discoveryTask.executeOnExecutor(threadPoolExecutor);
         mHandler.postDelayed(runnable, DISCOVERY_TIMEOUT);
     }
 
@@ -290,8 +313,14 @@ public class ScanLocalDevices extends AppCompatActivity {
 
     private void getDeviceInfo() {
 
-        String progressMsg = getString(R.string.progress_get_device_info);
-        showProgressDialog(progressMsg);
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+                String progressMsg = getString(R.string.progress_get_device_info);
+                showProgressDialog(progressMsg);
+            }
+        });
 
         Avsconfig.CmdGetDeviceInfo deviceInfoRequest = Avsconfig.CmdGetDeviceInfo.newBuilder()
                 .setDummy(123)
@@ -320,7 +349,7 @@ public class ScanLocalDevices extends AppCompatActivity {
                             btnScan.setVisibility(View.VISIBLE);
                         }
                     });
-                    mHandler.removeCallbacks(deviceConnectionFailedTask);
+                    mHandler.removeCallbacks(getDeviceInfoFailedTask);
                     goToDeviceActivity(deviceInfo);
 
                 } else {
@@ -331,7 +360,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
             @Override
             public void onFailure(Exception e) {
-                Log.e(TAG, "Error in getting status");
+                Log.e(TAG, "Error in getting device info");
                 e.printStackTrace();
                 hideProgressDialog();
                 Toast.makeText(ScanLocalDevices.this, R.string.error_get_device_info, Toast.LENGTH_SHORT).show();
@@ -371,6 +400,79 @@ public class ScanLocalDevices extends AppCompatActivity {
             e.printStackTrace();
         }
         return deviceInfo;
+    }
+
+    private void getAlexaSignedInStatus() {
+
+        runOnUiThread(new Runnable() {
+
+            @Override
+            public void run() {
+
+                String progressMsg = getString(R.string.progress_get_status);
+                showProgressDialog(progressMsg);
+            }
+        });
+
+        Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
+                .setDummy(123)
+                .build();
+        Avsconfig.AVSConfigMsgType msgType = Avsconfig.AVSConfigMsgType.TypeCmdSignInStatus;
+        Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.newBuilder()
+                .setMsg(msgType)
+                .setCmdSigninStatus(configRequest)
+                .build();
+        byte[] message = this.security.encrypt(payload.toByteArray());
+
+        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+
+            @Override
+            public void onSuccess(byte[] returnData) {
+
+                Avsconfig.AVSConfigStatus deviceStatus = processSignInStatusResponse(returnData);
+                Log.d(TAG, "SignIn Status Received : " + deviceStatus);
+                hideProgressDialog();
+
+                if (deviceStatus.equals(Avsconfig.AVSConfigStatus.SignedIn)) {
+                    goToAlexaActivity();
+                } else {
+                    goToLoginActivity();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                Log.e(TAG, "Error in getting status");
+                e.printStackTrace();
+
+                runOnUiThread(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        hideProgressDialog();
+                        alertForDeviceConnectionFailed();
+                    }
+                });
+            }
+        });
+    }
+
+    private Avsconfig.AVSConfigStatus processSignInStatusResponse(byte[] responseData) {
+
+        Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
+        byte[] decryptedData = this.security.decrypt(responseData);
+
+        try {
+
+            Avsconfig.AVSConfigPayload payload = Avsconfig.AVSConfigPayload.parseFrom(decryptedData);
+            Avsconfig.RespSignInStatus signInStatus = payload.getRespSigninStatus();
+            status = signInStatus.getStatus();
+            Log.d(TAG, "SignIn Status message " + status.toString());
+
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        return status;
     }
 
     private void goToLoginActivity() {
@@ -444,17 +546,18 @@ public class ScanLocalDevices extends AppCompatActivity {
             String progressMsg = getString(R.string.progress_connect_device);
             showProgressDialog(progressMsg);
             connectToDevice(SSDPdevices.get(position));
-            mHandler.postDelayed(deviceConnectionFailedTask, DEVICE_CONNECT_TIMEOUT);
+            mHandler.postDelayed(getDeviceInfoFailedTask, DEVICE_CONNECT_TIMEOUT);
         }
     };
 
-    private Runnable deviceConnectionFailedTask = new Runnable() {
+    private Runnable getDeviceInfoFailedTask = new Runnable() {
 
         @Override
         public void run() {
-            Log.e(TAG, "Disconnect device");
-            hideProgressDialog();
-            alertForDeviceConnectionFailed();
+            Log.e(TAG, "Not able to get Device info");
+            getAlexaSignedInStatus();
+//            hideProgressDialog();
+//            alertForDeviceConnectionFailed();
         }
     };
 
@@ -466,6 +569,13 @@ public class ScanLocalDevices extends AppCompatActivity {
             pDialog.setTitleText(message);
             pDialog.setCancelable(false);
             pDialog.show();
+        } else {
+            try {
+                pDialog.setTitleText(message);
+                pDialog.show();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

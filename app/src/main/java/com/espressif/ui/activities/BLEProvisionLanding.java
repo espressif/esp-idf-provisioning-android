@@ -18,6 +18,7 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -26,6 +27,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.ParcelUuid;
 import android.os.Vibrator;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -51,13 +53,20 @@ import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
+import com.espressif.provision.transport.BLETransportLatest;
+import com.espressif.provision.transport.BLETransportLegacy;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.ui.adapters.BleDeviceListAdapter;
+import com.espressif.ui.models.EspBtDevice;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import avs.Avsconfig;
@@ -98,7 +107,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private BluetoothAdapter bleAdapter;
     private BLEScanner bleScanner;
     private ArrayList<BluetoothDevice> deviceList;
-    private HashMap<BluetoothDevice, String> bluetoothDevices;
+    private HashMap<BluetoothDevice, EspBtDevice> bluetoothDevices;
     private Handler handler;
 
     @Override
@@ -181,8 +190,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 });
             }
         };
-
-        bleTransport = new BLETransport(this, transportListener);
     }
 
     @Override
@@ -310,7 +317,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
             return;
         }
 
-        bleTransport.disconnect();
+        if (bleTransport != null) {
+            bleTransport.disconnect();
+        }
+
         deviceList.clear();
         bluetoothDevices.clear();
         bleScanner.startScan();
@@ -459,7 +469,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
     private void goToProvisionActivity() {
 
-        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
+        Intent launchProvisionInstructions = new Intent(getApplicationContext(), WiFiScanActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
         launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
@@ -522,7 +532,20 @@ public class BLEProvisionLanding extends AppCompatActivity {
         @Override
         public void onPeripheralFound(BluetoothDevice device, ScanResult scanResult) {
 
+            ScanRecord scanRecord = scanResult.getScanRecord();
+            byte[] scanData = scanRecord.getBytes();
             Log.e(TAG, "====== onPeripheralFound ===== " + device.getName());
+            List<ParcelUuid> uuidList = scanRecord.getServiceUuids();
+
+            if (uuidList != null) {
+                for (int i = 0; i < uuidList.size(); i++) {
+                    Log.d(TAG, "UUID " + i + " : " + uuidList.get(i));
+                }
+            } else {
+                Log.d(TAG, "UUID list is null");
+            }
+            boolean isNewProvMethod = parseAdvertisementPacket(scanData);
+
             boolean deviceExists = false;
             String serviceUuid = "";
 
@@ -540,7 +563,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
             if (!deviceExists && device.getName().startsWith(deviceNamePrefix)) {
 
                 listView.setVisibility(View.VISIBLE);
-                bluetoothDevices.put(device, serviceUuid);
+                EspBtDevice espBtDevice = new EspBtDevice(device, serviceUuid, isNewProvMethod);
+                bluetoothDevices.put(device, espBtDevice);
                 deviceList.add(device);
                 adapter.notifyDataSetChanged();
             }
@@ -581,11 +605,19 @@ public class BLEProvisionLanding extends AppCompatActivity {
             listView.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
             BluetoothDevice device = adapter.getItem(position);
-            String uuid = bluetoothDevices.get(device);
+            String uuid = bluetoothDevices.get(device).getServiceUuid();
             deviceName = device.getName();
             Log.d(TAG, "=================== Connect to device : " + deviceName + " UUID : " + uuid);
 
-            bleTransport.connect(device, UUID.fromString(uuid));
+            if (bluetoothDevices.get(device).isLatestProvMethod()) {
+                bleTransport = new BLETransportLatest(BLEProvisionLanding.this, transportListener);
+            } else {
+                bleTransport = new BLETransportLegacy(BLEProvisionLanding.this, transportListener);
+            }
+
+            if (bleTransport != null) {
+                bleTransport.connect(device, UUID.fromString(uuid));
+            }
             handler.postDelayed(disconnectDeviceTask, DEVICE_CONNECT_TIMEOUT);
         }
     };
@@ -595,7 +627,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
         @Override
         public void run() {
             Log.e(TAG, "Disconnect device");
-            bleTransport.disconnect();
+
+            if (bleTransport != null) {
+                bleTransport.disconnect();
+            }
             progressBar.setVisibility(View.GONE);
             alertForDeviceNotSupported();
         }
@@ -631,5 +666,62 @@ public class BLEProvisionLanding extends AppCompatActivity {
         });
 
         builder.show();
+    }
+
+    private boolean parseAdvertisementPacket(final byte[] scanRecord) {
+
+        byte[] advertisedData = Arrays.copyOf(scanRecord, scanRecord.length);
+        boolean isLatestFw = false;
+
+        int offset = 0;
+        while (offset < (advertisedData.length - 2)) {
+            int len = advertisedData[offset++];
+            if (len == 0)
+                break;
+
+            int type = advertisedData[offset++];
+            switch (type) {
+                case 0x02: // Partial list of 16-bit UUIDs
+                case 0x03: // Complete list of 16-bit UUIDs
+                    Log.e(TAG, "This is Old firmware device");
+                    while (len > 1) {
+                        int uuid16 = advertisedData[offset++] & 0xFF;
+                        uuid16 |= (advertisedData[offset++] << 8);
+                        len -= 2;
+                    }
+                    break;
+
+                case 0x06:// Partial list of 128-bit UUIDs
+                case 0x07:// Complete list of 128-bit UUIDs
+                    // Loop through the advertised 128-bit UUID's.
+                    Log.e(TAG, "This is New firmware device");
+                    isLatestFw = true;
+                    while (len >= 16) {
+                        try {
+                            // Wrap the advertised bits and order them.
+                            ByteBuffer buffer = ByteBuffer.wrap(advertisedData,
+                                    offset++, 16).order(ByteOrder.LITTLE_ENDIAN);
+                            long mostSignificantBit = buffer.getLong();
+                            long leastSignificantBit = buffer.getLong();
+                        } catch (IndexOutOfBoundsException e) {
+                            // Defensive programming.
+                            Log.e(TAG, e.toString());
+                            continue;
+                        } finally {
+                            // Move the offset to read the next uuid.
+                            offset += 15;
+                            len -= 16;
+                        }
+                    }
+                    break;
+                case 0xFF:  // Manufacturer Specific Data
+                    Log.d(TAG, "Manufacturer Specific Data size:" + len + " bytes");
+                    break;
+                default:
+                    offset += (len - 1);
+                    break;
+            }
+        }
+        return isLatestFw;
     }
 }

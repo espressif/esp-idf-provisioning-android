@@ -12,7 +12,10 @@
         android:id="@+id/layout_device_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -48,7 +51,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_device_name"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:id="@+id/tv_volume"
@@ -77,7 +83,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_volume"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -104,7 +113,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_sound"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -140,7 +152,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_language"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -167,7 +182,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/layout_about"
-        android:padding="15dp">
+        android:paddingStart="5dp"
+        android:paddingTop="15dp"
+        android:paddingEnd="5dp"
+        android:paddingBottom="15dp">
 
         <TextView
             android:layout_width="wrap_content"
