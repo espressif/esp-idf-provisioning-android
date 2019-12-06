@@ -79,7 +79,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
                 android:layout_marginStart="20dp"
-                android:text="@string/progress_scanning" />
+                android:text="@string/progress_get_status" />
 
         </LinearLayout>
 

@@ -34,7 +34,7 @@ public class ManageDevices extends AppCompatActivity {
         Intent i = getIntent();
         this.device= (AlexaLocalDevices) i.getSerializableExtra("device");
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.scantoolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.setTitle("Manage "+device.getFriendlyName());
 
         TextView t = findViewById(R.id.deviceInfo);

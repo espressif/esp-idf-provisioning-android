@@ -18,14 +18,17 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.ParcelUuid;
 import android.os.Vibrator;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -40,7 +43,6 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.espressif.AppConstants;
-import com.espressif.avs.ConfigureAVS;
 import com.espressif.ble_scanner.BLEScanListener;
 import com.espressif.ble_scanner.BLEScanner;
 import com.espressif.provision.Provision;
@@ -50,24 +52,27 @@ import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.BLETransport;
+import com.espressif.provision.transport.BLETransportLatest;
+import com.espressif.provision.transport.BLETransportLegacy;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.ui.adapters.BleDeviceListAdapter;
+import com.espressif.ui.models.EspBtDevice;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 
 import avs.Avsconfig;
 
-import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
-
 public class BLEProvisionLanding extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + BLEProvisionLanding.class.getSimpleName();
-
-    private static final String PROOF_OF_POSSESSION = "abcd1234";
 
     // Request codes
     private static final int REQUEST_ENABLE_BT = 1;
@@ -87,14 +92,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private Security security;
     public static BLETransport bleTransport;
     private BLETransport.BLETransportListener transportListener;
-    // FIXME : Remove static BLE_TRANSPORT and think for another solution.
 
-    private String configUUID;
-    private String avsConfigUUID;
-    private String serviceUUID;
-    private String sessionUUID;
     private String deviceName;
     private String deviceNamePrefix;
+    private String pop;
     private boolean isDeviceConnected;
     private boolean isConnecting = false;
 
@@ -102,7 +103,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private BluetoothAdapter bleAdapter;
     private BLEScanner bleScanner;
     private ArrayList<BluetoothDevice> deviceList;
-    private HashMap<BluetoothDevice, String> bluetoothDevices;
+    private HashMap<BluetoothDevice, EspBtDevice> bluetoothDevices;
+    private SharedPreferences sharedPreferences;
     private Handler handler;
 
     @Override
@@ -131,18 +133,14 @@ public class BLEProvisionLanding extends AppCompatActivity {
             return;
         }
 
-        serviceUUID = getIntent().getStringExtra(BLETransport.SERVICE_UUID_KEY);
-        sessionUUID = getIntent().getStringExtra(BLETransport.SESSION_UUID_KEY);
-        configUUID = getIntent().getStringExtra(BLETransport.CONFIG_UUID_KEY);
-        avsConfigUUID = getIntent().getStringExtra(ConfigureAVS.AVS_CONFIG_UUID_KEY);
-        deviceNamePrefix = getIntent().getStringExtra(BLETransport.DEVICE_NAME_PREFIX_KEY);
-
         isConnecting = false;
         isDeviceConnected = false;
         handler = new Handler();
         bluetoothDevices = new HashMap<>();
         Collection<BluetoothDevice> keySet = bluetoothDevices.keySet();
         deviceList = new ArrayList<>(keySet);
+        sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
 
         initViews();
         bleScanner = new BLEScanner(this, SCAN_TIMEOUT, bleScanListener);
@@ -157,8 +155,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
             @Override
             public void onPeripheralNotConfigured(BluetoothDevice device) {
-//                btnScan.setEnabled(true);
-//                btnScan.setAlpha(1f);
                 btnScan.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
                 listView.setVisibility(View.VISIBLE);
@@ -191,19 +187,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 });
             }
         };
-
-        HashMap<String, String> configUUIDMap = new HashMap<>();
-        configUUIDMap.put(Provision.PROVISIONING_CONFIG_PATH, configUUID);
-        configUUIDMap.put("prov-scan", "0000ff50-0000-1000-8000-00805f9b34fb");
-        if (avsConfigUUID != null) {
-            configUUIDMap.put(ConfigureAVS.AVS_CONFIG_PATH, avsConfigUUID);
-        }
-
-        bleTransport = new BLETransport(this,
-                UUID.fromString(serviceUUID),
-                UUID.fromString(sessionUUID),
-                configUUIDMap,
-                transportListener);
     }
 
     @Override
@@ -223,7 +206,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
 
             if (isBleWorkDone) {
-                bleTransport.disconnect();
+                if (bleTransport != null) {
+                    bleTransport.disconnect();
+                }
                 btnScan.setVisibility(View.VISIBLE);
                 startScan();
             }
@@ -233,7 +218,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         isBleWorkDone = true;
-        bleTransport.disconnect();
+        if (bleTransport != null) {
+            bleTransport.disconnect();
+        }
         super.onBackPressed();
     }
 
@@ -331,7 +318,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
             return;
         }
 
-        bleTransport.disconnect();
+        if (bleTransport != null) {
+            bleTransport.disconnect();
+        }
+
         deviceList.clear();
         bluetoothDevices.clear();
         bleScanner.startScan();
@@ -355,15 +345,26 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private void bleDeviceConfigured(final Boolean isConfigured) {
 
         runOnUiThread(new Runnable() {
+
             @Override
             public void run() {
 
                 if (isConfigured) {
 
+                    isConnecting = false;
                     isDeviceConnected = true;
-//                    finish();
-//                    goToProofOfPossessionActivity();
-                    initSession();
+                    final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+
+                    if (bleTransport.deviceCapabilities != null) {
+
+                        if (!bleTransport.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                            goToProofOfPossessionActivity();
+                        }
+                    } else {
+                        pop = getResources().getString(R.string.proof_of_possesion);
+                        initSession();
+                    }
 
                 } else {
                     Toast.makeText(BLEProvisionLanding.this,
@@ -394,14 +395,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
         }
     }
 
-    private void goToProofOfPossessionActivity() {
-
-        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
-        alexaProvisioningIntent.putExtras(getIntent());
-        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        startActivity(alexaProvisioningIntent);
-    }
-
     private void getStatus() {
 
         Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
@@ -415,7 +408,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
         byte[] message = security.encrypt(payload.toByteArray());
 
-        BLEProvisionLanding.bleTransport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
+        bleTransport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -425,7 +418,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
                 if (deviceStatus.equals(Avsconfig.AVSConfigStatus.SignedIn)) {
 
-                    goToProvisionActivity();
+                    goToWiFiScanActivity();
 
                 } else {
                     goToLoginActivity();
@@ -458,28 +451,36 @@ public class BLEProvisionLanding extends AppCompatActivity {
         return status;
     }
 
+    private void goToProofOfPossessionActivity() {
+
+        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
+        alexaProvisioningIntent.putExtras(getIntent());
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
+        startActivity(alexaProvisioningIntent);
+    }
+
     private void goToLoginActivity() {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
         alexaProvisioningIntent.putExtras(getIntent());
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        alexaProvisioningIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, PROOF_OF_POSSESSION);
+        alexaProvisioningIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
         startActivity(alexaProvisioningIntent);
     }
 
-    private void goToProvisionActivity() {
+    private void goToWiFiScanActivity() {
 
-        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
+        Intent launchProvisionInstructions = new Intent(getApplicationContext(), WiFiScanActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, PROOF_OF_POSSESSION);
+        launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
     }
 
     private void initSession() {
 
-        final String pop = PROOF_OF_POSSESSION;
         Log.e(TAG, "POP : " + pop);
         final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
@@ -508,13 +509,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
         session.init(null);
     }
 
-    private void alertForDeviceNotSupported() {
+    private void alertForDeviceConnectionFailed() {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setCancelable(false);
 
         builder.setTitle("Error!");
-        builder.setMessage(R.string.error_device_not_supported);
+        builder.setMessage(R.string.error_device_connection_failed);
 
         // Set up the buttons
         builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
@@ -534,7 +535,20 @@ public class BLEProvisionLanding extends AppCompatActivity {
         @Override
         public void onPeripheralFound(BluetoothDevice device, ScanResult scanResult) {
 
+            ScanRecord scanRecord = scanResult.getScanRecord();
+            byte[] scanData = scanRecord.getBytes();
             Log.e(TAG, "====== onPeripheralFound ===== " + device.getName());
+            List<ParcelUuid> uuidList = scanRecord.getServiceUuids();
+
+            if (uuidList != null) {
+                for (int i = 0; i < uuidList.size(); i++) {
+                    Log.d(TAG, "UUID " + i + " : " + uuidList.get(i));
+                }
+            } else {
+                Log.d(TAG, "UUID list is null");
+            }
+            boolean isNewProvMethod = parseAdvertisementPacket(scanData);
+
             boolean deviceExists = false;
             String serviceUuid = "";
 
@@ -552,7 +566,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
             if (!deviceExists && device.getName().startsWith(deviceNamePrefix)) {
 
                 listView.setVisibility(View.VISIBLE);
-                bluetoothDevices.put(device, serviceUuid);
+                EspBtDevice espBtDevice = new EspBtDevice(device, serviceUuid, isNewProvMethod);
+                bluetoothDevices.put(device, espBtDevice);
                 deviceList.add(device);
                 adapter.notifyDataSetChanged();
             }
@@ -591,11 +606,21 @@ public class BLEProvisionLanding extends AppCompatActivity {
             isDeviceConnected = false;
             btnScan.setVisibility(View.GONE);
             listView.setVisibility(View.GONE);
-            BluetoothDevice device = adapter.getItem(position);
-            deviceName = device.getName();
-            Log.d(TAG, "=================== Connect to device : " + deviceName);
             progressBar.setVisibility(View.VISIBLE);
-            bleTransport.connect(device);
+            BluetoothDevice device = adapter.getItem(position);
+            String uuid = bluetoothDevices.get(device).getServiceUuid();
+            deviceName = device.getName();
+            Log.d(TAG, "=================== Connect to device : " + deviceName + " UUID : " + uuid);
+
+            if (bluetoothDevices.get(device).isLatestProvMethod()) {
+                bleTransport = new BLETransportLatest(BLEProvisionLanding.this, transportListener);
+            } else {
+                bleTransport = new BLETransportLegacy(BLEProvisionLanding.this, transportListener);
+            }
+
+            if (bleTransport != null) {
+                bleTransport.connect(device, UUID.fromString(uuid));
+            }
             handler.postDelayed(disconnectDeviceTask, DEVICE_CONNECT_TIMEOUT);
         }
     };
@@ -605,9 +630,69 @@ public class BLEProvisionLanding extends AppCompatActivity {
         @Override
         public void run() {
             Log.e(TAG, "Disconnect device");
-            bleTransport.disconnect();
+
+            if (bleTransport != null) {
+                bleTransport.disconnect();
+            }
             progressBar.setVisibility(View.GONE);
-            alertForDeviceNotSupported();
+            alertForDeviceConnectionFailed();
         }
     };
+
+    private boolean parseAdvertisementPacket(final byte[] scanRecord) {
+
+        byte[] advertisedData = Arrays.copyOf(scanRecord, scanRecord.length);
+        boolean isLatestFw = false;
+
+        int offset = 0;
+        while (offset < (advertisedData.length - 2)) {
+            int len = advertisedData[offset++];
+            if (len == 0)
+                break;
+
+            int type = advertisedData[offset++];
+            switch (type) {
+                case 0x02: // Partial list of 16-bit UUIDs
+                case 0x03: // Complete list of 16-bit UUIDs
+                    Log.e(TAG, "This is Old firmware device");
+                    while (len > 1) {
+                        int uuid16 = advertisedData[offset++] & 0xFF;
+                        uuid16 |= (advertisedData[offset++] << 8);
+                        len -= 2;
+                    }
+                    break;
+
+                case 0x06:// Partial list of 128-bit UUIDs
+                case 0x07:// Complete list of 128-bit UUIDs
+                    // Loop through the advertised 128-bit UUID's.
+                    Log.e(TAG, "This is New firmware device");
+                    isLatestFw = true;
+                    while (len >= 16) {
+                        try {
+                            // Wrap the advertised bits and order them.
+                            ByteBuffer buffer = ByteBuffer.wrap(advertisedData,
+                                    offset++, 16).order(ByteOrder.LITTLE_ENDIAN);
+                            long mostSignificantBit = buffer.getLong();
+                            long leastSignificantBit = buffer.getLong();
+                        } catch (IndexOutOfBoundsException e) {
+                            // Defensive programming.
+                            Log.e(TAG, e.toString());
+                            continue;
+                        } finally {
+                            // Move the offset to read the next uuid.
+                            offset += 15;
+                            len -= 16;
+                        }
+                    }
+                    break;
+                case 0xFF:  // Manufacturer Specific Data
+                    Log.d(TAG, "Manufacturer Specific Data size:" + len + " bytes");
+                    break;
+                default:
+                    offset += (len - 1);
+                    break;
+            }
+        }
+        return isLatestFw;
+    }
 }
