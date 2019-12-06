@@ -627,6 +627,7 @@ public class DeviceActivity extends AppCompatActivity {
             rlVolume.setClickable(true);
             rlSound.setClickable(true);
             rlLanguage.setClickable(true);
+            volumeBar.setEnabled(true);
             rlVolume.setAlpha(1f);
             rlSound.setAlpha(1f);
             rlLanguage.setAlpha(1f);
@@ -636,6 +637,7 @@ public class DeviceActivity extends AppCompatActivity {
             rlVolume.setClickable(false);
             rlSound.setClickable(false);
             rlLanguage.setClickable(false);
+            volumeBar.setEnabled(false);
             rlVolume.setAlpha(0.5f);
             rlSound.setAlpha(0.5f);
             rlLanguage.setAlpha(0.5f);

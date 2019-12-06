@@ -14,8 +14,10 @@
 package com.espressif.ui.activities;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,6 +26,7 @@ import android.provider.Settings;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
@@ -35,7 +38,6 @@ import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.ui.SigningKey;
 
 import java.util.HashMap;
 
@@ -46,7 +48,8 @@ public class EspMainActivity extends AppCompatActivity {
     private static final int REQUEST_LOCATION = 1;
 
     private String transportVersion, securityVersion;
-    private String BASE_URL, NETWORK_NAME_PREFIX, DEVICE_NAME_PREFIX;
+    private String BASE_URL;
+    private Button btnProvision, btnManageDevice;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,25 +58,29 @@ public class EspMainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_esp_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        Button btnProvision = findViewById(R.id.btn_start_provision);
 
-        Log.d("MD5", SigningKey.getCertificateMD5Fingerprint(this));
         BASE_URL = getResources().getString(R.string.wifi_base_url);
-        NETWORK_NAME_PREFIX = getResources().getString(R.string.wifi_network_name_prefix);
-        DEVICE_NAME_PREFIX = getResources().getString(R.string.ble_device_name_prefix);
+        initViews();
 
-        Button manageDevices = findViewById(R.id.manageButton);
-        manageDevices.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
+        SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
 
-                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+        String wifiNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
+        String bleDevicePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
 
-                Intent goToManagePage = new Intent(getApplicationContext(), ScanLocalDevices.class);
-                startActivity(goToManagePage);
-            }
-        });
+        if (TextUtils.isEmpty(wifiNamePrefix)) {
+
+            wifiNamePrefix = getResources().getString(R.string.wifi_network_name_prefix);
+            editor.putString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, wifiNamePrefix);
+        }
+
+        if (TextUtils.isEmpty(bleDevicePrefix)) {
+
+            bleDevicePrefix = getResources().getString(R.string.ble_device_name_prefix);
+            editor.putString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, bleDevicePrefix);
+        }
+
+        editor.apply();
 
         if (BuildConfig.FLAVOR_security.equals("sec1")) {
             securityVersion = Provision.CONFIG_SECURITY_SECURITY1;
@@ -86,40 +93,6 @@ public class EspMainActivity extends AppCompatActivity {
         } else {
             transportVersion = Provision.CONFIG_TRANSPORT_WIFI;
         }
-
-        btnProvision.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-
-                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-
-                    if (!isLocationEnabled()) {
-                        askForLocation();
-                        return;
-                    }
-                }
-
-                HashMap<String, String> config = new HashMap<>();
-                config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
-                config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
-                config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                config.put(Provision.CONFIG_WIFI_AP_KEY, NETWORK_NAME_PREFIX);
-                config.put(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, DEVICE_NAME_PREFIX);
-
-                if (BuildConfig.FLAVOR_avs.equals("avs")) {
-
-                    Provision.showProvisioningWithAmazonUI(EspMainActivity.this,
-                            config);
-                } else {
-
-                    Provision.showProvisioningUI(EspMainActivity.this, config);
-                }
-            }
-        });
     }
 
     @Override
@@ -127,14 +100,17 @@ public class EspMainActivity extends AppCompatActivity {
         super.onResume();
 
         if (BuildConfig.FLAVOR_transport.equals("ble") && BLEProvisionLanding.isBleWorkDone) {
-            BLEProvisionLanding.bleTransport.disconnect();
+
+            if (BLEProvisionLanding.bleTransport != null) {
+                BLEProvisionLanding.bleTransport.disconnect();
+            }
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-//        getMenuInflater().inflate(R.menu.menu_main, menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
@@ -146,8 +122,9 @@ public class EspMainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_app_info) {
+            Intent intent = new Intent(this, AppInfoActivity.class);
+            startActivity(intent);
         }
 
         return super.onOptionsItemSelected(item);
@@ -169,8 +146,6 @@ public class EspMainActivity extends AppCompatActivity {
                     config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
                     config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
                     config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-                    config.put(Provision.CONFIG_WIFI_AP_KEY, NETWORK_NAME_PREFIX);
-                    config.put(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, DEVICE_NAME_PREFIX);
 
                     if (BuildConfig.FLAVOR_avs.equals("avs")) {
 
@@ -183,6 +158,59 @@ public class EspMainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    View.OnClickListener provisionBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                if (!isLocationEnabled()) {
+                    askForLocation();
+                    return;
+                }
+            }
+
+            HashMap<String, String> config = new HashMap<>();
+            config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
+            config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
+            config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+
+            if (BuildConfig.FLAVOR_avs.equals("avs")) {
+
+                Provision.showProvisioningWithAmazonUI(EspMainActivity.this,
+                        config);
+            } else {
+
+                Provision.showProvisioningUI(EspMainActivity.this, config);
+            }
+        }
+    };
+
+    View.OnClickListener manageDeviceBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
+            Intent goToManagePage = new Intent(getApplicationContext(), ScanLocalDevices.class);
+            startActivity(goToManagePage);
+        }
+    };
+
+    private void initViews() {
+
+        btnProvision = findViewById(R.id.btn_start_provision);
+        btnManageDevice = findViewById(R.id.manageButton);
+        btnProvision.setOnClickListener(provisionBtnClickListener);
+        btnManageDevice.setOnClickListener(manageDeviceBtnClickListener);
     }
 
     private void askForLocation() {

@@ -160,7 +160,7 @@ public class WiFiScanActivity extends AppCompatActivity {
             }
         });
 
-        handler.postDelayed(stopScanningTask, 15000);
+        handler.postDelayed(stopScanningTask, WIFI_SCAN_TIMEOUT);
 
         WifiScan.CmdScanStart configRequest = WifiScan.CmdScanStart.newBuilder()
                 .setBlocking(true)

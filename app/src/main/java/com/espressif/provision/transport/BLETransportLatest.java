@@ -22,9 +22,11 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.os.Build;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.espressif.AppConstants;
+import com.espressif.ui.activities.ProvisionActivity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -261,8 +263,8 @@ public class BLETransportLatest extends BLETransport {
                 BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(AppConstants.HANDLER_PROTO_VER)));
 
                 if (characteristic != null) {
-                    // Write anything. It doesn't matter. We need to read characteristic and for that we need to write something.
-                    characteristic.setValue("V0.1");
+                    // Write V0.2 to read characteristic.
+                    characteristic.setValue("V0.2");
                     bluetoothGatt.writeCharacteristic(characteristic);
                 }
             }
@@ -313,7 +315,14 @@ public class BLETransportLatest extends BLETransport {
 
                 } catch (JSONException e) {
                     e.printStackTrace();
-                    Log.d(TAG, "Capabilities JSON not available.");
+                    Log.e(TAG, "Capabilities JSON not available.");
+                    Log.e(TAG, "Value : " + data);
+
+                    // If received data is "SUCCESS" then consider that WiFi auth mode will be available in WiFi Scan list.
+                    if (!TextUtils.isEmpty(data) && data.equalsIgnoreCase("SUCCESS")) {
+                        Log.e(TAG, "Received version V0.2");
+                        ProvisionActivity.isWiFiAuthModeAvailable = true;
+                    }
                 }
 
                 if (transportListener != null) {
@@ -408,7 +417,7 @@ public class BLETransportLatest extends BLETransport {
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(AppConstants.HANDLER_PROTO_VER)));
 
             if (characteristic != null) {
-                characteristic.setValue("V0.1");
+                characteristic.setValue("V0.2");
                 bluetoothGatt.writeCharacteristic(characteristic);
             }
         }

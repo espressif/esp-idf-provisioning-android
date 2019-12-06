@@ -26,4 +26,6 @@ public class AppConstants {
     public static final String KEY_STATUS_MSG = "status_msg";
     public static final String KEY_DEVICE_INFO = "device_info";
     public static final String KEY_DEVICE_LANGUAGE = "device_language";
+    
+    public static final String ESP_PREFERENCES = "Esp_Preferences";
 }

@@ -289,11 +289,11 @@ public class ScanLocalDevices extends AppCompatActivity {
         deviceHostAddress = device.getHostAddress();
         deviceName = device.getFriendlyName();
         Log.d(TAG, "Device host address : " + deviceHostAddress);
-        this.transport = new SoftAPTransport(deviceHostAddress + ":80");
-        this.security = new Security0();
-        this.session = new Session(this.transport, this.security);
+        transport = new SoftAPTransport(deviceHostAddress + ":80");
+        security = new Security0();
+        session = new Session(this.transport, this.security);
 
-        this.session.sessionListener = new Session.SessionListener() {
+        session.sessionListener = new Session.SessionListener() {
 
             @Override
             public void OnSessionEstablished() {
@@ -305,7 +305,7 @@ public class ScanLocalDevices extends AppCompatActivity {
             public void OnSessionEstablishFailed(Exception e) {
                 Log.d(TAG, "Session failed");
                 hideProgressDialog();
-                Toast.makeText(ScanLocalDevices.this, R.string.error_device_not_supported, Toast.LENGTH_SHORT).show();
+                Toast.makeText(ScanLocalDevices.this, R.string.error_device_connection_failed, Toast.LENGTH_SHORT).show();
             }
         };
         session.init(null);
@@ -331,9 +331,9 @@ public class ScanLocalDevices extends AppCompatActivity {
                 .setCmdGetDeviceInfo(deviceInfoRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
+        byte[] message = security.encrypt(payload.toByteArray());
 
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -402,6 +402,30 @@ public class ScanLocalDevices extends AppCompatActivity {
         return deviceInfo;
     }
 
+    private void getSignedInStatus() {
+
+        transport = new SoftAPTransport(deviceHostAddress + ":80");
+        security = new Security0();
+        session = new Session(this.transport, this.security);
+
+        session.sessionListener = new Session.SessionListener() {
+
+            @Override
+            public void OnSessionEstablished() {
+                Log.d(TAG, "Session established");
+                getAlexaSignedInStatus();
+            }
+
+            @Override
+            public void OnSessionEstablishFailed(Exception e) {
+                Log.d(TAG, "Session failed");
+                hideProgressDialog();
+                Toast.makeText(ScanLocalDevices.this, R.string.error_device_connection_failed, Toast.LENGTH_SHORT).show();
+            }
+        };
+        session.init(null);
+    }
+
     private void getAlexaSignedInStatus() {
 
         runOnUiThread(new Runnable() {
@@ -422,9 +446,9 @@ public class ScanLocalDevices extends AppCompatActivity {
                 .setMsg(msgType)
                 .setCmdSigninStatus(configRequest)
                 .build();
-        byte[] message = this.security.encrypt(payload.toByteArray());
+        byte[] message = security.encrypt(payload.toByteArray());
 
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -509,7 +533,7 @@ public class ScanLocalDevices extends AppCompatActivity {
         builder.setCancelable(false);
 
         builder.setTitle("Error!");
-        builder.setMessage(R.string.error_device_not_supported);
+        builder.setMessage(R.string.error_device_connection_failed);
 
         // Set up the buttons
         builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
@@ -555,7 +579,7 @@ public class ScanLocalDevices extends AppCompatActivity {
         @Override
         public void run() {
             Log.e(TAG, "Not able to get Device info");
-            getAlexaSignedInStatus();
+            getSignedInStatus();
 //            hideProgressDialog();
 //            alertForDeviceConnectionFailed();
         }
@@ -570,12 +594,8 @@ public class ScanLocalDevices extends AppCompatActivity {
             pDialog.setCancelable(false);
             pDialog.show();
         } else {
-            try {
-                pDialog.setTitleText(message);
-                pDialog.show();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            pDialog.setTitleText(message);
+            pDialog.show();
         }
     }
 

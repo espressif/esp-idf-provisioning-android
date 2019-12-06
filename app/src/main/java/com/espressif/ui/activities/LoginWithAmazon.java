@@ -416,28 +416,25 @@ public class LoginWithAmazon extends AppCompatActivity {
                                       String redirectUri,
                                       final ConfigureAVSActionListener actionListener) {
 
-        if (this.session.isEstablished()) {
-
-            byte[] message = createSetAVSConfigRequest(clientId,
-                    authCode,
-                    redirectUri);
-            transport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
-                @Override
-                public void onSuccess(byte[] returnData) {
-                    Avsconfig.AVSConfigStatus status = processSetAVSConfigResponse(returnData);
-                    if (actionListener != null) {
-                        actionListener.onComplete(status, null);
-                    }
+        byte[] message = createSetAVSConfigRequest(clientId,
+                authCode,
+                redirectUri);
+        transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+            @Override
+            public void onSuccess(byte[] returnData) {
+                Avsconfig.AVSConfigStatus status = processSetAVSConfigResponse(returnData);
+                if (actionListener != null) {
+                    actionListener.onComplete(status, null);
                 }
+            }
 
-                @Override
-                public void onFailure(Exception e) {
-                    if (actionListener != null) {
-                        actionListener.onComplete(Avsconfig.AVSConfigStatus.InvalidParam, e);
-                    }
+            @Override
+            public void onFailure(Exception e) {
+                if (actionListener != null) {
+                    actionListener.onComplete(Avsconfig.AVSConfigStatus.InvalidParam, e);
                 }
-            });
-        }
+            }
+        });
     }
 
     private byte[] createSetAVSConfigRequest(String clientId,

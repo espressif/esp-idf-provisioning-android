@@ -23,6 +23,7 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -34,10 +35,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -71,8 +70,6 @@ import java.util.UUID;
 
 import avs.Avsconfig;
 
-import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
-
 public class BLEProvisionLanding extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + BLEProvisionLanding.class.getSimpleName();
@@ -95,7 +92,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private Security security;
     public static BLETransport bleTransport;
     private BLETransport.BLETransportListener transportListener;
-    // FIXME : Remove static BLE_TRANSPORT and think for another solution.
 
     private String deviceName;
     private String deviceNamePrefix;
@@ -108,6 +104,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private BLEScanner bleScanner;
     private ArrayList<BluetoothDevice> deviceList;
     private HashMap<BluetoothDevice, EspBtDevice> bluetoothDevices;
+    private SharedPreferences sharedPreferences;
     private Handler handler;
 
     @Override
@@ -136,14 +133,14 @@ public class BLEProvisionLanding extends AppCompatActivity {
             return;
         }
 
-        deviceNamePrefix = getIntent().getStringExtra(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX);
-
         isConnecting = false;
         isDeviceConnected = false;
         handler = new Handler();
         bluetoothDevices = new HashMap<>();
         Collection<BluetoothDevice> keySet = bluetoothDevices.keySet();
         deviceList = new ArrayList<>(keySet);
+        sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX, "");
 
         initViews();
         bleScanner = new BLEScanner(this, SCAN_TIMEOUT, bleScanListener);
@@ -209,7 +206,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
             }
 
             if (isBleWorkDone) {
-                bleTransport.disconnect();
+                if (bleTransport != null) {
+                    bleTransport.disconnect();
+                }
                 btnScan.setVisibility(View.VISIBLE);
                 startScan();
             }
@@ -219,7 +218,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         isBleWorkDone = true;
-        bleTransport.disconnect();
+        if (bleTransport != null) {
+            bleTransport.disconnect();
+        }
         super.onBackPressed();
     }
 
@@ -344,6 +345,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private void bleDeviceConfigured(final Boolean isConfigured) {
 
         runOnUiThread(new Runnable() {
+
             @Override
             public void run() {
 
@@ -357,7 +359,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
                         if (!bleTransport.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
 
-                            askForPop();
+                            goToProofOfPossessionActivity();
                         }
                     } else {
                         pop = getResources().getString(R.string.proof_of_possesion);
@@ -393,14 +395,6 @@ public class BLEProvisionLanding extends AppCompatActivity {
         }
     }
 
-    private void goToProofOfPossessionActivity() {
-
-        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
-        alexaProvisioningIntent.putExtras(getIntent());
-        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
-        startActivity(alexaProvisioningIntent);
-    }
-
     private void getStatus() {
 
         Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
@@ -414,7 +408,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
         byte[] message = security.encrypt(payload.toByteArray());
 
-        BLEProvisionLanding.bleTransport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
+        bleTransport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -424,7 +418,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
 
                 if (deviceStatus.equals(Avsconfig.AVSConfigStatus.SignedIn)) {
 
-                    goToProvisionActivity();
+                    goToWiFiScanActivity();
 
                 } else {
                     goToLoginActivity();
@@ -457,6 +451,15 @@ public class BLEProvisionLanding extends AppCompatActivity {
         return status;
     }
 
+    private void goToProofOfPossessionActivity() {
+
+        Intent alexaProvisioningIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
+        alexaProvisioningIntent.putExtras(getIntent());
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, true);
+        alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
+        startActivity(alexaProvisioningIntent);
+    }
+
     private void goToLoginActivity() {
 
         Intent alexaProvisioningIntent = new Intent(getApplicationContext(), LoginWithAmazon.class);
@@ -467,7 +470,7 @@ public class BLEProvisionLanding extends AppCompatActivity {
         startActivity(alexaProvisioningIntent);
     }
 
-    private void goToProvisionActivity() {
+    private void goToWiFiScanActivity() {
 
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), WiFiScanActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
@@ -506,13 +509,13 @@ public class BLEProvisionLanding extends AppCompatActivity {
         session.init(null);
     }
 
-    private void alertForDeviceNotSupported() {
+    private void alertForDeviceConnectionFailed() {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setCancelable(false);
 
         builder.setTitle("Error!");
-        builder.setMessage(R.string.error_device_not_supported);
+        builder.setMessage(R.string.error_device_connection_failed);
 
         // Set up the buttons
         builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
@@ -632,41 +635,9 @@ public class BLEProvisionLanding extends AppCompatActivity {
                 bleTransport.disconnect();
             }
             progressBar.setVisibility(View.GONE);
-            alertForDeviceNotSupported();
+            alertForDeviceConnectionFailed();
         }
     };
-
-    private void askForPop() {
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(false);
-
-        LayoutInflater layoutInflaterAndroid = LayoutInflater.from(this);
-        View view = layoutInflaterAndroid.inflate(R.layout.dialog_pop, null);
-        builder.setView(view);
-        final EditText etPop = view.findViewById(R.id.et_prefix);
-        etPop.setHint(R.string.hint_txt_pop);
-        etPop.setText(getResources().getString(R.string.proof_of_possesion));
-        etPop.setSelection(etPop.getText().length());
-
-        // Set up the buttons
-        builder.setPositiveButton(R.string.btn_save, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                pop = etPop.getText().toString();
-
-                if (pop != null) {
-                    pop = pop.trim();
-                }
-
-                initSession();
-            }
-        });
-
-        builder.show();
-    }
 
     private boolean parseAdvertisementPacket(final byte[] scanRecord) {
 

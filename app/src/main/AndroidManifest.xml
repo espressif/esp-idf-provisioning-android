@@ -118,6 +118,11 @@
             android:label="@string/title_activity_sound"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.AppInfoActivity"
+            android:label="@string/title_activity_app_info"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
 
     </application>
 

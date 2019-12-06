@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">ESP Alexa</string>
     <string name="action_settings">Settings</string>
+    <string name="action_app_info">App Info</string>
     <string name="login_with_amazon">Login with Amazon</string>
     <string name="welcome_and_login_with_amazon">Welcome! To continue provisioning your Alexa Powered device, please login with Amazon</string>
     <string name="title_activity_provision_landing">Connect to device</string>
@@ -79,7 +80,8 @@
     <string name="error_authentication_failed">Device provisioning failed. \n Reason : Wi-Fi Authentication failed. Please reset device to factory settings and retry.</string>
     <string name="error_unknown">Device provisioning failed. \n Reason : Unknown. Please reset device to factory settings and retry.</string>
     <string name="error_pop_incorrect">Error establishing session.\n Check if Proof of Possession(POP) is correct!</string>
-    <string name="error_device_not_supported">Failed to connect with Device.</string>
+    <string name="error_device_connection_failed">Failed to connect with Device.</string>
+    <string name="error_device_not_supported">Communication failed. Device may not be supported.</string>
     <string name="error_get_device_info">Failed to get device details.</string>
     <string name="error_get_device_info_not_available">Sorry! Device details not received.</string>
     <string name="error_device_name_empty">Device name cannot be empty.</string>
@@ -101,6 +103,7 @@
     <string name="title_activity_device_info">Device Details</string>
     <string name="title_activity_language">Languages</string>
     <string name="title_activity_sound">Sound Settings</string>
+    <string name="title_activity_app_info">App Info</string>
 
     <string name="join_other_network">Join Other Network</string>
     <string name="networks">Networks</string>
@@ -119,6 +122,7 @@
     <string name="serial_number">Serial Number :</string>
     <string name="fw_version">Firmware Version :</string>
     <string name="connected_wifi">Connected Wi-Fi :</string>
+    <string name="app_version">App Version :</string>
 
     <string-array name="language_array">
         <item>Deutsche</item>

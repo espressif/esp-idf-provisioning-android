@@ -32,14 +32,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.espressif.AppConstants;
-import com.espressif.avs.ConfigureAVS;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
 import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
-import com.espressif.provision.transport.BLETransport;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 
@@ -50,6 +48,8 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + ProvisionActivity.class.getSimpleName();
 
+    public static boolean isWiFiAuthModeAvailable = false;
+
     private TextView ssid;
     private EditText ssidInput;
     private EditText passwordInput;
@@ -59,7 +59,6 @@ public class ProvisionActivity extends AppCompatActivity {
     private int wifiSecurityType;
     private String ssidValue, passphraseValue;
     private String pop, baseUrl, transportVersion, securityVersion;
-    private String deviceNamePrefix, deviceUUID, sessionUUID, configUUID, avsconfigUUID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,7 +78,6 @@ public class ProvisionActivity extends AppCompatActivity {
         baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
-        deviceNamePrefix = intent.getStringExtra(AppConstants.KEY_BLE_DEVICE_NAME_PREFIX);
 
         ssid = findViewById(R.id.ssid_text);
         ssidInput = findViewById(R.id.ssid_input);
@@ -87,35 +85,36 @@ public class ProvisionActivity extends AppCompatActivity {
         btnProvision = findViewById(R.id.btn_provision);
         progressBar = findViewById(R.id.progress_indicator);
 
+        ssidValue = wifiSSID;
+        Log.d(TAG, "Selected AP -" + ssidValue);
+        Log.e(TAG, "POP : " + pop);
+
         if (TextUtils.isEmpty(wifiSSID)) {
 
             ssid.setVisibility(View.GONE);
             ssidInput.setVisibility(View.VISIBLE);
+
+            btnProvision.setEnabled(false);
+            btnProvision.setAlpha(0.5f);
+            btnProvision.setTextColor(Color.WHITE);
+
         } else {
 
             ssidInput.setVisibility(View.GONE);
             ssid.setVisibility(View.VISIBLE);
             ssid.setText(wifiSSID);
 
-            // Security feature is not available in Alexa release. Uncomment below code once firmware sends wifi sec type.
-//            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
-//
-//                passwordInput.setVisibility(View.GONE);
-//                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
-//                btnProvision.setEnabled(false);
-//                btnProvision.setAlpha(0.5f);
-//                btnProvision.setTextColor(Color.WHITE);
-//                doProvisioning();
-//            }
+            if (isWiFiAuthModeAvailable && wifiSecurityType == AppConstants.WIFI_OPEN) {
+
+                passwordInput.setVisibility(View.GONE);
+                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
+                doProvisioning();
+            } else {
+                btnProvision.setEnabled(true);
+                btnProvision.setAlpha(1f);
+                btnProvision.setTextColor(Color.WHITE);
+            }
         }
-
-        ssidValue = wifiSSID;
-        Log.d("ProvisionActivity", "Selected AP -" + wifiSSID);
-
-//        btnProvision.setEnabled(false);
-//        btnProvision.setAlpha(0.5f);
-//        btnProvision.setTextColor(Color.WHITE);
-        enableProvisionBtn();
 
         ssidInput.addTextChangedListener(new TextWatcher() {
 

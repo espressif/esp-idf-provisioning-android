@@ -15,7 +15,7 @@ android {
     defaultConfig {
         applicationId "com.espressif.provbleavs"
         minSdkVersion 21
-        targetSdkVersion 27
+        targetSdkVersion 28
         versionCode 10
         versionName "2.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
