@@ -9,12 +9,18 @@ import android.net.NetworkRequest;
 import android.os.Build;
 import android.util.Log;
 
+import com.espressif.ui.models.EspNode;
+
+import java.util.HashMap;
+
 public class EspApplication extends Application {
 
     private static final String TAG = EspApplication.class.getSimpleName();
 
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
+
+    public HashMap<String, EspNode> nodeMap;
 
     @Override
     public void onCreate() {

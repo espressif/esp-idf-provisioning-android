@@ -1,8 +1,12 @@
 package com.espressif.ui.adapters;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
+import android.content.Intent;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,8 +14,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.R;
-import com.espressif.ui.user_module.EspDevice;
+import com.espressif.ui.activities.EspDeviceActivity;
+import com.espressif.ui.models.EspDevice;
 
 import java.util.ArrayList;
 
@@ -30,7 +36,7 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
         // infalte the item Layout
         LayoutInflater layoutInflater = LayoutInflater.from(context);
-        View v = layoutInflater.inflate(R.layout.item_esp_device, parent, false);
+        View v = layoutInflater.inflate(R.layout.item_esp_new_device, parent, false);
         // set the view's size, margins, paddings and layout parameters
         MyViewHolder vh = new MyViewHolder(v); // pass the view to View Holder
         return vh;
@@ -39,27 +45,43 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder myViewHolder, final int position) {
 
-        EspDevice device = deviceList.get(position);
+        final EspDevice device = deviceList.get(position);
 //        MyViewHolder myViewHolder = (MyViewHolder) holder;
 
         // set the data in items
         Log.e("TAG", "Device name : " + device.getDeviceName());
+        Log.e("TAG", "Device type : " + device.getDeviceType());
         myViewHolder.tvDeviceName.setText(device.getDeviceName());
 
-        if (device.isOnline()) {
-            myViewHolder.ivDeviceStatus.setImageResource(R.drawable.ic_status_online);
+        if (TextUtils.isEmpty(device.getDeviceType())) {
+
+            myViewHolder.ivDevice.setImageResource(R.drawable.ic_device);
+
         } else {
-            myViewHolder.ivDeviceStatus.setImageResource(R.drawable.ic_status_offline);
+
+            if (AppConstants.ESP_DEVICE_BULB.equals(device.getDeviceType())) {
+
+                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device_light_bulb);
+
+            } else if (AppConstants.ESP_DEVICE_SWITCH.equals(device.getDeviceType())) {
+
+                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device_switch);
+
+            } else {
+                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device);
+            }
         }
 
         // implement setOnClickListener event on item view.
-//        holder.itemView.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-        // display a toast with person name on item click
-//                Toast.makeText(context, personNames.get(position), Toast.LENGTH_SHORT).show();
-//            }
-//        });
+        myViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(context, EspDeviceActivity.class);
+                intent.putExtra(AppConstants.KEY_ESP_DEVICE, device);
+                context.startActivity(intent);
+            }
+        });
     }
 
     @Override
@@ -69,21 +91,21 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
     public void updateList(ArrayList<EspDevice> updatedDeviceList) {
         deviceList = updatedDeviceList;
-//        notifyDataSetChanged();
+        notifyDataSetChanged();
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder {
 
         // init the item view's
         TextView tvDeviceName;
-        ImageView ivDeviceStatus;
+        ImageView ivDevice;
 
         public MyViewHolder(View itemView) {
             super(itemView);
 
             // get the reference of item view's
             tvDeviceName = itemView.findViewById(R.id.tv_device_name);
-            ivDeviceStatus = itemView.findViewById(R.id.iv_device_status);
+            ivDevice = itemView.findViewById(R.id.iv_device);
         }
     }
 }

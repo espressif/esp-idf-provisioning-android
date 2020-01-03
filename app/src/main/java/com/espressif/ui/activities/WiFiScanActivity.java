@@ -3,8 +3,10 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -95,6 +97,7 @@ public class WiFiScanActivity extends AppCompatActivity {
         });
 
         if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+            Log.e(TAG, "Security 1 with pop : " + pop);
             security = new Security1(pop);
         } else {
             security = new Security0();
@@ -102,7 +105,12 @@ public class WiFiScanActivity extends AppCompatActivity {
 
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
 
-            transport = new SoftAPTransport(baseUrl);
+            Log.e(TAG, "Base URL : " + baseUrl);
+            if (ProvisionLanding.softAPTransport != null) {
+                transport = ProvisionLanding.softAPTransport;
+            } else {
+                transport = new SoftAPTransport(baseUrl);
+            }
 
         } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
 
@@ -126,7 +134,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
         Log.d(TAG, "Fetch Scan List");
 
-        session = new Session(this.transport, security);
+        session = new Session(transport, security);
         session.sessionListener = new Session.SessionListener() {
 
             @Override

@@ -2,13 +2,13 @@ package com.espressif.cloudapi;
 
 import com.google.gson.annotations.SerializedName;
 
-public class AddDeviceRequest {
+public class DeviceOperationRequest {
 
     @SerializedName("user_id")
     private String userId;
 
-    @SerializedName("device_id")
-    private String deviceId;
+    @SerializedName("node_id")
+    private String nodeId;
 
     @SerializedName("secret_key")
     private String secretKey;
@@ -24,12 +24,12 @@ public class AddDeviceRequest {
         this.userId = userId;
     }
 
-    public String getDeviceId() {
-        return deviceId;
+    public String getNodeId() {
+        return nodeId;
     }
 
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 
     public String getSecretKey() {

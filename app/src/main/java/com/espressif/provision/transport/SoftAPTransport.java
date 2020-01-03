@@ -76,10 +76,13 @@ public class SoftAPTransport implements Transport {
                 responseBytes = outputStream.toByteArray();
             }
         } catch (MalformedURLException e) {
+            e.printStackTrace();
             Log.e(TAG, e.getMessage());
         } catch (IOException e) {
+            e.printStackTrace();
             Log.e(TAG, e.getMessage());
         } catch (Exception e) {
+            e.printStackTrace();
             Log.e(TAG, "Error : ", e);
         }
 
@@ -101,6 +104,7 @@ public class SoftAPTransport implements Transport {
                             byte[] returnData = sendPostRequest("prov-session", data);
                             listener.onSuccess(returnData);
                         } catch (Exception e) {
+                            e.printStackTrace();
                             listener.onFailure(e);
                         }
 

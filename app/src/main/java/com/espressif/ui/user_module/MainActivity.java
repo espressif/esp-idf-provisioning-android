@@ -22,12 +22,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
-import android.support.design.widget.NavigationView;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+
+import com.google.android.material.navigation.NavigationView;
+
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -224,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
                     if (option != null) {
                         if (option.length() > 0) {
                             Log.d(TAG, " -- Selected Option: " + option);
-                            conitnueWithSelectedMfa(option);
+                            continueWithSelectedMfa(option);
                         } else {
                             inPassword.setText("");
                             inPassword.requestFocus();
@@ -361,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(chooseMfaActivity, 7);
     }
 
-    private void conitnueWithSelectedMfa(String option) {
+    private void continueWithSelectedMfa(String option) {
         // mfaOptionsContinuation.setChallengeResponse("ANSWER", option);
         mfaOptionsContinuation.setMfaOption(option);
         mfaOptionsContinuation.continueTask();
@@ -396,7 +399,6 @@ public class MainActivity extends AppCompatActivity {
         Intent confirmActivity = new Intent(this, SignUpConfirm.class);
         confirmActivity.putExtra("source", "main");
         startActivityForResult(confirmActivity, 2);
-
     }
 
 //    private void launchUser() {

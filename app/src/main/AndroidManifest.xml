@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.espressif.provision">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -9,11 +10,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-sdk tools:overrideLibrary="com.google.zxing.client.android" />
 
     <application
         android:name="com.espressif.EspApplication"
         android:allowBackup="true"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -72,11 +77,31 @@
             android:name="com.espressif.ui.activities.SettingsActivity"
             android:label="@string/title_activity_settings"
             android:screenOrientation="portrait" />
+        <activity
+            android:name="com.espressif.ui.activities.EspDeviceActivity"
+            android:label="@string/title_activity_esp_device"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <activity
             android:name="com.espressif.ui.user_module.RegisterUser"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/AppTheme.NoActionBar">
+
+            <!--<intent-filter>-->
+            <!--<action android:name="android.intent.action.VIEW" />-->
+
+            <!--<category android:name="android.intent.category.DEFAULT" />-->
+            <!--<category android:name="android.intent.category.BROWSABLE" />-->
+
+            <!--<data-->
+            <!--android:host="@string/com_auth0_domain"-->
+            <!--android:pathPrefix="/com.espressif.ui.user_module/RegisterUser"-->
+            <!--android:scheme="https" />-->
+            <!--</intent-filter>-->
+
+        </activity>
+
         <activity
             android:name="com.espressif.ui.user_module.SignUpConfirm"
             android:label="@string/title_activity_sign_up_confirm"

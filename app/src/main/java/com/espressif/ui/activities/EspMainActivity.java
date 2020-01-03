@@ -20,46 +20,64 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.provider.Settings;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import com.espressif.AppConstants;
+import com.espressif.EspApplication;
+import com.espressif.cloudapi.ApiClient;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
+import com.espressif.provision.transport.ResponseListener;
+import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.ui.adapters.EspDeviceAdapter;
-import com.espressif.ui.user_module.EspDevice;
+import com.espressif.ui.models.EspDevice;
+import com.espressif.ui.models.EspNode;
+import com.espressif.ui.models.UpdateEvent;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.notbytes.barcode_reader.BarcodeReaderActivity;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class EspMainActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + EspMainActivity.class.getSimpleName();
 
     private static final int REQUEST_LOCATION = 1;
+    private static final int BARCODE_READER_ACTIVITY_REQUEST = 120;
 
-    private Button btnProvision;
+    private FloatingActionButton btnProvision, btnScanQrCode;
     private ProgressDialog progressDialog;
     private RecyclerView recyclerView;
     private TextView tvNoDevice, tvTitleDevices;
@@ -68,6 +86,7 @@ public class EspMainActivity extends AppCompatActivity {
     private String BASE_URL;
     private String transportVersion, securityVersion;
     private ApiManager apiManager;
+    private EspApplication espApp;
     private EspDeviceAdapter deviceAdapter;
     private ArrayList<EspDevice> devices;
 
@@ -81,6 +100,7 @@ public class EspMainActivity extends AppCompatActivity {
 
         devices = new ArrayList<>();
         BASE_URL = getResources().getString(R.string.wifi_base_url);
+        espApp = (EspApplication) getApplicationContext();
         initViews();
 
         SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
@@ -121,7 +141,7 @@ public class EspMainActivity extends AppCompatActivity {
 
         showWaitDialog("Getting devices...");
         apiManager = new ApiManager(getApplicationContext());
-        getUserId();
+        getSupportedVersions();
     }
 
     @Override
@@ -131,6 +151,19 @@ public class EspMainActivity extends AppCompatActivity {
         if (BuildConfig.FLAVOR_transport.equals("ble") && BLEProvisionLanding.isBleWorkDone) {
             BLEProvisionLanding.bleTransport.disconnect();
         }
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onEvent(UpdateEvent event) {
+        showWaitDialog("Getting devices...");
+        getDevices();
     }
 
     @Override
@@ -160,6 +193,8 @@ public class EspMainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        Log.d(TAG, "onActivityResult, resultCode : " + resultCode + ", requestCode : " + requestCode);
+
         if (requestCode == REQUEST_LOCATION) {
 
             Log.d(TAG, "REQUEST_LOCATION result received");
@@ -175,6 +210,90 @@ public class EspMainActivity extends AppCompatActivity {
 
                     Provision.showProvisioningUI(EspMainActivity.this, config);
                 }
+            }
+        } else if (requestCode == BARCODE_READER_ACTIVITY_REQUEST) {
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                if (!isLocationEnabled()) {
+                    askForLocation();
+                    return;
+                }
+            }
+
+            if (resultCode != RESULT_OK) {
+                Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (data != null) {
+
+                Log.e(TAG, "Data is not null");
+                final String deviceName = data.getStringExtra("deviceName");
+                String password = data.getStringExtra("password");
+                final String pop = data.getStringExtra("pop");
+                String transportValue = data.getStringExtra("transport");
+
+                Log.e(TAG, "deviceName : " + deviceName + " password : " + password + " pop : " + pop + " transportValue : " + transportValue);
+                ProvisionLanding.softAPTransport = new SoftAPTransport(BASE_URL);
+                String tempData = "ESP";
+
+                ProvisionLanding.softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
+
+                    @Override
+                    public void onSuccess(byte[] returnData) {
+
+                        String data = new String(returnData, StandardCharsets.UTF_8);
+                        Log.d(TAG, "Value : " + data);
+
+                        try {
+                            JSONObject jsonObject = new JSONObject(data);
+                            JSONObject provInfo = jsonObject.getJSONObject("prov");
+
+                            String versionInfo = provInfo.getString("ver");
+                            Log.d(TAG, "Device Version : " + versionInfo);
+
+                            JSONArray capabilities = provInfo.getJSONArray("cap");
+                            ProvisionLanding.deviceCapabilities = new ArrayList<>();
+
+                            for (int i = 0; i < capabilities.length(); i++) {
+                                String cap = capabilities.getString(i);
+                                ProvisionLanding.deviceCapabilities.add(cap);
+                            }
+                            Log.d(TAG, "Capabilities : " + ProvisionLanding.deviceCapabilities);
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                            Log.d(TAG, "Capabilities JSON not available.");
+                        }
+
+                        if (!ProvisionLanding.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                            if (!TextUtils.isEmpty(pop)) {
+                                goToWifiScanListActivity(pop);
+                            } else {
+                                goToPopActivity(deviceName);
+                            }
+
+                        } else if (ProvisionLanding.deviceCapabilities.contains("wifi_scan")) {
+
+                            goToWifiScanListActivity("");
+
+                        } else {
+
+                            if (!TextUtils.isEmpty(pop)) {
+                                goToProvisionActivity(pop);
+                            } else {
+                                goToProvisionActivity("");
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        e.printStackTrace();
+                    }
+                });
             }
         }
     }
@@ -204,30 +323,101 @@ public class EspMainActivity extends AppCompatActivity {
         }
     };
 
+    View.OnClickListener scanQrCodeBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                if (!isLocationEnabled()) {
+                    askForLocation();
+                    return;
+                }
+            }
+            ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
+            goToBarCodeActivity();
+        }
+    };
+
     private void initViews() {
 
         btnProvision = findViewById(R.id.btn_provision);
+        btnScanQrCode = findViewById(R.id.btn_scan_qr_code);
         tvNoDevice = findViewById(R.id.tv_no_device);
         tvTitleDevices = findViewById(R.id.txt_devices);
         recyclerView = findViewById(R.id.rv_device_list);
         swipeRefreshLayout = findViewById(R.id.swipe_container);
         btnProvision.setOnClickListener(provisionBtnClickListener);
+        btnScanQrCode.setOnClickListener(scanQrCodeBtnClickListener);
 
         // set a LinearLayoutManager with default orientation
-        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getApplicationContext());
-        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        GridLayoutManager linearLayoutManager = new GridLayoutManager(getApplicationContext(), 2);
         recyclerView.setLayoutManager(linearLayoutManager); // set LayoutManager to RecyclerView
-        recyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL));
 
         deviceAdapter = new EspDeviceAdapter(this, devices);
         recyclerView.setAdapter(deviceAdapter);
 
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+
             @Override
             public void onRefresh() {
                 getDevices();
             }
         });
+    }
+
+    private void getSupportedVersions() {
+
+        apiManager.getSupportedVersions(new ApiResponseListener() {
+
+            @Override
+            public void onSuccess(Bundle data) {
+
+                String updateMsg = data.getString("additional_info");
+                ArrayList<String> versions = data.getStringArrayList("supported_versions");
+
+                if (!versions.contains(ApiClient.CURRENT_VERSION)) {
+                    alertForForceUpdate(updateMsg);
+                } else {
+
+                    int currentVersion = getVersionNumber(ApiClient.CURRENT_VERSION);
+
+                    for (int i = 0; i < versions.size(); i++) {
+
+                        int version = getVersionNumber(versions.get(i));
+
+                        if (version > currentVersion) {
+
+                            // TODO Make flag true once alert is shown so that update popup will not come every time.
+                            if (!TextUtils.isEmpty(updateMsg)) {
+                                alertForNewVersion(updateMsg);
+                            } else {
+                                alertForNewVersion("");
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                getUserId();
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private int getVersionNumber(String versionString) {
+
+        versionString = versionString.replace("v", "");
+        int version = Integer.valueOf(versionString);
+        return version;
     }
 
     private void getUserId() {
@@ -251,15 +441,30 @@ public class EspMainActivity extends AppCompatActivity {
 
     private void getDevices() {
 
-        apiManager.getDevices(new ApiResponseListener() {
+        Log.e(TAG, "Get devices");
+        apiManager.getAllDevices(new ApiResponseListener() {
 
             @Override
             public void onSuccess(Bundle data) {
 
+                Log.e(TAG, "Get devices Success received");
                 closeWaitDialog();
                 swipeRefreshLayout.setRefreshing(false);
-                devices = data.getParcelableArrayList("devices");
-                Log.e(TAG, "Device list size : " + devices.size());
+                devices.clear();
+
+                for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                    String key = entry.getKey();
+                    EspNode node = entry.getValue();
+
+                    if (node != null) {
+                        ArrayList<EspDevice> espDevices = node.getDevices();
+                        devices.addAll(espDevices);
+                        Log.d(TAG, "Devices size : " + espDevices.size());
+                    }
+                }
+
+                Log.d(TAG, "Device list size : " + devices.size());
 
                 if (devices.size() > 0) {
 
@@ -283,6 +488,73 @@ public class EspMainActivity extends AppCompatActivity {
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
+    }
+
+    private void goToBarCodeActivity() {
+
+        Intent launchIntent = BarcodeReaderActivity.getLaunchIntent(this, true, false);
+        startActivityForResult(launchIntent, BARCODE_READER_ACTIVITY_REQUEST);
+    }
+
+    private void alertForForceUpdate(String message) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+
+        builder.setTitle("New Version is available!");
+        builder.setMessage(message);
+
+        // Set up the buttons
+        builder.setPositiveButton(R.string.btn_update, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                final String appPackageName = getPackageName(); // getPackageName() from Context or Activity object
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+                } catch (android.content.ActivityNotFoundException anfe) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName)));
+                }
+            }
+        });
+
+        builder.show();
+    }
+
+    private void alertForNewVersion(String message) {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(true);
+
+        builder.setTitle("New Version is available!");
+        builder.setMessage(message);
+
+        // Set up the buttons
+        builder.setPositiveButton(R.string.btn_update, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                final String appPackageName = getPackageName(); // getPackageName() from Context or Activity object
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + appPackageName)));
+                } catch (android.content.ActivityNotFoundException anfe) {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=" + appPackageName)));
+                }
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.dismiss();
+            }
+        });
+
+        builder.show();
     }
 
     private void askForLocation() {
@@ -342,7 +614,7 @@ public class EspMainActivity extends AppCompatActivity {
             progressDialog = new ProgressDialog(this);
         }
         progressDialog.setTitle(message);
-        progressDialog.setCancelable(false);
+        progressDialog.setCancelable(true);
         progressDialog.show();
     }
 
@@ -354,5 +626,38 @@ public class EspMainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void goToPopActivity(String currentSSID) {
+
+        Intent popIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
+        putExtraInformation(popIntent);
+        popIntent.putExtra(AppConstants.KEY_DEVICE_NAME, currentSSID);
+        startActivity(popIntent);
+    }
+
+    private void goToWifiScanListActivity(String pop) {
+
+        Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanActivity.class);
+        putExtraInformation(wifiListIntent);
+        wifiListIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
+        startActivity(wifiListIntent);
+    }
+
+    private void goToProvisionActivity(String pop) {
+
+        Intent provisionIntent = new Intent(getApplicationContext(), ProvisionActivity.class);
+        putExtraInformation(provisionIntent);
+        provisionIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, pop);
+        startActivityForResult(provisionIntent, Provision.REQUEST_PROVISIONING_CODE);
+    }
+
+    private void putExtraInformation(Intent intent) {
+
+        Bundle optionsBundle = new Bundle();
+        optionsBundle.putString(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
+        optionsBundle.putString(Provision.CONFIG_SECURITY_KEY, securityVersion);
+        optionsBundle.putString(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+        intent.putExtras(optionsBundle);
     }
 }

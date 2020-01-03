@@ -23,6 +23,21 @@ public class AppConstants {
     public static final String KEY_BLE_DEVICE_NAME_PREFIX = "ble_device_name_prefix";
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_STATUS_MSG = "status_msg";
+    public static final String KEY_ESP_DEVICE = "esp_device";
 
     public static final String ESP_PREFERENCES = "Esp_Preferences";
+
+    // UI Types of Device
+    public static final String UI_TYPE_TOGGLE = "esp-ui-toggle";
+    public static final String UI_TYPE_SLIDER = "esp-ui-slider";
+
+    // ESP Device Types
+    public static final String ESP_DEVICE_BULB = "esp.device.lightbulb";
+    public static final String ESP_DEVICE_SWITCH = "esp.device.switch";
+
+    public enum UpdateEventType {
+        EVENT_DEVICE_ADDED,
+        EVENT_ADD_DEVICE_TIME_OUT,
+        EVENT_REMOVE
+    }
 }

@@ -81,23 +81,31 @@
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:textSize="@dimen/activity_text_size_small" />
 
-    <EditText
-        android:id="@+id/editTextRegUserPassword"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/editTextRegUserPassword_layout"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/activity_text_height"
+        android:layout_height="wrap_content"
         android:layout_below="@+id/textViewRegUserPasswordLabel"
         android:layout_centerHorizontal="true"
-        android:background="@drawable/text_border_selector"
-        android:hint="Password"
-        android:inputType="textPassword"
-        android:paddingLeft="@dimen/activity_text_padding"
-        android:paddingRight="@dimen/activity_text_padding" />
+        app:passwordToggleEnabled="true">
+
+        <EditText
+            android:id="@+id/editTextRegUserPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/text_border_selector"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:paddingLeft="@dimen/activity_text_padding"
+            android:paddingRight="@dimen/activity_text_padding" />
+
+    </com.google.android.material.textfield.TextInputLayout>
 
     <TextView
         android:id="@+id/textViewUserRegPasswordMessage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/editTextRegUserPassword"
+        android:layout_below="@+id/editTextRegUserPassword_layout"
         android:layout_centerHorizontal="true"
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceSmall"

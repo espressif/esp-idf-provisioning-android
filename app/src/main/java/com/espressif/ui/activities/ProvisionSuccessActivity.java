@@ -16,8 +16,8 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.Button;
@@ -40,7 +40,6 @@ public class ProvisionSuccessActivity extends AppCompatActivity {
         String status = getIntent().getStringExtra(AppConstants.KEY_STATUS_MSG);
         TextView successTextView = findViewById(R.id.success_textview);
         successTextView.setText(status);
-        ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
 
         Button doneButton = findViewById(R.id.done_button);
         doneButton.setOnClickListener(new View.OnClickListener() {

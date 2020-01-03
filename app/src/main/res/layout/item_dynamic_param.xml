@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_view_switch"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    card_view:cardBackgroundColor="@android:color/white"
+    card_view:cardCornerRadius="10dp"
+    card_view:cardElevation="10dp"
+    card_view:cardUseCompatPadding="true">
+
+    <RelativeLayout
+        android:id="@+id/rl_card_slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/slider_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Title"
+            android:textSize="18sp" />
+
+        <!--<SeekBar-->
+        <!--android:id="@+id/card_slider"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_below="@id/slider_name"-->
+        <!--android:layout_marginTop="10dp"-->
+        <!--android:layout_marginBottom="10dp"-->
+        <!--android:max="100"-->
+        <!--android:min="0" />-->
+
+        <com.warkiz.tickseekbar.TickSeekBar
+            android:id="@+id/card_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/slider_name"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            app:tsb_seek_smoothly="true"
+            app:tsb_show_thumb_text="below"
+            app:tsb_show_tick_marks_type="oval"
+            app:tsb_show_tick_texts="above"
+            app:tsb_thumb_color="@color/colorAccent"
+            app:tsb_thumb_size="12dp"
+            app:tsb_thumb_text_color="@color/colorAccent"
+            app:tsb_tick_marks_color="#AAAAAA"
+            app:tsb_tick_marks_size="0dp"
+            app:tsb_tick_texts_color="#555555"
+            app:tsb_tick_texts_size="13sp"
+            app:tsb_ticks_count="2"
+            app:tsb_track_background_color="#AAAAAA"
+            app:tsb_track_background_size="2dp"
+            app:tsb_track_progress_color="@color/colorAccent"
+            app:tsb_track_progress_size="3dp" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_card_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/switch_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:max="100"
+            android:text="Title"
+            android:textSize="18sp" />
+
+        <Switch
+            android:id="@+id/card_switch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true" />
+
+        <TextView
+            android:id="@+id/tv_switch_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:text="@string/text_on"
+            android:textColor="@color/color_text_on"
+            android:textSize="18sp" />
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/rl_card_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="visible">
+
+        <TextView
+            android:id="@+id/label_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:max="100"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/label_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:max="100"
+            android:textSize="18sp" />
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>

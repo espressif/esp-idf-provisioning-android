@@ -26,11 +26,6 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.util.Log;
@@ -42,6 +37,12 @@ import android.widget.EditText;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
 import com.espressif.provision.BuildConfig;
@@ -49,7 +50,6 @@ import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
-import com.espressif.provision.transport.Transport;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,16 +62,18 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + ProvisionLanding.class.getSimpleName();
 
+    private static final int WIFI_SETTINGS_ACTIVITY_REQUEST = 121;
+
     private String currentSSID;
     private String deviceNamePrefix;
     private String securityVersion;
+    public static SoftAPTransport softAPTransport;
     public static ArrayList<String> deviceCapabilities;
     private SharedPreferences sharedPreferences;
 
     private RelativeLayout prefixLayout;
     private Button btnPrefix, btnConnect;
     private TextView textPrefix, textWiFiInstruction, textNoInternet;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,14 +95,17 @@ public class ProvisionLanding extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
-        if (requestCode == Provision.REQUEST_PROVISIONING_CODE && resultCode == RESULT_OK) {
+        switch (requestCode) {
+            case WIFI_SETTINGS_ACTIVITY_REQUEST:
+                updateUi();
+                break;
 
-            setResult(resultCode);
-            finish();
-
-        } else if (requestCode == 100) {
-
-            updateUi();
+            case Provision.REQUEST_PROVISIONING_CODE:
+                if (resultCode == RESULT_OK) {
+                    setResult(resultCode);
+                    finish();
+                }
+                break;
         }
     }
 
@@ -136,10 +141,10 @@ public class ProvisionLanding extends AppCompatActivity {
             if (currentSSID != null && currentSSID.startsWith(deviceNamePrefix)) {
 
                 String baseUrl = getIntent().getStringExtra(Provision.CONFIG_BASE_URL_KEY);
-                Transport transport = new SoftAPTransport(baseUrl);
+                softAPTransport = new SoftAPTransport(baseUrl);
                 String tempData = "ESP";
 
-                transport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
+                softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
 
                     @Override
                     public void onSuccess(byte[] returnData) {
@@ -155,6 +160,7 @@ public class ProvisionLanding extends AppCompatActivity {
                             Log.d(TAG, "Device Version : " + versionInfo);
 
                             JSONArray capabilities = provInfo.getJSONArray("cap");
+                            deviceCapabilities = new ArrayList<>();
 
                             for (int i = 0; i < capabilities.length(); i++) {
                                 String cap = capabilities.getString(i);
@@ -188,7 +194,7 @@ public class ProvisionLanding extends AppCompatActivity {
                 });
 
             } else {
-                startActivityForResult(new Intent(Settings.ACTION_WIFI_SETTINGS), 100);
+                startActivityForResult(new Intent(Settings.ACTION_WIFI_SETTINGS), WIFI_SETTINGS_ACTIVITY_REQUEST);
             }
         }
     };

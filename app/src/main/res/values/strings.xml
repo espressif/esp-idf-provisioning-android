@@ -15,6 +15,7 @@
     <string name="dialog_msg_for_gps">Location services are disabled. Please enable them to continue</string>
 
     <string name="success_text">Device has been successfully provisioned!</string>
+    <string name="add_device_success_text">Device has been successfully added!</string>
     <string name="wifi_disconnected_text">Please check the device indicators for provisioning status.</string>
     <string name="done">Done</string>
 
@@ -35,6 +36,7 @@
     <string name="btn_save">Save</string>
     <string name="btn_ok">Ok</string>
     <string name="btn_cancel">Cancel</string>
+    <string name="btn_update">Update</string>
 
     <!-- Strings used for Progress -->
     <string name="progress_scanning">Scanning Devices...</string>
@@ -63,7 +65,7 @@
     <string name="title_activity_forgot_password">ForgotPasswordActivity</string>
     <string name="title_activity_change_password">ChangePasswordActivity</string>
     <string name="title_activity_new_password">NewPassword</string>
-
+    <string name="title_activity_esp_device">Device</string>
 
     <string name="prefix">Prefix :</string>
     <string name="hint_prefix">Enter Prefix</string>
@@ -73,6 +75,8 @@
 
     <string name="join_other_network">Join Other Network</string>
     <string name="networks">Networks</string>
+    <string name="text_on">ON</string>
+    <string name="text_off">OFF</string>
 
     <string name="nav_drawer_open">Open navigation drawer</string>
     <string name="nav_drawer_close">Close navigation drawer</string>
@@ -81,5 +85,10 @@
     <string name="Menu">Menu</string>
     <string name="app_main_desc">A sample app to showcase Cognito Identity and the SDK for Android.</string>
     <string name="pick_MFA">MFA Options</string>
+
+    <string name="have_qr_code"><u>Do you have QR code to connect device ?</u></string>
+
+    <string name="tab_text_1">Login</string>
+    <string name="tab_text_2">SignUp</string>
 
 </resources>
