@@ -26,11 +26,12 @@
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
         <activity
-            android:name="com.espressif.ui.user_module.MainActivity"
+            android:name="com.espressif.ui.activities.MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -84,32 +85,8 @@
             android:theme="@style/AppTheme.NoActionBar" />
 
         <activity
-            android:name="com.espressif.ui.user_module.RegisterUser"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar">
-
-            <!--<intent-filter>-->
-            <!--<action android:name="android.intent.action.VIEW" />-->
-
-            <!--<category android:name="android.intent.category.DEFAULT" />-->
-            <!--<category android:name="android.intent.category.BROWSABLE" />-->
-
-            <!--<data-->
-            <!--android:host="@string/com_auth0_domain"-->
-            <!--android:pathPrefix="/com.espressif.ui.user_module/RegisterUser"-->
-            <!--android:scheme="https" />-->
-            <!--</intent-filter>-->
-
-        </activity>
-
-        <activity
-            android:name="com.espressif.ui.user_module.SignUpConfirm"
+            android:name="com.espressif.ui.user_module.SignUpConfirmActivity"
             android:label="@string/title_activity_sign_up_confirm"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="com.espressif.ui.user_module.MFAActivity"
-            android:label="@string/title_activity_mfa"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
@@ -125,11 +102,6 @@
         <activity
             android:name="com.espressif.ui.user_module.NewPassword"
             android:label="@string/title_activity_new_password"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="com.espressif.ui.user_module.ChooseMFA"
-            android:label="@string/title_activity_choose_mfa"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 

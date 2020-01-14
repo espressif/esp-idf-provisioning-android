@@ -9,6 +9,8 @@ import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
+
 import com.espressif.provision.R;
 import com.espressif.AppConstants;
 import com.espressif.ui.models.WiFiAccessPoint;
@@ -49,6 +51,7 @@ public class WiFiListAdapter extends ArrayAdapter<WiFiAccessPoint> {
 
         if (wiFiAccessPoint.getWifiName().equals(context.getString(R.string.join_other_network))) {
 
+            wifiNameText.setTextColor(ContextCompat.getColor(context.getApplicationContext(), R.color.colorPrimary));
             rssiImage.setVisibility(View.VISIBLE);
             rssiImage.setImageResource(R.drawable.ic_right_arrow);
         }

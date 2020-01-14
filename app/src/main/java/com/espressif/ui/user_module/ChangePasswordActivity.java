@@ -1,234 +1,182 @@
-/*
- * Copyright 2013-2017 Amazon.com,
- * Inc. or its affiliates. All Rights Reserved.
- *
- * Licensed under the Amazon Software License (the "License").
- * You may not use this file except in compliance with the
- * License. A copy of the License is located at
- *
- *      http://aws.amazon.com/asl/
- *
- * or in the "license" file accompanying this file. This file is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, express or implied. See the License
- * for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.espressif.ui.user_module;
 
-import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.content.pm.ActivityInfo;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
+import androidx.cardview.widget.CardView;
+import androidx.core.widget.ContentLoadingProgressBar;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GenericHandler;
 import com.espressif.provision.R;
+import com.google.android.material.textfield.TextInputLayout;
 
 public class ChangePasswordActivity extends AppCompatActivity {
 
-    private EditText currPassword;
-    private EditText newPassword;
-    private EditText newConfirmPassword;
-    private Button changeButton;
+    private TextView tvTitle, tvBack, tvCancel;
+    private EditText etOldPassword, etNewPassword, etConfirmNewPassword;
+    private TextInputLayout layoutOldPassword, layoutNewPassword, layoutConfirmPassword;
+    private CardView btnSetPassword;
+    private TextView txtSetPasswordBtn;
+    private ImageView arrowImage;
+    private ContentLoadingProgressBar progressBar;
     private AlertDialog userDialog;
-    private ProgressDialog waitDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_change_password);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbarChangePass);
-        toolbar.setTitle("");
-        setSupportActionBar(toolbar);
-
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setDisplayShowHomeEnabled(true);
-
-        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onBackPressed();
-            }
-        });
-
-        TextView main_title = (TextView) findViewById(R.id.change_password_toolbar_title);
-        main_title.setText("Change password");
-
         init();
     }
 
     private void init() {
 
-        currPassword = (EditText) findViewById(R.id.editTextChangePassCurrPass);
-        currPassword.addTextChangedListener(new TextWatcher() {
+        tvTitle = findViewById(R.id.main_toolbar_title);
+        tvBack = findViewById(R.id.btn_back);
+        tvCancel = findViewById(R.id.btn_cancel);
+
+        tvTitle.setText(R.string.title_activity_change_password);
+        tvBack.setVisibility(View.VISIBLE);
+        tvCancel.setVisibility(View.VISIBLE);
+
+        tvBack.setOnClickListener(backButtonClickListener);
+        tvCancel.setOnClickListener(cancelButtonClickListener);
+
+        etOldPassword = findViewById(R.id.et_old_password);
+        etNewPassword = findViewById(R.id.et_new_password);
+        etConfirmNewPassword = findViewById(R.id.et_confirm_new_password);
+        layoutOldPassword = findViewById(R.id.layout_old_password);
+        layoutNewPassword = findViewById(R.id.layout_new_password);
+        layoutConfirmPassword = findViewById(R.id.layout_confirm_new_password);
+        btnSetPassword = findViewById(R.id.btn_set_password);
+        txtSetPasswordBtn = findViewById(R.id.text_btn);
+        arrowImage = findViewById(R.id.iv_arrow);
+        progressBar = findViewById(R.id.progress_indicator);
+
+        txtSetPasswordBtn.setText(R.string.btn_set_password);
+        btnSetPassword.setOnClickListener(setPasswordBtnClickListener);
+
+        etConfirmNewPassword.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassCurrPassLabel);
-                    label.setText(currPassword.getHint());
-                    currPassword.setBackground(getDrawable(R.drawable.text_border_selector));
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+
+                if (actionId == EditorInfo.IME_ACTION_GO) {
+                    changePassword();
                 }
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                TextView label = (TextView) findViewById(R.id.textViewChangePassCurrPassMessage);
-                label.setText("");
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassCurrPassLabel);
-                    label.setText("");
-                }
-            }
-        });
-
-        newPassword = (EditText) findViewById(R.id.editTextChangePassNewPass);
-        newPassword.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassNewPassLabel);
-                    label.setText(newPassword.getHint());
-                    newPassword.setBackground(getDrawable(R.drawable.text_border_selector));
-                }
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                TextView label = (TextView) findViewById(R.id.textViewChangePassNewPassMessage);
-                label.setText("");
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassNewPassLabel);
-                    label.setText("");
-                }
-            }
-        });
-
-        newConfirmPassword = (EditText) findViewById(R.id.editTextChangePassConfirmPass);
-        newConfirmPassword.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassConfirmPassLabel);
-                    label.setText(newConfirmPassword.getHint());
-                    newConfirmPassword.setBackground(getDrawable(R.drawable.text_border_selector));
-                }
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                TextView label = (TextView) findViewById(R.id.textViewChangePassConfirmPassMessage);
-                label.setText("");
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                if (s.length() == 0) {
-                    TextView label = (TextView) findViewById(R.id.textViewChangePassConfirmPassLabel);
-                    label.setText("");
-                }
-            }
-        });
-
-        changeButton = (Button) findViewById(R.id.change_pass_button);
-        changeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                changePassword();
+                return false;
             }
         });
     }
 
+    private View.OnClickListener backButtonClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Log.e("TAG", "On Back button click");
+            finish();
+        }
+    };
+
+    private View.OnClickListener cancelButtonClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Log.e("TAG", "On Cancel button click");
+            finish();
+        }
+    };
+
+    private View.OnClickListener setPasswordBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+            changePassword();
+        }
+    };
+
     private void changePassword() {
 
-        String cPass = currPassword.getText().toString();
-        if (TextUtils.isEmpty(cPass)) {
-            TextView label = (TextView) findViewById(R.id.textViewChangePassCurrPassMessage);
-            label.setText(currPassword.getHint() + " cannot be empty");
-            currPassword.setBackground(getDrawable(R.drawable.text_border_error));
+        layoutOldPassword.setError(null);
+        layoutNewPassword.setError(null);
+        layoutConfirmPassword.setError(null);
+
+        String oldPassword = etOldPassword.getText().toString();
+        if (TextUtils.isEmpty(oldPassword)) {
+
+            layoutOldPassword.setError(getString(R.string.error_password_empty));
             return;
         }
 
-        String nPass = newPassword.getText().toString();
-        if (TextUtils.isEmpty(nPass)) {
-            TextView label = (TextView) findViewById(R.id.textViewChangePassNewPassMessage);
-            label.setText(newPassword.getHint() + " cannot be empty");
-            newPassword.setBackground(getDrawable(R.drawable.text_border_error));
+        String newPassword = etNewPassword.getText().toString();
+        if (TextUtils.isEmpty(newPassword)) {
+
+            layoutNewPassword.setError(getString(R.string.error_password_empty));
             return;
         }
 
-        String ncPass = newConfirmPassword.getText().toString();
-        if (TextUtils.isEmpty(ncPass)) {
-            TextView label = (TextView) findViewById(R.id.textViewChangePassConfirmPassMessage);
-            label.setText(newConfirmPassword.getHint() + " cannot be empty");
-            newConfirmPassword.setBackground(getDrawable(R.drawable.text_border_error));
+        String confirmNewPassword = etConfirmNewPassword.getText().toString();
+        if (TextUtils.isEmpty(confirmNewPassword)) {
+
+            layoutConfirmPassword.setError(getString(R.string.error_confirm_password_empty));
             return;
         }
 
-        if (!nPass.equals(ncPass)) {
-            TextView label = (TextView) findViewById(R.id.textViewChangePassConfirmPassMessage);
-            label.setText("Passwords not matched");
-            newConfirmPassword.setBackground(getDrawable(R.drawable.text_border_error));
+        if (!newPassword.equals(confirmNewPassword)) {
+
+            layoutConfirmPassword.setError(getString(R.string.error_password_not_matched));
             return;
         }
 
-        showWaitDialog("Changing password...");
-        AppHelper.getPool().getUser(AppHelper.getCurrUser()).changePasswordInBackground(cPass, nPass, callback);
+        showLoading();
+        AppHelper.getPool().getUser(AppHelper.getCurrUser()).changePasswordInBackground(oldPassword, newPassword, callback);
     }
 
     GenericHandler callback = new GenericHandler() {
 
         @Override
         public void onSuccess() {
-            closeWaitDialog();
-            //showDialogMessage("Success!","Password has been changed",true);
-            Toast.makeText(getApplicationContext(), "Your password was changed", Toast.LENGTH_LONG).show();
+
+            hideLoading();
+            showDialogMessage("Success!", "Password has been changed", true);
             clearInput();
         }
 
         @Override
         public void onFailure(Exception exception) {
+
             exception.printStackTrace();
-            closeWaitDialog();
-            currPassword.setBackground(getDrawable(R.drawable.text_border_error));
-            newPassword.setBackground(getDrawable(R.drawable.text_border_error));
-            newConfirmPassword.setBackground(getDrawable(R.drawable.text_border_error));
+            hideLoading();
             showDialogMessage("Password change failed", AppHelper.formatException(exception), false);
         }
     };
 
     private void clearInput() {
-        currPassword.setText("");
-        newPassword.setText("");
-        newConfirmPassword.setText("");
+
+        etOldPassword.setText("");
+        etNewPassword.setText("");
+        etConfirmNewPassword.setText("");
     }
 
     private void showDialogMessage(String title, String body, final boolean exitActivity) {
+
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(title).setMessage(body).setNeutralButton("OK", new DialogInterface.OnClickListener() {
+        builder.setTitle(title).setMessage(body).setNeutralButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
+
             @Override
             public void onClick(DialogInterface dialog, int which) {
+
                 try {
                     userDialog.dismiss();
                     if (exitActivity) {
@@ -243,18 +191,21 @@ public class ChangePasswordActivity extends AppCompatActivity {
         userDialog.show();
     }
 
-    private void showWaitDialog(String message) {
-        closeWaitDialog();
-        waitDialog = new ProgressDialog(this);
-        waitDialog.setTitle(message);
-        waitDialog.show();
+    private void showLoading() {
+
+        btnSetPassword.setEnabled(false);
+        btnSetPassword.setAlpha(0.5f);
+        txtSetPasswordBtn.setText(R.string.btn_setting_password);
+        progressBar.setVisibility(View.VISIBLE);
+        arrowImage.setVisibility(View.GONE);
     }
 
-    private void closeWaitDialog() {
-        try {
-            waitDialog.dismiss();
-        } catch (Exception e) {
-            // Wait dialog is already closed or does not exist
-        }
+    public void hideLoading() {
+
+        btnSetPassword.setEnabled(true);
+        btnSetPassword.setAlpha(1f);
+        txtSetPasswordBtn.setText(R.string.btn_set_password);
+        progressBar.setVisibility(View.GONE);
+        arrowImage.setVisibility(View.VISIBLE);
     }
 }
