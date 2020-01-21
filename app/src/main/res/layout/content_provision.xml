@@ -46,7 +46,7 @@
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="30dp">
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/ssid_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

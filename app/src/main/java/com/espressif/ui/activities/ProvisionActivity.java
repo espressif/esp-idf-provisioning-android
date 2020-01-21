@@ -13,8 +13,13 @@
 // limitations under the License.
 package com.espressif.ui.activities;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
@@ -25,6 +30,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
@@ -40,6 +46,10 @@ import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
+import com.espressif.ui.adapters.AutoSuggestAdapter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import espressif.Constants;
 import espressif.WifiConstants;
@@ -49,7 +59,7 @@ public class ProvisionActivity extends AppCompatActivity {
     private static final String TAG = "Espressif::" + ProvisionActivity.class.getSimpleName();
 
     private TextView ssid;
-    private EditText ssidInput;
+    private AutoCompleteTextView ssidInput;
     private EditText passwordInput;
     private Button btnProvision;
     private ProgressBar progressBar;
@@ -57,6 +67,11 @@ public class ProvisionActivity extends AppCompatActivity {
     private int wifiSecurityType;
     private String ssidValue, passphraseValue = "";
     private String pop, baseUrl, transportVersion, securityVersion;
+
+    private AutoSuggestAdapter autoSuggestAdapter;
+
+    private WifiManager wifiManager;
+    private WifiReceiver wifiReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +82,14 @@ public class ProvisionActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.title_activity_provision);
         setSupportActionBar(toolbar);
 
+        // TODO: Add check for wifi enabled
+
+        wifiReceiver = new WifiReceiver();
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        registerReceiver(wifiReceiver,
+                new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+        wifiManager.startScan();
+
         Intent intent = getIntent();
         final String wifiSSID = intent.getStringExtra(Provision.PROVISIONING_WIFI_SSID);
         wifiSecurityType = intent.getIntExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, AppConstants.WIFI_OPEN);
@@ -76,6 +99,10 @@ public class ProvisionActivity extends AppCompatActivity {
         securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
         ssid = findViewById(R.id.ssid_text);
+
+        autoSuggestAdapter = new AutoSuggestAdapter(this,
+                android.R.layout.simple_dropdown_item_1line);
+
         ssidInput = findViewById(R.id.ssid_input);
         passwordInput = findViewById(R.id.password_input);
         btnProvision = findViewById(R.id.btn_provision);
@@ -110,6 +137,9 @@ public class ProvisionActivity extends AppCompatActivity {
         btnProvision.setEnabled(false);
         btnProvision.setAlpha(0.5f);
         btnProvision.setTextColor(Color.WHITE);
+
+        ssidInput.setThreshold(2);
+        ssidInput.setAdapter(autoSuggestAdapter);
 
         ssidInput.addTextChangedListener(new TextWatcher() {
 
@@ -389,5 +419,31 @@ public class ProvisionActivity extends AppCompatActivity {
         goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
         goToSuccessPage.putExtras(getIntent());
         startActivity(goToSuccessPage);
+    }
+
+    public class WifiReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            Log.d(TAG,"wifi receiver");
+
+
+            if(intent.getAction().equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION))
+            {
+                List<ScanResult> scanResults = wifiManager.getScanResults();
+
+                ArrayList<String> ssidList = new ArrayList<>();
+
+                for (ScanResult scanResult : scanResults) {
+                    if (scanResult.frequency > 2400 && scanResult.frequency < 2500){
+                        ssidList.add(scanResult.SSID);
+                    }
+                }
+
+                autoSuggestAdapter.setListData(ssidList);
+                autoSuggestAdapter.notifyDataSetChanged();
+            }
+        }
     }
 }
