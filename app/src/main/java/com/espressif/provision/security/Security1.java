@@ -160,15 +160,9 @@ public class Security1 implements Security {
             this.cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec, ivParameterSpec);
 
             this.clientVerify = this.encrypt(devicePublicKey);
-        } catch (InvalidProtocolBufferException e) {
+        } catch (InvalidProtocolBufferException | InvalidKeyException | NoSuchAlgorithmException e) {
             Log.e(TAG, e.getMessage());
-        } catch (InvalidKeyException e) {
-            Log.e(TAG, e.getMessage());
-        } catch (NoSuchAlgorithmException e) {
-            Log.e(TAG, e.getMessage());
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (InvalidAlgorithmParameterException e) {
+        } catch (NoSuchPaddingException | InvalidAlgorithmParameterException e) {
             e.printStackTrace();
         }
     }
