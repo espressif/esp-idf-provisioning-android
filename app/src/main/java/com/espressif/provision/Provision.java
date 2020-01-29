@@ -16,6 +16,7 @@ package com.espressif.provision;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.espressif.provision.security.Security;
 import com.espressif.provision.session.Session;
@@ -53,6 +54,7 @@ public class Provision {
     public static final String CONFIG_WIFI_AP_KEY = "wifiAPPrefix";
     public static final String PROVISIONING_CONFIG_PATH = "prov-config";
     public static final String PROVISIONING_WIFI_SSID = "SSID";
+    public static final String PROVISIONING_WIFI_PASSWORD = "password";
     private static final String TAG = "Espressif::" + Provision.class.getSimpleName();
     public ProvisioningListener provisioningListener;
     private Security security;
@@ -137,6 +139,7 @@ public class Provision {
 
                 @Override
                 public void onFailure(Exception e) {
+                    e.printStackTrace();
                     if (provisioningListener != null) {
                         provisioningListener.OnProvisioningFailed(e);
                     }
@@ -167,6 +170,12 @@ public class Provision {
                         if (provisioningListener != null) {
                             provisioningListener.OnApplyConfigurationsSucceeded();
                         }
+
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         pollForWifiConnectionStatus(new WifiStateListener() {
                             @Override
                             public void onWifiStateUpdated(WifiConstants.WifiStationState stationState,
@@ -180,6 +189,7 @@ public class Provision {
                             }
                         });
                     } else {
+
                         if (provisioningListener != null) {
                             provisioningListener.OnApplyConfigurationsFailed();
                         }
@@ -191,6 +201,7 @@ public class Provision {
 
                 @Override
                 public void onFailure(Exception e) {
+                    e.printStackTrace();
                     if (provisioningListener != null) {
                         provisioningListener.OnApplyConfigurationsFailed();
                     }
@@ -293,6 +304,7 @@ public class Provision {
 
             @Override
             public void onFailure(Exception e) {
+                e.printStackTrace();
                 wifiStateListener.onWifiStateUpdated(WifiConstants.WifiStationState.Disconnected,
                         WifiConstants.WifiConnectFailedReason.UNRECOGNIZED,
                         e);

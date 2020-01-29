@@ -1,6 +1,6 @@
 package com.espressif.cloudapi;
 
-import java.util.HashMap;
+import com.google.gson.JsonObject;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -16,15 +16,15 @@ import retrofit2.http.Query;
 public interface ApiInterface {
 
     // Get Supported Versions
-    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + "getapiversions")
+    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + "apiversions")
     Call<ResponseBody> getSupportedVersions();
 
     // Get User Id
-    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/users")
+    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user")
     Call<ResponseBody> getUserId(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("user_name") String userName);
 
     // Get Nodes
-    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/mapping")
+    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes")
     Call<ResponseBody> getDevicesForUser(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("userid") String userId);
 
     // Get EspNode Detail
@@ -42,12 +42,12 @@ public interface ApiInterface {
                                                @Query("node_id") String nodeId, @Query("request_id") String requestId, @Query("user_request") boolean userReq);
 
     // Get dynamic param value
-    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/dynamic_params")
+    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/params")
     Call<ResponseBody> getParamValue(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("nodeid") String nodeId);
 
     // Update dynamic param value
-    @PUT(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/dynamic_params")
-    Call<ResponseBody> updateParamValue(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("nodeid") String nodeId, @Body HashMap<String, Object> body);
+    @PUT(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/params")
+    Call<ResponseBody> updateParamValue(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("nodeid") String nodeId, @Body JsonObject body);
 
     // Remove Device
     @PUT(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/mapping")

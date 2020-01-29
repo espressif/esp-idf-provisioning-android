@@ -20,7 +20,8 @@
     <color name="color_border">#f2f1fc</color>
     <color name="color_text">#1a1a1a</color>
     <color name="color_background">#f6f6fb</color>
-    <!--<color name="color_orange">#ff5207</color>-->
+    <color name="color_orange">#ff5207</color>
     <color name="color_text_secondary">#8181a8</color>
+    <color name="color_remove">#ffeee6</color>
 
 </resources>

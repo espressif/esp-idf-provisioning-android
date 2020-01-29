@@ -15,7 +15,6 @@ package com.espressif.ui.activities;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -26,26 +25,20 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.provider.Settings;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.RelativeLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.widget.ContentLoadingProgressBar;
 
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
-import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
 import com.espressif.provision.transport.ResponseListener;
@@ -71,17 +64,16 @@ public class ProvisionLanding extends AppCompatActivity {
     public static ArrayList<String> deviceCapabilities;
     private SharedPreferences sharedPreferences;
 
-    private RelativeLayout prefixLayout;
-    private Button btnPrefix, btnConnect;
-    private TextView textPrefix, textWiFiInstruction, textNoInternet;
+    private TextView tvTitle, tvBack, tvCancel;
+    private CardView btnConnect;
+    private TextView txtConnectBtn;
+    private ImageView arrowImage;
+    private ContentLoadingProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision_landing);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setTitle(R.string.title_activity_connect_device);
-        setSupportActionBar(toolbar);
 
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
@@ -89,7 +81,6 @@ public class ProvisionLanding extends AppCompatActivity {
         deviceCapabilities = new ArrayList<>();
 
         initViews();
-        updateUi();
     }
 
     @Override
@@ -120,7 +111,6 @@ public class ProvisionLanding extends AppCompatActivity {
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-                    updateUi();
                 }
             }
             break;
@@ -140,97 +130,97 @@ public class ProvisionLanding extends AppCompatActivity {
 
             if (currentSSID != null && currentSSID.startsWith(deviceNamePrefix)) {
 
-                String baseUrl = getIntent().getStringExtra(Provision.CONFIG_BASE_URL_KEY);
-                softAPTransport = new SoftAPTransport(baseUrl);
-                String tempData = "ESP";
-
-                softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
-
-                    @Override
-                    public void onSuccess(byte[] returnData) {
-
-                        String data = new String(returnData, StandardCharsets.UTF_8);
-                        Log.d(TAG, "Value : " + data);
-
-                        try {
-                            JSONObject jsonObject = new JSONObject(data);
-                            JSONObject provInfo = jsonObject.getJSONObject("prov");
-
-                            String versionInfo = provInfo.getString("ver");
-                            Log.d(TAG, "Device Version : " + versionInfo);
-
-                            JSONArray capabilities = provInfo.getJSONArray("cap");
-                            deviceCapabilities = new ArrayList<>();
-
-                            for (int i = 0; i < capabilities.length(); i++) {
-                                String cap = capabilities.getString(i);
-                                deviceCapabilities.add(cap);
-                            }
-                            Log.d(TAG, "Capabilities : " + deviceCapabilities);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Log.d(TAG, "Capabilities JSON not available.");
-                        }
-
-                        if (!deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-
-                            goToPopActivity();
-
-                        } else if (deviceCapabilities.contains("wifi_scan")) {
-
-                            goToWifiScanListActivity();
-
-                        } else {
-
-                            goToProvisionActivity();
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-
+                connectDevice();
             } else {
                 startActivityForResult(new Intent(Settings.ACTION_WIFI_SETTINGS), WIFI_SETTINGS_ACTIVITY_REQUEST);
             }
         }
     };
 
-    private View.OnClickListener btnPrefixChangeClickListener = new View.OnClickListener() {
+    private void connectDevice() {
+
+        String baseUrl = getIntent().getStringExtra(Provision.CONFIG_BASE_URL_KEY);
+        softAPTransport = new SoftAPTransport(baseUrl);
+        String tempData = "ESP";
+
+        softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
+
+            @Override
+            public void onSuccess(byte[] returnData) {
+
+                String data = new String(returnData, StandardCharsets.UTF_8);
+                Log.d(TAG, "Value : " + data);
+
+                try {
+                    JSONObject jsonObject = new JSONObject(data);
+                    JSONObject provInfo = jsonObject.getJSONObject("prov");
+
+                    String versionInfo = provInfo.getString("ver");
+                    Log.d(TAG, "Device Version : " + versionInfo);
+
+                    JSONArray capabilities = provInfo.getJSONArray("cap");
+                    deviceCapabilities = new ArrayList<>();
+
+                    for (int i = 0; i < capabilities.length(); i++) {
+                        String cap = capabilities.getString(i);
+                        deviceCapabilities.add(cap);
+                    }
+                    Log.d(TAG, "Capabilities : " + deviceCapabilities);
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    Log.d(TAG, "Capabilities JSON not available.");
+                }
+
+                if (!deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                    goToPopActivity();
+
+                } else if (deviceCapabilities.contains("wifi_scan")) {
+
+                    goToWifiScanListActivity();
+
+                } else {
+
+                    goToProvisionActivity();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private View.OnClickListener cancelButtonClickListener = new View.OnClickListener() {
 
         @Override
         public void onClick(View v) {
 
-            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-            askForPrefix();
+            finish();
         }
     };
 
     private void initViews() {
 
-        prefixLayout = findViewById(R.id.prefix_layout);
-        btnPrefix = findViewById(R.id.btn_change_prefix);
-        textPrefix = findViewById(R.id.prefix_value);
-        btnConnect = findViewById(R.id.connect_button);
-        textWiFiInstruction = findViewById(R.id.start_provisioning_message);
-        textNoInternet = findViewById(R.id.no_internet_note);
+        tvTitle = findViewById(R.id.main_toolbar_title);
+        tvBack = findViewById(R.id.btn_back);
+        tvCancel = findViewById(R.id.btn_cancel);
 
-        // Set visibility of Prefix layout
-        if (BuildConfig.IS_ALLOWED_FILTERING_BY_PREFIX) {
+        tvTitle.setText(R.string.title_activity_connect_device);
+        tvBack.setVisibility(View.GONE);
+        tvCancel.setVisibility(View.VISIBLE);
 
-            prefixLayout.setVisibility(View.VISIBLE);
+        tvCancel.setOnClickListener(cancelButtonClickListener);
 
-        } else {
-            prefixLayout.setVisibility(View.GONE);
-        }
+        btnConnect = findViewById(R.id.btn_connect);
+        txtConnectBtn = findViewById(R.id.text_btn);
+        arrowImage = findViewById(R.id.iv_arrow);
+        progressBar = findViewById(R.id.progress_indicator);
 
-        textPrefix.setText(deviceNamePrefix);
+        txtConnectBtn.setText(R.string.btn_connect);
         btnConnect.setOnClickListener(btnConnectClickListener);
-        btnPrefix.setOnClickListener(btnPrefixChangeClickListener);
     }
 
     private void updateUi() {
@@ -241,19 +231,27 @@ public class ProvisionLanding extends AppCompatActivity {
         Log.d(TAG, "SSID : " + currentSSID);
 
         if (currentSSID != null && (currentSSID.startsWith(deviceNamePrefix) || currentSSID.equals(deviceNamePrefix))) {
-            btnConnect.setText(R.string.connected_to_device_action);
-            textWiFiInstruction.setText(R.string.connected_to_device_instructions);
-            textNoInternet.setVisibility(View.VISIBLE);
+
+            btnConnect.setEnabled(false);
+            btnConnect.setAlpha(0.5f);
+            txtConnectBtn.setText(R.string.btn_connecting);
+            progressBar.setVisibility(View.VISIBLE);
+            arrowImage.setVisibility(View.GONE);
+            connectDevice();
+
         } else {
-            btnConnect.setText(R.string.connect_to_device_action);
-            SpannableStringBuilder instructions = getWifiInstructions();
-            textWiFiInstruction.setText(instructions);
-            textNoInternet.setVisibility(View.GONE);
+
+            btnConnect.setEnabled(true);
+            btnConnect.setAlpha(1f);
+            txtConnectBtn.setText(R.string.btn_connect);
+            progressBar.setVisibility(View.GONE);
+            arrowImage.setVisibility(View.VISIBLE);
         }
     }
 
     private String fetchWifiSSID() {
 
+        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
         String ssid = null;
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -278,69 +276,9 @@ public class ProvisionLanding extends AppCompatActivity {
         return ssid;
     }
 
-    private SpannableStringBuilder getWifiInstructions() {
-
-        deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
-        String instructions = getResources().getString(R.string.connect_to_device_instructions);
-        SpannableStringBuilder str = new SpannableStringBuilder(instructions +
-                " : " +
-                "\n" +
-                deviceNamePrefix +
-                "XXXXXX");
-        int startIndex = instructions.length() + 3;
-        str.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                startIndex,
-                str.length(),
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        return str;
-    }
-
-    private void askForPrefix() {
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setCancelable(true);
-
-        LayoutInflater layoutInflaterAndroid = LayoutInflater.from(this);
-        View view = layoutInflaterAndroid.inflate(R.layout.dialog_prefix, null);
-        builder.setView(view);
-        final EditText etPrefix = view.findViewById(R.id.et_prefix);
-        etPrefix.setText(deviceNamePrefix);
-        etPrefix.setSelection(etPrefix.getText().length());
-
-        // Set up the buttons
-        builder.setPositiveButton(R.string.btn_save, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                String prefix = etPrefix.getText().toString();
-
-                if (prefix != null) {
-                    prefix = prefix.trim();
-                }
-
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, prefix);
-                editor.apply();
-                deviceNamePrefix = prefix;
-                textPrefix.setText(prefix);
-                updateUi();
-            }
-        });
-
-        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        });
-
-        builder.show();
-    }
-
     private void goToPopActivity() {
 
+        finish();
         Intent popIntent = new Intent(getApplicationContext(), ProofOfPossessionActivity.class);
         popIntent.putExtra(AppConstants.KEY_DEVICE_NAME, currentSSID);
         popIntent.putExtras(getIntent());
@@ -349,6 +287,7 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private void goToWifiScanListActivity() {
 
+        finish();
         Intent wifiListIntent = new Intent(getApplicationContext(), WiFiScanActivity.class);
         wifiListIntent.putExtras(getIntent());
         wifiListIntent.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, "");
@@ -357,6 +296,7 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private void goToProvisionActivity() {
 
+        finish();
         Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
         launchProvisionInstructions.putExtras(getIntent());
         launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, "");

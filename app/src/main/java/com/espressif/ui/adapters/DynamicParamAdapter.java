@@ -1,18 +1,25 @@
 package com.espressif.ui.adapters;
 
-import android.content.Context;
+import android.app.Activity;
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.InputType;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
-import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.AppConstants;
@@ -20,23 +27,23 @@ import com.espressif.cloudapi.ApiManager;
 import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.R;
 import com.espressif.ui.models.Param;
+import com.google.gson.JsonObject;
 import com.warkiz.tickseekbar.OnSeekChangeListener;
 import com.warkiz.tickseekbar.SeekParams;
 import com.warkiz.tickseekbar.TickSeekBar;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapter.MyViewHolder> {
 
     private final String TAG = DynamicParamAdapter.class.getSimpleName();
 
-    private Context context;
+    private Activity context;
     private ArrayList<Param> params;
     private ApiManager apiManager;
     private String nodeId, deviceName;
 
-    public DynamicParamAdapter(Context context, String nodeId, String deviceName, ArrayList<Param> deviceList) {
+    public DynamicParamAdapter(Activity context, String nodeId, String deviceName, ArrayList<Param> deviceList) {
         this.context = context;
         this.nodeId = nodeId;
         this.deviceName = deviceName;
@@ -56,35 +63,92 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
     }
 
     @Override
-    public void onBindViewHolder(@NonNull MyViewHolder myViewHolder, final int position) {
+    public void onBindViewHolder(@NonNull final MyViewHolder myViewHolder, final int position) {
 
-        Log.e(TAG, "onBindViewHolder");
+//        Log.e(TAG, "onBindViewHolder for position : " + position);
         final Param param = params.get(position);
-        Log.e(TAG, "param.getName : " + param.getName());
-        Log.e(TAG, "param.getLabelValue : " + param.getLabelValue());
+        Log.e(TAG, "param.getName : " + param.getName() + " and param.getLabelValue : " + param.getLabelValue());
 
         if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
 
-            myViewHolder.rvUiTypeSlider.setVisibility(View.VISIBLE);
-            myViewHolder.rvUiTypeSwitch.setVisibility(View.GONE);
+            String dataType = param.getDataType();
 
-            int sliderValue = param.getSliderValue();
-            Log.e(TAG, "Value : " + sliderValue);
+            if (!TextUtils.isEmpty(dataType) && (dataType.equalsIgnoreCase("int")
+                    || dataType.equalsIgnoreCase("integer")
+                    || dataType.equalsIgnoreCase("float")
+                    || dataType.equalsIgnoreCase("double"))) {
 
-            myViewHolder.tvSliderName.setText(param.getName());
-            int max = param.getMaxBounds();
-            int min = param.getMinBounds();
-            Log.e(TAG, "Min value : " + min);
-            Log.e(TAG, "Max value : " + max);
+                double sliderValue = param.getSliderValue();
+                int max = param.getMaxBounds();
+                int min = param.getMinBounds();
 
-            myViewHolder.slider.setMax(max);
-            myViewHolder.slider.setMin(min);
-            myViewHolder.slider.setTickCount(2);
-            myViewHolder.slider.setProgress(sliderValue);
+                if ((min < max) && (sliderValue >= min && sliderValue <= max)) {
+
+                    displaySlider(myViewHolder, param, position);
+                } else {
+                    displayLabel(myViewHolder, param, position);
+                }
+            }
+
+        } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+
+            String dataType = param.getDataType();
+
+            if (!TextUtils.isEmpty(dataType) && (dataType.equalsIgnoreCase("bool")
+                    || dataType.equalsIgnoreCase("boolean"))) {
+
+                displayToggle(myViewHolder, param);
+
+            } else {
+                displayLabel(myViewHolder, param, position);
+            }
+
+        } else {
+            displayLabel(myViewHolder, param, position);
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return params.size();
+    }
+
+    public void updateList(ArrayList<Param> updatedDeviceList) {
+        params = updatedDeviceList;
+        notifyDataSetChanged();
+    }
+
+    private void displaySlider(final MyViewHolder myViewHolder, final Param param, final int position) {
+
+        Log.d(TAG, "Deep : UI Type :" + param.getUiType() + " for position :" + position);
+
+        myViewHolder.rvUiTypeSlider.setVisibility(View.VISIBLE);
+        myViewHolder.rvUiTypeSwitch.setVisibility(View.GONE);
+        myViewHolder.rvUiTypeLabel.setVisibility(View.GONE);
+
+        double sliderValue = param.getSliderValue();
+        myViewHolder.tvSliderName.setText(param.getName());
+        float max = param.getMaxBounds();
+        float min = param.getMinBounds();
+        String dataType = param.getDataType();
+
+        if (dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")) {
+
+            myViewHolder.intSlider.setVisibility(View.VISIBLE);
+            myViewHolder.floatSlider.setVisibility(View.GONE);
+
+            myViewHolder.intSlider.setMax(max);
+            myViewHolder.intSlider.setMin(min);
+            myViewHolder.intSlider.setTickCount(2);
+            myViewHolder.intSlider.setProgress((int) sliderValue);
+
+            Log.e(TAG, "=================== Param : " + param.getName() + " properties : " + param.getProperties().toString());
 
             if (param.getProperties().contains("write")) {
 
-                myViewHolder.slider.setOnSeekChangeListener(new OnSeekChangeListener() {
+                Log.e(TAG, "=================== Param : " + param.getName() + " CONTAINS WRITE");
+
+                myViewHolder.intSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
 
                     @Override
                     public void onSeeking(SeekParams seekParams) {
@@ -102,190 +166,414 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
 
                         Log.e(TAG, "onStopTrackingTouch - " + finalProgress);
 
-                        HashMap<String, Object> body = new HashMap<>();
-                        String key = deviceName + "." + param.getName();
-                        body.put(key, finalProgress);
+                        JsonObject jsonParam = new JsonObject();
+                        JsonObject body = new JsonObject();
+
+                        jsonParam.addProperty(param.getName(), finalProgress);
+                        body.add(deviceName, jsonParam);
 
                         apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
 
                             @Override
                             public void onSuccess(Bundle data) {
-
                             }
 
                             @Override
                             public void onFailure(Exception exception) {
-
                             }
                         });
                     }
                 });
+
             } else {
 
-                myViewHolder.slider.setOnTouchListener(new View.OnTouchListener() {
+                Log.e(TAG, "=================== Param : " + param.getName() + " Read only");
+                myViewHolder.intSlider.setOnTouchListener(new View.OnTouchListener() {
+                    @Override
+                    public boolean onTouch(View v, MotionEvent event) {
+                        Log.e(TAG, "============= Disabled Slider for position : " + position);
+                        return true;
+                    }
+                });
+            }
+
+        } else {
+
+            myViewHolder.intSlider.setVisibility(View.GONE);
+            myViewHolder.floatSlider.setVisibility(View.VISIBLE);
+
+            myViewHolder.floatSlider.setMax(max);
+            myViewHolder.floatSlider.setMin(min);
+            myViewHolder.floatSlider.setTickCount(2);
+            myViewHolder.floatSlider.setProgress((float) sliderValue);
+            Log.e(TAG, "FLOAT Slider value : " + myViewHolder.floatSlider.getProgressFloat());
+            Log.e(TAG, "FLOAT Slider value : " + (float) sliderValue);
+
+            if (param.getProperties().contains("write")) {
+
+                myViewHolder.floatSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
+
+                    @Override
+                    public void onSeeking(SeekParams seekParams) {
+                    }
+
+                    @Override
+                    public void onStartTrackingTouch(TickSeekBar seekBar) {
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(TickSeekBar seekBar) {
+
+                        float progress = seekBar.getProgressFloat();
+                        float finalProgress = progress;
+
+                        Log.e(TAG, "onStopTrackingTouch - " + finalProgress);
+
+                        JsonObject jsonParam = new JsonObject();
+                        JsonObject body = new JsonObject();
+
+                        jsonParam.addProperty(param.getName(), finalProgress);
+                        body.add(deviceName, jsonParam);
+
+                        apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+
+                            @Override
+                            public void onSuccess(Bundle data) {
+                            }
+
+                            @Override
+                            public void onFailure(Exception exception) {
+                            }
+                        });
+                    }
+                });
+
+            } else {
+
+                myViewHolder.floatSlider.setOnTouchListener(new View.OnTouchListener() {
                     @Override
                     public boolean onTouch(View v, MotionEvent event) {
                         return true;
                     }
                 });
             }
+        }
+    }
 
+    private void displayToggle(final MyViewHolder myViewHolder, final Param param) {
 
-        } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+        myViewHolder.rvUiTypeLabel.setVisibility(View.GONE);
+        myViewHolder.rvUiTypeSlider.setVisibility(View.GONE);
+        myViewHolder.rvUiTypeSwitch.setVisibility(View.VISIBLE);
 
-            myViewHolder.rvUiTypeLabel.setVisibility(View.GONE);
-            myViewHolder.rvUiTypeSlider.setVisibility(View.GONE);
-            myViewHolder.rvUiTypeSwitch.setVisibility(View.VISIBLE);
+        myViewHolder.tvSwitchName.setText(param.getName());
+        myViewHolder.tvSwitchStatus.setVisibility(View.VISIBLE);
 
-            myViewHolder.tvSwitchName.setText(param.getName());
+        if (param.getSwitchStatus()) {
+
+            myViewHolder.tvSwitchStatus.setText(R.string.text_on);
+
+        } else {
+            myViewHolder.tvSwitchStatus.setText(R.string.text_off);
+        }
+
+        if (param.getProperties().contains("write")) {
+
+            myViewHolder.toggleSwitch.setVisibility(View.VISIBLE);
             myViewHolder.toggleSwitch.setChecked(param.getSwitchStatus());
 
-            if (param.getProperties().contains("write")) {
+            myViewHolder.toggleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 
-                myViewHolder.toggleSwitch.setVisibility(View.VISIBLE);
-                myViewHolder.tvSwitchStatus.setVisibility(View.GONE);
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-                myViewHolder.toggleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    if (isChecked) {
 
-                    @Override
-                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        myViewHolder.tvSwitchStatus.setText(R.string.text_on);
 
-                        HashMap<String, Object> body = new HashMap<>();
-                        String key = deviceName + "." + param.getName();
-                        body.put(key, isChecked);
-
-                        apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
-
-                            @Override
-                            public void onSuccess(Bundle data) {
-
-                            }
-
-                            @Override
-                            public void onFailure(Exception exception) {
-
-                            }
-                        });
+                    } else {
+                        myViewHolder.tvSwitchStatus.setText(R.string.text_off);
                     }
-                });
 
-            } else {
+                    JsonObject jsonParam = new JsonObject();
+                    JsonObject body = new JsonObject();
 
-                myViewHolder.toggleSwitch.setVisibility(View.GONE);
-                myViewHolder.tvSwitchStatus.setVisibility(View.VISIBLE);
+                    jsonParam.addProperty(param.getName(), isChecked);
+                    body.add(deviceName, jsonParam);
 
-                if (param.getSwitchStatus()) {
+                    apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
 
-                    myViewHolder.tvSwitchStatus.setText(R.string.text_on);
-                    myViewHolder.tvSwitchStatus.setTextColor(context.getResources().getColor(R.color.color_text_on));
+                        @Override
+                        public void onSuccess(Bundle data) {
+                        }
 
-                } else {
-                    myViewHolder.tvSwitchStatus.setText(R.string.text_off);
-                    myViewHolder.tvSwitchStatus.setTextColor(context.getResources().getColor(R.color.color_text_off));
+                        @Override
+                        public void onFailure(Exception exception) {
+                        }
+                    });
                 }
-            }
+            });
 
         } else {
 
-            if (param.getDataType().equalsIgnoreCase("bool")) {
+            myViewHolder.toggleSwitch.setVisibility(View.GONE);
+        }
+    }
 
-                myViewHolder.rvUiTypeLabel.setVisibility(View.GONE);
-                myViewHolder.rvUiTypeSlider.setVisibility(View.GONE);
-                myViewHolder.rvUiTypeSwitch.setVisibility(View.VISIBLE);
+    private void displayLabel(final MyViewHolder myViewHolder, final Param param, final int position) {
 
-                myViewHolder.tvSwitchName.setText(param.getName());
-                myViewHolder.toggleSwitch.setChecked(param.getSwitchStatus());
+        myViewHolder.rvUiTypeSlider.setVisibility(View.GONE);
+        myViewHolder.rvUiTypeSwitch.setVisibility(View.GONE);
+        myViewHolder.rvUiTypeLabel.setVisibility(View.VISIBLE);
 
-                if (param.getProperties().contains("write")) {
+        myViewHolder.tvLabelName.setText(param.getName());
+        myViewHolder.tvLabelValue.setText(param.getLabelValue());
 
-                    myViewHolder.toggleSwitch.setVisibility(View.VISIBLE);
-                    myViewHolder.tvSwitchStatus.setVisibility(View.GONE);
+        if (param.getProperties().contains("write")) {
 
-                    myViewHolder.toggleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+            myViewHolder.btnEdit.setOnClickListener(new View.OnClickListener() {
 
-                        @Override
-                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                @Override
+                public void onClick(View v) {
+                    askForNewValue(myViewHolder, param, position);
+                }
+            });
 
-                            HashMap<String, Object> body = new HashMap<>();
-                            String key = deviceName + "." + param.getName();
-                            body.put(key, isChecked);
+        } else {
 
+            myViewHolder.btnEdit.setVisibility(View.GONE);
+        }
+    }
+
+    private void askForNewValue(final MyViewHolder myViewHolder, final Param param, final int position) {
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        LayoutInflater inflater = context.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.dialog_attribute, null);
+        builder.setView(dialogView);
+
+        final EditText etAttribute = dialogView.findViewById(R.id.et_attr_value);
+
+        if (!TextUtils.isEmpty(param.getDataType())) {
+
+            String dataType = param.getDataType();
+
+            if (dataType.equalsIgnoreCase("int")
+                    || dataType.equalsIgnoreCase("integer")) {
+
+                etAttribute.setInputType(InputType.TYPE_CLASS_NUMBER);
+
+            } else if (dataType.equalsIgnoreCase("float")
+                    || dataType.equalsIgnoreCase("double")) {
+
+                etAttribute.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+
+            } else if (dataType.equalsIgnoreCase("string")) {
+
+                etAttribute.setInputType(InputType.TYPE_CLASS_TEXT);
+            }
+        }
+
+        if (!TextUtils.isEmpty(param.getLabelValue())) {
+            etAttribute.setText(param.getLabelValue());
+            etAttribute.setSelection(etAttribute.getText().length());
+            etAttribute.requestFocus();
+        }
+
+        builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                String dataType = param.getDataType();
+                final String value = etAttribute.getText().toString();
+
+                JsonObject jsonParam = new JsonObject();
+                JsonObject body = new JsonObject();
+
+                if (dataType.equalsIgnoreCase("bool")
+                        || dataType.equalsIgnoreCase("boolean")) {
+
+                    if (!TextUtils.isEmpty(value)) {
+
+                        if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")
+                                || value.equalsIgnoreCase("0") || value.equalsIgnoreCase("1")) {
+
+                            boolean isOn = false;
+
+                            if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("1")) {
+                                isOn = true;
+                            }
+
+                            myViewHolder.btnEdit.setVisibility(View.GONE);
+                            myViewHolder.progressBar.setVisibility(View.VISIBLE);
+
+                            jsonParam.addProperty(param.getName(), isOn);
+                            body.add(deviceName, jsonParam);
+
+                            final boolean finalIsOn = isOn;
                             apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
 
                                 @Override
                                 public void onSuccess(Bundle data) {
 
+                                    myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                                    myViewHolder.progressBar.setVisibility(View.GONE);
+
+                                    if (finalIsOn) {
+
+                                        myViewHolder.tvLabelValue.setText("true");
+                                        params.get(position).setLabelValue("true");
+
+                                    } else {
+                                        myViewHolder.tvLabelValue.setText("false");
+                                        params.get(position).setLabelValue("false");
+                                    }
                                 }
 
                                 @Override
                                 public void onFailure(Exception exception) {
 
+                                    myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                                    myViewHolder.progressBar.setVisibility(View.GONE);
+                                    myViewHolder.tvLabelValue.setText(param.getLabelValue());
                                 }
                             });
+
+                        } else {
+
+                            dialog.dismiss();
+                            Toast.makeText(context, "Please enter valid value", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+
+                        dialog.dismiss();
+                        Toast.makeText(context, "Please enter valid value", Toast.LENGTH_SHORT).show();
+                    }
+
+                } else if (dataType.equalsIgnoreCase("int")
+                        || dataType.equalsIgnoreCase("integer")) {
+
+                    int newValue = Integer.valueOf(value);
+                    jsonParam.addProperty(param.getName(), newValue);
+                    body.add(deviceName, jsonParam);
+
+                    apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+
+                        @Override
+                        public void onSuccess(Bundle data) {
+
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(value);
+                            params.get(position).setLabelValue(value);
+                        }
+
+                        @Override
+                        public void onFailure(Exception exception) {
+
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                        }
+                    });
+
+                } else if (dataType.equalsIgnoreCase("float")
+                        || dataType.equalsIgnoreCase("double")) {
+
+                    float newValue = Float.valueOf(value);
+                    jsonParam.addProperty(param.getName(), newValue);
+                    body.add(deviceName, jsonParam);
+
+                    apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+
+                        @Override
+                        public void onSuccess(Bundle data) {
+
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(value);
+                            params.get(position).setLabelValue(value);
+                        }
+
+                        @Override
+                        public void onFailure(Exception exception) {
+
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(param.getLabelValue());
                         }
                     });
 
                 } else {
 
-                    myViewHolder.toggleSwitch.setVisibility(View.GONE);
-                    myViewHolder.tvSwitchStatus.setVisibility(View.VISIBLE);
+                    jsonParam.addProperty(param.getName(), value);
+                    body.add(deviceName, jsonParam);
 
-                    if (param.getSwitchStatus()) {
+                    apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
 
-                        myViewHolder.tvSwitchStatus.setText(R.string.text_on);
-                        myViewHolder.tvSwitchStatus.setTextColor(context.getResources().getColor(R.color.color_text_on));
+                        @Override
+                        public void onSuccess(Bundle data) {
 
-                    } else {
-                        myViewHolder.tvSwitchStatus.setText(R.string.text_off);
-                        myViewHolder.tvSwitchStatus.setTextColor(context.getResources().getColor(R.color.color_text_off));
-                    }
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(value);
+                            params.get(position).setLabelValue(value);
+                        }
+
+                        @Override
+                        public void onFailure(Exception exception) {
+
+                            myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+                            myViewHolder.progressBar.setVisibility(View.GONE);
+                            myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                        }
+                    });
                 }
-
-            } else {
-
-                myViewHolder.rvUiTypeSlider.setVisibility(View.GONE);
-                myViewHolder.rvUiTypeSwitch.setVisibility(View.GONE);
-                myViewHolder.rvUiTypeLabel.setVisibility(View.VISIBLE);
-                myViewHolder.tvLabelName.setText(param.getName());
-                myViewHolder.tvLabelValue.setText(param.getLabelValue());
             }
-        }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
-    @Override
-    public int getItemCount() {
-        return params.size();
-    }
-
-    public void updateList(ArrayList<Param> updatedDeviceList) {
-        params = updatedDeviceList;
-        notifyDataSetChanged();
-    }
-
-    public class MyViewHolder extends RecyclerView.ViewHolder {
+    public static class MyViewHolder extends RecyclerView.ViewHolder {
 
         // init the item view's
-        TickSeekBar slider;
-        Switch toggleSwitch;
+        TickSeekBar intSlider, floatSlider;
+        SwitchCompat toggleSwitch;
         TextView tvSliderName, tvSwitchName, tvSwitchStatus, tvLabelName, tvLabelValue;
         RelativeLayout rvUiTypeSlider, rvUiTypeSwitch, rvUiTypeLabel;
+        TextView btnEdit;
+        ContentLoadingProgressBar progressBar;
 
         public MyViewHolder(View itemView) {
             super(itemView);
 
             // get the reference of item view's
-            slider = itemView.findViewById(R.id.card_slider);
+            intSlider = itemView.findViewById(R.id.card_int_slider);
+            floatSlider = itemView.findViewById(R.id.card_float_slider);
             toggleSwitch = itemView.findViewById(R.id.card_switch);
             tvSliderName = itemView.findViewById(R.id.slider_name);
             tvSwitchName = itemView.findViewById(R.id.switch_name);
             tvSwitchStatus = itemView.findViewById(R.id.tv_switch_status);
-            tvLabelName = itemView.findViewById(R.id.label_name);
-            tvLabelValue = itemView.findViewById(R.id.label_value);
+            tvLabelName = itemView.findViewById(R.id.tv_label_name);
+            tvLabelValue = itemView.findViewById(R.id.tv_label_value);
+            btnEdit = itemView.findViewById(R.id.btn_edit);
+            progressBar = itemView.findViewById(R.id.progress_indicator);
             rvUiTypeSlider = itemView.findViewById(R.id.rl_card_slider);
             rvUiTypeSwitch = itemView.findViewById(R.id.rl_card_switch);
             rvUiTypeLabel = itemView.findViewById(R.id.rl_card_label);
         }
     }
 }
-// AWS console access
-// Share document of AWS concepts

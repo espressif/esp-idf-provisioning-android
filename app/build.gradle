@@ -43,9 +43,9 @@ android {
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
             buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
-            resValue "string", "user_pool_id", "us-east-1_Vrr3pWTIy"
-            resValue "string", "client_id", "78suluee2rmlltshrt2v4lvuo0"
-            resValue "string", "client_secret", "6d9ekt3eun7osi0nplvip03gb3tnts1jgpnk45knimverpbu62d"
+            resValue "string", "user_pool_id", "us-east-1_Kr951Rlo1"
+            resValue "string", "client_id", "375pp885nbr3nfbh3ms9vma3v3"
+            resValue "string", "client_secret", "1far8m99n7p0aokfop6msfbqop24ng4c1iir1ldm339uppiof4id"
         }
 
         debug {
@@ -55,9 +55,9 @@ android {
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
             buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
-            resValue "string", "user_pool_id", "us-east-1_Vrr3pWTIy"
-            resValue "string", "client_id", "78suluee2rmlltshrt2v4lvuo0"
-            resValue "string", "client_secret", "6d9ekt3eun7osi0nplvip03gb3tnts1jgpnk45knimverpbu62d"
+            resValue "string", "user_pool_id", "us-east-1_Kr951Rlo1"
+            resValue "string", "client_id", "375pp885nbr3nfbh3ms9vma3v3"
+            resValue "string", "client_secret", "1far8m99n7p0aokfop6msfbqop24ng4c1iir1ldm339uppiof4id"
         }
     }
 

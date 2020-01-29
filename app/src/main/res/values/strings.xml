@@ -89,6 +89,9 @@
     <string name="hint_new_password">New Password</string>
     <string name="hint_confirm_new_password">Confirm New Password</string>
     <string name="hint_verification_code">Verification code</string>
+    <string name="hint_pop">Proof of Possession</string>
+    <string name="hint_ssid">Network Name</string>
+    <string name="hint_value">Enter Value</string>
 
     <!--Button text-->
     <string name="btn_register">Register</string>
@@ -99,13 +102,20 @@
     <string name="btn_confirming">Confirming&#8230;</string>
     <string name="btn_set_password">Set Password</string>
     <string name="btn_setting_password">Setting password&#8230;</string>
+    <string name="btn_connect">Connect</string>
+    <string name="btn_connecting">Connecting&#8230;</string>
     <string name="btn_reset_password">Reset Password</string>
-    <string name="btn_resetting_password">Resetting Password</string>
+    <string name="btn_resetting_password">Resetting Password&#8230;</string>
+    <string name="btn_remove">Remove</string>
+    <string name="btn_removing">Removing&#8230;</string>
     <string name="btn_github">GitHub</string>
     <string name="btn_ok">OK</string>
     <string name="btn_back">Back</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="btn_connect">Connect</string>
+    <string name="btn_join">Join</string>
+    <string name="btn_yes">YES</string>
+    <string name="btn_no">NO</string>
+    <string name="btn_edit">Edit</string>
 
     <!--Screen titles-->
     <string name="title_activity_devices">Devices</string>
@@ -114,10 +124,12 @@
     <string name="title_activity_reset_password">Reset Password</string>
     <string name="title_activity_change_password">Change Password</string>
     <string name="title_activity_connect_device">Connect to Device</string>
-    <string name="title_activity_pop">Proof Of Possession</string>
+    <string name="title_activity_pop">Proof of Possession</string>
     <string name="title_activity_provision">Provision</string>
     <string name="title_activity_provisioning">Provisioning</string>
     <string name="title_activity_wifi_scan_list">Select Wi-Fi Network</string>
+    <string name="title_activity_node_details">Node Details</string>
+    <string name="title_activity_user_profile">User Profile</string>
 
     <!--Error Messages-->
     <string name="error_email_empty">Email cannot be empty</string>
@@ -126,6 +138,7 @@
     <string name="error_confirm_password_empty">Confirm Password cannot be empty</string>
     <string name="error_confirmation_code_empty">Confirmation code cannot be empty</string>
     <string name="error_verification_code_empty">Verification code cannot be empty</string>
+    <string name="error_ssid_empty">Network name cannot be empty</string>
     <string name="error_password_not_matched">Passwords not matched</string>
     <string name="error_agree_terms_n_condition">Please agree to privacy policy and terms &amp; conditions.</string>
 
@@ -143,14 +156,29 @@
     <string name="dialog_title_password_changed">Password successfully changed!</string>
     <string name="dialog_title_forgot_password_failed">Forgot password failed</string>
 
+    <!--Node Details-->
+    <string name="node_id">Node Id</string>
+    <string name="node_name">Name</string>
+    <string name="node_type">Type</string>
+    <string name="node_fw_version">Firmware Version</string>
+    <string name="node_config_version">Config Version</string>
+
     <!--Other Strings-->
-    <string name="password_instruction">Password should contain at least one capital letter, one special character and a number.</string>
     <string name="read_terms_condition">I have read and agree to the Privacy Policy and Terms &amp; Conditions.</string>
     <string name="login_with">Login with</string>
     <string name="use_email_id">or use your email id</string>
     <string name="forgot_password">Forgot password?</string>
     <string name="resend_code">Resend Code</string>
+    <string name="connect_your_device">Connect your device</string>
+    <string name="password_instruction">Password should contain at least one capital letter, one special character and a number.</string>
     <string name="forgot_password_instruction">Please enter your registered email id to reset your password.</string>
     <string name="reset_password_instruction">Set your new password with the verification code that was sent to you.</string>
+    <string name="connect_device_instruction">To provision your device: make sure it is turned ON. Connect your mobile phone to the Wi-Fi network with a name like PROV_XXXXXX</string>
+    <string name="pop_instruction">Enter your proof of possession PIN for</string>
+
+    <string name="prov_step_1">Sending WI-Fi credentials</string>
+    <string name="prov_step_2">Confirming Wi-Fi connection</string>
+    <string name="prov_step_3">Configuring User-Node association</string>
+    <string name="prov_step_4">Confirming User-Node association</string>
 
 </resources>

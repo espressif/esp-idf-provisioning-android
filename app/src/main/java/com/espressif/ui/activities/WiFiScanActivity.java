@@ -1,15 +1,20 @@
 package com.espressif.ui.activities;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -26,6 +31,7 @@ import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.espressif.ui.adapters.WiFiListAdapter;
 import com.espressif.ui.models.WiFiAccessPoint;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.util.ArrayList;
@@ -43,7 +49,7 @@ public class WiFiScanActivity extends AppCompatActivity {
     private ImageView ivRefresh;
     public static Session session;
     public static Security security;
-    public Transport transport;
+    private Transport transport;
     private Intent intent;
     private int totalCount;
     private int startIndex;
@@ -85,14 +91,15 @@ public class WiFiScanActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
 
                 Log.d(TAG, "Device to be connected -" + apDevices.get(pos));
-                callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
+//                callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
+                askForNetwork(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
             }
         });
 
         wifiListView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
-
             }
         });
 
@@ -139,6 +146,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
             @Override
             public void OnSessionEstablished() {
+
                 Log.e(TAG, "Session established");
                 try {
                     startWifiScan();
@@ -149,6 +157,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
             @Override
             public void OnSessionEstablishFailed(Exception e) {
+
                 Log.e(TAG, "Session failed");
                 e.printStackTrace();
                 String statusText = getResources().getString(R.string.error_pop_incorrect);
@@ -431,6 +440,97 @@ public class WiFiScanActivity extends AppCompatActivity {
             launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
             launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
         }
+        startActivity(launchProvisionInstructions);
+    }
+
+    private void askForNetwork(final String ssid, final int authMode) {
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = this.getLayoutInflater();
+        final View dialogView = inflater.inflate(R.layout.dialog_wifi_network, null);
+        builder.setView(dialogView);
+
+        final EditText etSsid = dialogView.findViewById(R.id.et_ssid);
+        final EditText etPassword = dialogView.findViewById(R.id.et_password);
+
+        if (ssid.equals(getString(R.string.join_other_network))) {
+
+            builder.setTitle("Enter Network Information");
+
+        } else {
+
+            builder.setTitle(ssid);
+            etSsid.setVisibility(View.GONE);
+        }
+
+        builder.setPositiveButton(R.string.btn_join, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                String password = etPassword.getText().toString();
+
+                if (ssid.equals(getString(R.string.join_other_network))) {
+
+                    String networkName = etSsid.getText().toString();
+
+                    if (TextUtils.isEmpty(networkName)) {
+
+                        etSsid.setError(getString(R.string.error_ssid_empty));
+
+                    } else {
+
+                        dialog.dismiss();
+                        goForProvisioning(networkName, password);
+                    }
+
+                } else {
+
+                    if (TextUtils.isEmpty(password)) {
+
+                        if (authMode != AppConstants.WIFI_OPEN) {
+
+                            TextInputLayout passwordLayout = dialogView.findViewById(R.id.layout_password);
+                            passwordLayout.setError(getString(R.string.error_password_empty));
+
+                        } else {
+
+                            dialog.dismiss();
+                            goForProvisioning(ssid, password);
+                        }
+
+                    } else {
+
+                        if (authMode == AppConstants.WIFI_OPEN) {
+                            password = "";
+                        }
+                        dialog.dismiss();
+                        goForProvisioning(ssid, password);
+                    }
+                }
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    private void goForProvisioning(String ssid, String password) {
+
+        finish();
+        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
+        launchProvisionInstructions.putExtras(getIntent());
+        launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
+        launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_PASSWORD, password);
         startActivity(launchProvisionInstructions);
     }
 

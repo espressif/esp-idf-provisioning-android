@@ -79,7 +79,7 @@ public class LoginFragment extends Fragment {
         imageLoginWithGitHub = btnLoginWithGitHub.findViewById(R.id.iv_arrow);
 
         txtLoginBtn.setText(R.string.btn_login);
-        txtLoginWithGitHubBtn.setText(R.string.btn_github);
+        txtLoginWithGitHubBtn.setVisibility(View.GONE);
         imageLoginWithGitHub.setImageResource(R.drawable.ic_github);
         LinearLayout ll = btnLoginWithGitHub.findViewById(R.id.layout_btn);
         ll.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));

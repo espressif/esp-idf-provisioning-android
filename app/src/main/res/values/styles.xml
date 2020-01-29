@@ -21,4 +21,8 @@
         <item name="colorAccent">@android:color/white</item> <!-- Whatever color you want-->
     </style>
 
+    <style name="AppTheme.OrangeAccent">
+        <item name="colorAccent">@color/color_orange</item> <!-- Whatever color you want-->
+    </style>
+
 </resources>

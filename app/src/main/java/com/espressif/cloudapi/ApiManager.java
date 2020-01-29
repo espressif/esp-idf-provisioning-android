@@ -13,6 +13,7 @@ import com.espressif.ui.models.EspNode;
 import com.espressif.ui.models.Param;
 import com.espressif.ui.models.UpdateEvent;
 import com.espressif.ui.user_module.AppHelper;
+import com.google.gson.JsonObject;
 
 import org.greenrobot.eventbus.EventBus;
 import org.json.JSONArray;
@@ -678,15 +679,9 @@ public class ApiManager {
         });
     }
 
-    public void setDynamicParamValue(final String nodeId, HashMap<String, Object> body, final ApiResponseListener listener) {
+    public void setDynamicParamValue(final String nodeId, JsonObject body, final ApiResponseListener listener) {
 
         String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
-
-        for (String key : body.keySet()) {
-
-            Log.e(TAG, "Key : " + key);
-            Log.e(TAG, "Value : " + body.get(key));
-        }
 
         try {
             apiInterface.updateParamValue(authToken, nodeId, body).enqueue(new Callback<ResponseBody>() {

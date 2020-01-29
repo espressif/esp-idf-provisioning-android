@@ -14,25 +14,18 @@
 package com.espressif.ui.activities;
 
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Vibrator;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.util.Log;
-import android.view.HapticFeedbackConstants;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+import androidx.core.widget.ContentLoadingProgressBar;
 
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
@@ -41,12 +34,8 @@ import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
-import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.espressif.ui.models.UpdateEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -63,23 +52,22 @@ import espressif.WifiConstants;
 
 public class ProvisionActivity extends AppCompatActivity {
 
-    private static final String TAG = "Espressif::" + ProvisionActivity.class.getSimpleName();
+    private static final String TAG = ProvisionActivity.class.getSimpleName();
 
     private static final long ADD_DEVICE_REQ_TIME = 5000;
 
-    private TextView ssid;
-    private EditText ssidInput;
-    private EditText passwordInput;
-    private Button btnProvision;
-    private ProgressBar progressBar;
+    private TextView tvTitle, tvBack, tvCancel;
+    private ImageView tick1, tick2, tick3, tick4;
+    private ContentLoadingProgressBar progress1, progress2, progress3, progress4;
 
-    private int wifiSecurityType, addDeviceReqCount = 0;
+    private CardView btnOk;
+    private TextView txtOkBtn;
+
+    private int addDeviceReqCount = 0;
     private String ssidValue, passphraseValue = "";
     private String pop, baseUrl, transportVersion, securityVersion;
     private String deviceSecret, secretKey;
 
-    private Session session;
-    private Security security;
     private Transport transport;
     private Handler handler;
 
@@ -88,98 +76,28 @@ public class ProvisionActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_provision);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setTitle(R.string.title_activity_provision);
-        setSupportActionBar(toolbar);
 
         Intent intent = getIntent();
-        final String wifiSSID = intent.getStringExtra(Provision.PROVISIONING_WIFI_SSID);
-        wifiSecurityType = intent.getIntExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, AppConstants.WIFI_OPEN);
+        ssidValue = intent.getStringExtra(Provision.PROVISIONING_WIFI_SSID);
+        passphraseValue = intent.getStringExtra(Provision.PROVISIONING_WIFI_PASSWORD);
         pop = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
         baseUrl = intent.getStringExtra(Provision.CONFIG_BASE_URL_KEY);
         transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-        ssid = findViewById(R.id.ssid_text);
-        ssidInput = findViewById(R.id.ssid_input);
-        passwordInput = findViewById(R.id.password_input);
-        btnProvision = findViewById(R.id.btn_provision);
-        progressBar = findViewById(R.id.progress_indicator);
+        initViews();
         handler = new Handler();
 
-        ssidValue = wifiSSID;
-        Log.d(TAG, "Selected AP -" + ssidValue);
-        Log.e(TAG, "POP : " + pop);
-
-        if (TextUtils.isEmpty(wifiSSID)) {
-
-            ssid.setVisibility(View.GONE);
-            ssidInput.setVisibility(View.VISIBLE);
-
+        if (BuildConfig.FLAVOR_transport.equals("ble")) {
+            transport = BLEProvisionLanding.bleTransport;
         } else {
-
-            ssidInput.setVisibility(View.GONE);
-            ssid.setVisibility(View.VISIBLE);
-            ssid.setText(wifiSSID);
-
-            if (wifiSecurityType == AppConstants.WIFI_OPEN) {
-
-                passwordInput.setVisibility(View.GONE);
-                findViewById(R.id.password_input_layout).setVisibility(View.GONE);
-                btnProvision.setEnabled(false);
-                btnProvision.setAlpha(0.5f);
-                btnProvision.setTextColor(Color.WHITE);
-                doProvisioning();
-            }
+            transport = ProvisionLanding.softAPTransport;
         }
 
-        btnProvision.setEnabled(false);
-        btnProvision.setAlpha(0.5f);
-        btnProvision.setTextColor(Color.WHITE);
-
-        ssidInput.addTextChangedListener(new TextWatcher() {
-
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                ssidValue = editable.toString().trim();
-                enableProvisionBtn();
-            }
-        });
-
-        passwordInput.addTextChangedListener(new TextWatcher() {
-
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                passphraseValue = editable.toString();
-                enableProvisionBtn();
-            }
-        });
-
-        btnProvision.setOnClickListener(new View.OnClickListener() {
-
-            @Override
-            public void onClick(View view) {
-                Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-                vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-                doProvisioning();
-            }
-        });
+        Log.d(TAG, "Selected AP -" + ssidValue);
+        Log.e(TAG, "POP : " + pop);
+        showLoading();
+        doStep1();
     }
 
     @Override
@@ -208,57 +126,187 @@ public class ProvisionActivity extends AppCompatActivity {
 
             case EVENT_DEVICE_ADDED:
                 goToSuccessPage(getString(R.string.add_device_success_text));
+                tick4.setImageResource(R.drawable.ic_checkbox_on);
+                tick4.setVisibility(View.VISIBLE);
+                progress4.setVisibility(View.GONE);
                 break;
 
             case EVENT_ADD_DEVICE_TIME_OUT:
+                tick4.setImageResource(R.drawable.ic_error);
+                tick4.setVisibility(View.VISIBLE);
+                progress4.setVisibility(View.GONE);
                 goToSuccessPage("Add device not confirmed from cloud.");
                 break;
         }
     }
 
-    private void doProvisioning() {
+    private View.OnClickListener cancelBtnClickListener = new View.OnClickListener() {
 
-        btnProvision.setEnabled(false);
-        btnProvision.setAlpha(0.5f);
-        btnProvision.setTextColor(Color.WHITE);
-        ssidInput.setEnabled(false);
-        passwordInput.setEnabled(false);
-        progressBar.setVisibility(View.VISIBLE);
+        @Override
+        public void onClick(View v) {
 
-        security = WiFiScanActivity.security;
+            finish();
+        }
+    };
 
-        if (security == null) {
-            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-                security = new Security1(pop);
-            } else {
-                security = new Security0();
-            }
+    private View.OnClickListener okBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            finish();
+        }
+    };
+
+    private void initViews() {
+
+        tvTitle = findViewById(R.id.main_toolbar_title);
+        tvBack = findViewById(R.id.btn_back);
+        tvCancel = findViewById(R.id.btn_cancel);
+
+        tick1 = findViewById(R.id.iv_tick_1);
+        tick2 = findViewById(R.id.iv_tick_2);
+        tick3 = findViewById(R.id.iv_tick_3);
+        tick4 = findViewById(R.id.iv_tick_4);
+
+        progress1 = findViewById(R.id.prov_progress_1);
+        progress2 = findViewById(R.id.prov_progress_2);
+        progress3 = findViewById(R.id.prov_progress_3);
+        progress4 = findViewById(R.id.prov_progress_4);
+
+        tvTitle.setText(R.string.title_activity_provisioning);
+        tvBack.setVisibility(View.GONE);
+        tvCancel.setVisibility(View.VISIBLE);
+
+        tvCancel.setOnClickListener(cancelBtnClickListener);
+
+        btnOk = findViewById(R.id.btn_ok);
+        txtOkBtn = findViewById(R.id.text_btn);
+
+        txtOkBtn.setText(R.string.btn_ok);
+        btnOk.setOnClickListener(okBtnClickListener);
+    }
+
+    private void doStep1() {
+
+        tick1.setVisibility(View.GONE);
+        progress1.setVisibility(View.VISIBLE);
+
+        associateDevice();
+    }
+
+    private void doStep2() {
+
+        tick1.setImageResource(R.drawable.ic_checkbox_on);
+        tick1.setVisibility(View.VISIBLE);
+        progress1.setVisibility(View.GONE);
+        tick2.setVisibility(View.GONE);
+        progress2.setVisibility(View.VISIBLE);
+    }
+
+    private void doStep3(boolean isSuccessInStep2) {
+
+        if (isSuccessInStep2) {
+            tick2.setImageResource(R.drawable.ic_checkbox_on);
+        } else {
+            tick2.setImageResource(R.drawable.ic_alert);
         }
 
-        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
+        tick2.setVisibility(View.VISIBLE);
+        progress2.setVisibility(View.GONE);
+        tick3.setVisibility(View.GONE);
+        progress3.setVisibility(View.VISIBLE);
 
-            if (ProvisionLanding.softAPTransport != null) {
-                transport = ProvisionLanding.softAPTransport;
-            } else {
-                transport = new SoftAPTransport(baseUrl);
-            }
+        ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
 
-            associateDevice();
+        if (BuildConfig.FLAVOR_transport.equals("ble")) {
 
-        } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+            addDeviceToCloud(new ApiResponseListener() {
 
-            if (BLEProvisionLanding.bleTransport == null) {
+                @Override
+                public void onSuccess(Bundle data) {
 
-                Log.e(TAG, "BLE Transport is Null. It should not be null.");
-                BLEProvisionLanding.isBleWorkDone = true;
-                finish();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+//                            Toast.makeText(ProvisionActivity2.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
 
-            } else {
-                transport = BLEProvisionLanding.bleTransport;
-                associateDevice();
-            }
+                @Override
+                public void onFailure(Exception exception) {
+
+                    tick3.setImageResource(R.drawable.ic_error);
+                    tick3.setVisibility(View.VISIBLE);
+                    progress3.setVisibility(View.GONE);
+                    hideLoading();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this, "Add Device Failed", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    String statusText = "Add Device Failed";
+                    goToSuccessPage(statusText);
+                }
+            });
+        } else {
+
+            handler.postDelayed(addDeviceTask, ADD_DEVICE_REQ_TIME);
         }
     }
+
+    private void doStep4() {
+
+        hideLoading();
+        tick3.setImageResource(R.drawable.ic_checkbox_on);
+        tick3.setVisibility(View.VISIBLE);
+        progress3.setVisibility(View.GONE);
+        tick4.setVisibility(View.GONE);
+        progress4.setVisibility(View.VISIBLE);
+    }
+
+//    private void doProvisioning() {
+//
+//        tick1.setVisibility(View.GONE);
+//        progress1.setVisibility(View.VISIBLE);
+//
+//        security = WiFiScanActivity.security;
+//
+//        if (security == null) {
+//            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+//                security = new Security1(pop);
+//            } else {
+//                security = new Security0();
+//            }
+//        }
+//
+//        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
+//
+//            if (ProvisionLanding.softAPTransport != null) {
+//                transport = ProvisionLanding.softAPTransport;
+//            } else {
+//                transport = new SoftAPTransport(baseUrl);
+//            }
+//
+//            associateDevice();
+//
+//        } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+//
+//            if (BLEProvisionLanding.bleTransport == null) {
+//
+//                Log.e(TAG, "BLE Transport is Null. It should not be null.");
+//                BLEProvisionLanding.isBleWorkDone = true;
+//                finish();
+//
+//            } else {
+//                transport = BLEProvisionLanding.bleTransport;
+//                associateDevice();
+//            }
+//        }
+//    }
 
     private void provision() {
 
@@ -267,17 +315,16 @@ public class ProvisionActivity extends AppCompatActivity {
 
             @Override
             public void run() {
-                Toast.makeText(ProvisionActivity.this, "Sending network credentials", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(ProvisionActivity2.this, "Sending network credentials", Toast.LENGTH_SHORT).show();
             }
         });
 
-        session = WiFiScanActivity.session;
+        if (WiFiScanActivity.session == null) {
 
-        if (session == null) {
+            Log.e(TAG, "Session is null");
 
-            session = new Session(transport, security);
-            final Session finalSession = session;
-            session.sessionListener = new Session.SessionListener() {
+            WiFiScanActivity.session = new Session(transport, WiFiScanActivity.security);
+            WiFiScanActivity.session.sessionListener = new Session.SessionListener() {
 
                 @Override
                 public void OnSessionEstablished() {
@@ -285,14 +332,11 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(ProvisionActivity.this,
-                                    "Session Established",
-                                    Toast.LENGTH_SHORT)
-                                    .show();
+//                            Toast.makeText(ProvisionActivity2.this, "Session Established", Toast.LENGTH_SHORT).show();
                         }
                     });
 
-                    applyConfig(finalSession);
+                    applyConfig();
                 }
 
                 @Override
@@ -301,49 +345,53 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(ProvisionActivity.this,
-                                    "Cannot establish session",
-                                    Toast.LENGTH_LONG)
-                                    .show();
+                            Toast.makeText(ProvisionActivity.this, "Cannot establish session", Toast.LENGTH_LONG).show();
                             toggleFormState(true);
                         }
                     });
                 }
             };
-            session.init(null);
+            WiFiScanActivity.session.init(null);
         } else {
-            applyConfig(session);
+            Log.e(TAG, "Session is not null");
+            applyConfig();
         }
     }
 
-    private void applyConfig(Session session) {
+    private void applyConfig() {
 
-        Log.d(TAG, "Session established : " + session.isEstablished());
-        final Provision provision = new Provision(session);
+        Log.d(TAG, "Session established : " + WiFiScanActivity.session.isEstablished());
+        final Provision provision = new Provision(WiFiScanActivity.session);
 
         provision.provisioningListener = new Provision.ProvisioningListener() {
             @Override
             public void OnApplyConfigurationsSucceeded() {
+
+                Log.e(TAG, "Applying Config success");
+
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(ProvisionActivity.this,
-                                "Configurations successfully applied",
-                                Toast.LENGTH_LONG)
-                                .show();
+//                        Toast.makeText(ProvisionActivity2.this, "Configurations successfully applied", Toast.LENGTH_LONG).show();
+                        doStep2();
                     }
                 });
             }
 
             @Override
             public void OnApplyConfigurationsFailed() {
+
                 runOnUiThread(new Runnable() {
+
                     @Override
                     public void run() {
-                        Toast.makeText(ProvisionActivity.this,
-                                "Configurations cannot be applied",
-                                Toast.LENGTH_LONG)
-                                .show();
+
+                        tick1.setImageResource(R.drawable.ic_error);
+                        tick1.setVisibility(View.VISIBLE);
+                        progress1.setVisibility(View.GONE);
+                        hideLoading();
+
+                        Toast.makeText(ProvisionActivity.this, "Configurations cannot be applied", Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -358,8 +406,19 @@ public class ProvisionActivity extends AppCompatActivity {
 
                 if (e != null) {
 
-                    statusText = e.getMessage();
-                    goToSuccessPage(statusText);
+//                    runOnUiThread(new Runnable() {
+//
+//                        @Override
+//                        public void run() {
+//                            tick2.setImageResource(R.drawable.ic_alert_triangle);
+//                            tick2.setVisibility(View.VISIBLE);
+//                            progress2.setVisibility(View.GONE);
+//                            hideLoading();
+//                        }
+//                    });
+//
+//                    statusText = e.getMessage();
+//                    goToSuccessPage(statusText);
 
                 } else if (newStatus == WifiConstants.WifiStationState.Connected) {
 //                    statusText = getResources().getString(R.string.success_text);
@@ -367,87 +426,20 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(ProvisionActivity.this, "Adding device to cloud", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(ProvisionActivity2.this, "Adding device to cloud", Toast.LENGTH_SHORT).show();
+                            doStep3(true);
                         }
                     });
 
-                    ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
+                } else if (newStatus == WifiConstants.WifiStationState.Disconnected
+                        || newStatus == WifiConstants.WifiStationState.ConnectionFailed) {
 
-                    if (BuildConfig.FLAVOR_transport.equals("ble")) {
-
-                        addDeviceToCloud(new ApiResponseListener() {
-
-                            @Override
-                            public void onSuccess(Bundle data) {
-
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(ProvisionActivity.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            }
-
-                            @Override
-                            public void onFailure(Exception exception) {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(ProvisionActivity.this,
-                                                "Add Device Failed",
-                                                Toast.LENGTH_LONG)
-                                                .show();
-                                    }
-                                });
-                                String statusText = "Add Device Failed";
-                                goToSuccessPage(statusText);
-                            }
-                        });
-                    } else {
-
-                        handler.postDelayed(addDeviceTask, ADD_DEVICE_REQ_TIME);
-                    }
-
-                } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
-
-                    ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
-
-                    if (BuildConfig.FLAVOR_transport.equals("ble")) {
-
-                        addDeviceToCloud(new ApiResponseListener() {
-
-                            @Override
-                            public void onSuccess(Bundle data) {
-
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(ProvisionActivity.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            }
-
-                            @Override
-                            public void onFailure(Exception exception) {
-
-                                runOnUiThread(new Runnable() {
-
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(ProvisionActivity.this,
-                                                "Add Device Failed",
-                                                Toast.LENGTH_LONG)
-                                                .show();
-                                    }
-                                });
-                                String statusText = getResources().getString(R.string.wifi_disconnected_text);
-                                goToSuccessPage(statusText);
-                            }
-                        });
-                    } else {
-
-                        handler.postDelayed(addDeviceTask, ADD_DEVICE_REQ_TIME);
-                    }
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            doStep3(false);
+                        }
+                    });
 
                 } else {
 
@@ -464,18 +456,22 @@ public class ProvisionActivity extends AppCompatActivity {
 
             @Override
             public void OnProvisioningFailed(Exception e) {
+
                 runOnUiThread(new Runnable() {
+
                     @Override
                     public void run() {
-                        Toast.makeText(ProvisionActivity.this,
-                                "Provisioning Failed",
-                                Toast.LENGTH_LONG)
-                                .show();
+
+                        tick2.setImageResource(R.drawable.ic_error);
+                        tick2.setVisibility(View.VISIBLE);
+                        progress2.setVisibility(View.GONE);
+
+                        Toast.makeText(ProvisionActivity.this, "Provisioning Failed", Toast.LENGTH_LONG).show();
                         toggleFormState(true);
                     }
                 });
                 setResult(RESULT_CANCELED);
-                finish();
+//                finish();
             }
         };
 
@@ -492,12 +488,12 @@ public class ProvisionActivity extends AppCompatActivity {
     private void enableProvisionBtn() {
 
         if (!TextUtils.isEmpty(ssidValue)/* && !TextUtils.isEmpty(passphraseValue) */) {
-            btnProvision.setEnabled(true);
-            btnProvision.setAlpha(1f);
+//            btnProvision.setEnabled(true);
+//            btnProvision.setAlpha(1f);
         } else {
-            btnProvision.setEnabled(false);
-            btnProvision.setAlpha(0.5f);
-            btnProvision.setTextColor(Color.WHITE);
+//            btnProvision.setEnabled(false);
+//            btnProvision.setAlpha(0.5f);
+//            btnProvision.setTextColor(Color.WHITE);
         }
     }
 
@@ -505,27 +501,27 @@ public class ProvisionActivity extends AppCompatActivity {
 
         if (isEnabled) {
 
-            progressBar.setVisibility(View.GONE);
-            btnProvision.setEnabled(true);
-            btnProvision.setAlpha(1f);
-            ssidInput.setEnabled(true);
-            passwordInput.setEnabled(true);
+//            progressBar.setVisibility(View.GONE);
+//            btnProvision.setEnabled(true);
+//            btnProvision.setAlpha(1f);
+//            ssidInput.setEnabled(true);
+//            passwordInput.setEnabled(true);
 
         } else {
 
-            progressBar.setVisibility(View.VISIBLE);
-            btnProvision.setEnabled(false);
-            btnProvision.setAlpha(0.5f);
-            btnProvision.setTextColor(Color.WHITE);
-            ssidInput.setEnabled(false);
-            passwordInput.setEnabled(false);
+//            progressBar.setVisibility(View.VISIBLE);
+//            btnProvision.setEnabled(false);
+//            btnProvision.setAlpha(0.5f);
+//            btnProvision.setTextColor(Color.WHITE);
+//            ssidInput.setEnabled(false);
+//            passwordInput.setEnabled(false);
         }
     }
 
     private void associateDevice() {
 
         Log.d(TAG, "Associate device");
-        Toast.makeText(ProvisionActivity.this, "Associating Device", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(ProvisionActivity2.this, "Associating Device", Toast.LENGTH_SHORT).show();
 
         final String secretKey = UUID.randomUUID().toString();
 
@@ -539,7 +535,7 @@ public class ProvisionActivity extends AppCompatActivity {
                 .setCmdGetSetDetails(deviceSecretRequest)
                 .build();
 
-        byte[] data = security.encrypt(payload.toByteArray());
+        byte[] data = WiFiScanActivity.security.encrypt(payload.toByteArray());
         Log.d(TAG, "Send config data");
 
         transport.sendConfigData(AppConstants.HANDLER_CLOUD_USER_ASSOC, data, new ResponseListener() {
@@ -554,10 +550,19 @@ public class ProvisionActivity extends AppCompatActivity {
             @Override
             public void onFailure(Exception e) {
 
+                Log.e(TAG, "Send config data - onFailure");
+                Log.e(TAG, "Error : " + e.getMessage());
+
                 runOnUiThread(new Runnable() {
 
                     @Override
                     public void run() {
+
+                        tick1.setImageResource(R.drawable.ic_error);
+                        tick1.setVisibility(View.VISIBLE);
+                        progress1.setVisibility(View.GONE);
+                        hideLoading();
+
                         Toast.makeText(ProvisionActivity.this, "Failed to associate device", Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -571,7 +576,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private void processDetails(byte[] responseData, String secretKey) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = WiFiScanActivity.security.decrypt(responseData);
 
         try {
             Cloud.CloudConfigPayload payload = Cloud.CloudConfigPayload.parseFrom(decryptedData);
@@ -591,11 +596,17 @@ public class ProvisionActivity extends AppCompatActivity {
             }
 
         } catch (InvalidProtocolBufferException e) {
+
             e.printStackTrace();
             runOnUiThread(new Runnable() {
+
                 @Override
                 public void run() {
-//                    closeWaitDialog();
+
+                    tick1.setImageResource(R.drawable.ic_error);
+                    tick1.setVisibility(View.VISIBLE);
+                    progress1.setVisibility(View.GONE);
+                    hideLoading();
                 }
             });
             String statusText = "Failed to associate device.";
@@ -623,15 +634,16 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private void goToSuccessPage(final String statusText) {
 
+        Log.e(TAG, "goToSuccessPage");
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 toggleFormState(true);
-                finish();
-                Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
-                goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
-                goToSuccessPage.putExtras(getIntent());
-                startActivity(goToSuccessPage);
+//                finish();
+//                Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
+//                goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
+//                goToSuccessPage.putExtras(getIntent());
+//                startActivity(goToSuccessPage);
             }
         });
     }
@@ -651,22 +663,26 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(ProvisionActivity.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(ProvisionActivity2.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
                         }
                     });
+                    doStep4();
                 }
 
                 @Override
                 public void onFailure(Exception exception) {
 
                     if (addDeviceReqCount == 5) {
+
+                        tick3.setImageResource(R.drawable.ic_error);
+                        tick3.setVisibility(View.VISIBLE);
+                        progress3.setVisibility(View.GONE);
+                        hideLoading();
+
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Add Device Failed",
-                                        Toast.LENGTH_LONG)
-                                        .show();
+                                Toast.makeText(ProvisionActivity.this, "Add Device Failed", Toast.LENGTH_LONG).show();
                             }
                         });
                         String statusText = "Add Device Failed";
@@ -679,25 +695,15 @@ public class ProvisionActivity extends AppCompatActivity {
         }
     };
 
-//    private void showWaitDialog(String message) {
-//
-//        closeWaitDialog();
-//
-//        if (progressDialog == null) {
-//            progressDialog = new ProgressDialog(this);
-//        }
-//        progressDialog.setTitle(message);
-//        progressDialog.setCancelable(false);
-//        progressDialog.show();
-//    }
-//
-//    private void closeWaitDialog() {
-//        try {
-//            if (progressDialog != null) {
-//                progressDialog.dismiss();
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
+    private void showLoading() {
+
+        btnOk.setEnabled(false);
+        btnOk.setAlpha(0.5f);
+    }
+
+    public void hideLoading() {
+
+        btnOk.setEnabled(true);
+        btnOk.setAlpha(1f);
+    }
 }

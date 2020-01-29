@@ -24,6 +24,7 @@ public class AppConstants {
     public static final String KEY_DEVICE_NAME = "device_name";
     public static final String KEY_STATUS_MSG = "status_msg";
     public static final String KEY_ESP_DEVICE = "esp_device";
+    public static final String KEY_NODE_ID = "node_id";
 
     public static final String ESP_PREFERENCES = "Esp_Preferences";
 

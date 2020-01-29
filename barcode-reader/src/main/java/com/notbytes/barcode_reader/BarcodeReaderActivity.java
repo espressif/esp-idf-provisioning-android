@@ -11,10 +11,11 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Vibrator;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
-import android.widget.Toast;
+import android.view.HapticFeedbackConstants;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -88,6 +89,9 @@ public class BarcodeReaderActivity extends AppCompatActivity implements BarcodeR
 
     @Override
     public void onScanned(Barcode barcode) {
+
+        Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
 
         if (mBarcodeReaderFragment != null) {
             mBarcodeReaderFragment.pauseScanning();
