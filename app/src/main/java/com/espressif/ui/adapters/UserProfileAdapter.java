@@ -17,52 +17,56 @@ import java.util.ArrayList;
 public class UserProfileAdapter extends RecyclerView.Adapter<UserProfileAdapter.MyViewHolder> {
 
     private Context context;
-    private ArrayList<String> nodeInfoList;
-    private ArrayList<String> nodeInfoValueList;
+    private ArrayList<String> userInfoList;
+    private ArrayList<String> userInfoValueList;
     private View.OnClickListener mOnItemClickListener;
+    private boolean isUserInfoView;
 
-    public UserProfileAdapter(Context context, ArrayList<String> nodeInfoList, ArrayList<String> nodeValueList) {
+    public UserProfileAdapter(Context context, ArrayList<String> userInfoList, ArrayList<String> userInfoValueList, boolean isUserInfo) {
+
         this.context = context;
-        this.nodeInfoList = nodeInfoList;
-        this.nodeInfoValueList = nodeValueList;
+        this.userInfoList = userInfoList;
+        this.userInfoValueList = userInfoValueList;
+        this.isUserInfoView = isUserInfo;
     }
 
     @Override
     public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
 
-        // infalte the item Layout
-        LayoutInflater layoutInflater = LayoutInflater.from(context);
-        View v = layoutInflater.inflate(R.layout.item_user_profile, parent, false);
-        // set the view's size, margins, paddings and layout parameters
-        MyViewHolder vh = new MyViewHolder(v); // pass the view to View Holder
-        return vh;
+        if (isUserInfoView) {
+
+            LayoutInflater layoutInflater = LayoutInflater.from(context);
+            View v = layoutInflater.inflate(R.layout.item_user_profile, parent, false);
+            MyViewHolder vh = new MyViewHolder(v); // pass the view to View Holder
+            return vh;
+
+        } else {
+            LayoutInflater layoutInflater = LayoutInflater.from(context);
+            View v = layoutInflater.inflate(R.layout.item_user_profile_terms, parent, false);
+            MyViewHolder vh = new MyViewHolder(v); // pass the view to View Holder
+            return vh;
+        }
     }
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder myViewHolder, final int position) {
 
-        if (nodeInfoList.get(position).equals("Email") && !TextUtils.isEmpty(nodeInfoValueList.get(position))) {
+        if (isUserInfoView) {
 
-            myViewHolder.tvNodeInfoLabel.setText(nodeInfoList.get(position));
-            myViewHolder.tvNodeInfoValue.setText(nodeInfoValueList.get(position));
+            myViewHolder.tvUserInfoLabel.setText(userInfoList.get(position));
 
-        } else if (nodeInfoList.get(position).equals(context.getString(R.string.title_activity_change_password))) {
+            if (userInfoValueList != null && !TextUtils.isEmpty(userInfoValueList.get(position))) {
 
-            myViewHolder.tvNodeInfoLabel.setVisibility(View.GONE);
-            myViewHolder.tvNodeInfoValue.setText(context.getString(R.string.title_activity_change_password));
-            myViewHolder.tvNodeInfoValue.setTextColor(context.getResources().getColor(R.color.colorPrimary));
-
-        } else if (nodeInfoList.get(position).equals("Logout")) {
-
-            myViewHolder.tvNodeInfoLabel.setVisibility(View.GONE);
-            myViewHolder.tvNodeInfoValue.setText("Logout");
-            myViewHolder.tvNodeInfoValue.setTextColor(context.getResources().getColor(R.color.color_orange));
+                myViewHolder.tvUserInfoValue.setText(userInfoValueList.get(position));
+            }
+        } else {
+            myViewHolder.tvUserInfoLabel.setText(userInfoList.get(position));
         }
     }
 
     @Override
     public int getItemCount() {
-        return nodeInfoList.size();
+        return userInfoList.size();
     }
 
     public void setOnItemClickListener(View.OnClickListener itemClickListener) {
@@ -72,14 +76,14 @@ public class UserProfileAdapter extends RecyclerView.Adapter<UserProfileAdapter.
     public class MyViewHolder extends RecyclerView.ViewHolder {
 
         // init the item view's
-        TextView tvNodeInfoLabel, tvNodeInfoValue;
+        TextView tvUserInfoLabel, tvUserInfoValue;
 
         public MyViewHolder(View itemView) {
             super(itemView);
 
             // get the reference of item view's
-            tvNodeInfoLabel = itemView.findViewById(R.id.tv_node_label);
-            tvNodeInfoValue = itemView.findViewById(R.id.tv_node_value);
+            tvUserInfoLabel = itemView.findViewById(R.id.tv_info);
+            tvUserInfoValue = itemView.findViewById(R.id.tv_value);
             itemView.setTag(this);
             itemView.setOnClickListener(mOnItemClickListener);
         }

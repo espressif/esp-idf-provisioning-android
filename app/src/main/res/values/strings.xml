@@ -74,6 +74,7 @@
     <string name="Menu">Menu</string>
     <string name="app_main_desc">A sample app to showcase Cognito Identity and the SDK for Android.</string>
     <string name="pick_MFA">MFA Options</string>
+    <string name="powered_by_esp">Powered by ESPRESSIF</string>
 
     <string name="have_qr_code"><u>Do you have QR code to connect device ?</u></string>
 

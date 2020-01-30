@@ -39,7 +39,7 @@ public interface ApiInterface {
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/mapping")
     Call<ResponseBody> getAddNodeRequestStatus(@Header(ApiClient.HEADER_AUTHORIZATION) String token,
                                                @Query("userid") String userid,
-                                               @Query("node_id") String nodeId, @Query("request_id") String requestId, @Query("user_request") boolean userReq);
+                                               @Query("request_id") String requestId, @Query("user_request") boolean userReq);
 
     // Get dynamic param value
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/params")
@@ -52,4 +52,8 @@ public interface ApiInterface {
     // Remove Device
     @PUT(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/mapping")
     Call<ResponseBody> removeDevice(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Body DeviceOperationRequest rawJsonString);
+
+    // Get Online / Offline Status of Devices
+    @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/status")
+    Call<ResponseBody> getOnlineOfflineStatus(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("nodeid") String nodeId);
 }

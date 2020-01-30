@@ -15,6 +15,13 @@
 
     <uses-sdk tools:overrideLibrary="com.google.zxing.client.android" />
 
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true" />
+
     <application
         android:name="com.espressif.EspApplication"
         android:allowBackup="true"
@@ -75,9 +82,10 @@
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.activities.SettingsActivity"
+            android:name="com.espressif.ui.activities.UserProfileActivity"
             android:label="@string/title_activity_settings"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.EspDeviceActivity"
             android:label="@string/title_activity_esp_device"

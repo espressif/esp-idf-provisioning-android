@@ -23,6 +23,8 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -362,9 +364,11 @@ public class ApiManager {
 
                                             JSONObject paraObj = paramsJson.optJSONObject(j);
                                             Param param = new Param();
+                                            Log.e(TAG, "================= Received name" + paraObj.optString("name"));
                                             param.setName(paraObj.optString("name"));
                                             param.setDataType(paraObj.optString("data_type"));
                                             param.setUiType(paraObj.optString("ui-type"));
+                                            param.setDynamicParam(true);
                                             params.add(param);
 
                                             JSONArray propertiesJson = paraObj.optJSONArray("properties");
@@ -467,7 +471,7 @@ public class ApiManager {
         String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
         Log.d(TAG, "Auth token : " + authToken);
         Log.d(TAG, "nodeId : " + nodeId);
-        Log.d(TAG, "userId : " + userId);
+//        Log.d(TAG, "userId : " + userId);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
         req.setUserId(userId);
@@ -606,50 +610,88 @@ public class ApiManager {
                             for (int i = 0; i < devices.size(); i++) {
 
                                 ArrayList<Param> params = devices.get(i).getParams();
+                                String deviceName = devices.get(i).getDeviceName();
+                                JSONObject deviceJson = jsonObject.optJSONObject(deviceName);
 
-                                for (int j = 0; j < params.size(); j++) {
+                                if (deviceJson != null) {
 
-                                    Param param = params.get(j);
-                                    String key = devices.get(i).getDeviceName() + "." + param.getName();
-                                    Log.e(TAG, "Key : " + key);
-                                    Log.e(TAG, "UiType : " + param.getUiType());
+                                    Log.e(TAG, "JSON IS NOT NULL for device name : " + deviceName);
 
-                                    if (jsonResponse.contains(key)) {
+                                    for (int j = 0; j < params.size(); j++) {
 
-                                        if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
+                                        Param param = params.get(j);
+                                        String key = param.getName();
+                                        Log.e(TAG, "=============== Key : " + key);
 
-                                            int value = jsonObject.optInt(key);
-                                            param.setSliderValue(value);
-                                            Log.e(TAG, "Value : " + value);
+                                        if (jsonResponse.contains(key)) {
 
-                                        } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+                                            String dataType = param.getDataType();
 
-                                            boolean value = jsonObject.optBoolean(key);
-                                            param.setSwitchStatus(value);
-                                            Log.e(TAG, "Value : " + value);
-                                        } else {
+                                            if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
 
-                                            if (param.getDataType().equalsIgnoreCase("bool")) {
+                                                String labelValue = "";
 
-                                                boolean value = jsonObject.optBoolean(key);
+                                                if (dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")) {
+
+                                                    int value = deviceJson.optInt(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+                                                    param.setSliderValue(value);
+
+                                                } else if (dataType.equalsIgnoreCase("float") || dataType.equalsIgnoreCase("double")) {
+
+                                                    double value = deviceJson.optDouble(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+                                                    param.setSliderValue(value);
+
+                                                } else {
+
+                                                    labelValue = deviceJson.optString(key);
+                                                    param.setLabelValue(labelValue);
+                                                }
+
+                                            } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+
+                                                boolean value = deviceJson.optBoolean(key);
                                                 param.setSwitchStatus(value);
-                                                Log.e(TAG, "Value : " + value);
 
                                             } else {
 
-                                                String value = "";
+                                                String labelValue = "";
 
-                                                if (param.getDataType().equalsIgnoreCase("int")) {
-                                                    int labelValue = jsonObject.optInt(key);
-                                                    value = String.valueOf(labelValue);
-                                                } else if (param.getDataType().equalsIgnoreCase("double")) {
-                                                    double labelValue = jsonObject.optDouble(key);
-                                                    value = String.valueOf(labelValue);
+                                                if (dataType.equalsIgnoreCase("bool") || dataType.equalsIgnoreCase("boolean")) {
+
+                                                    boolean value = deviceJson.optBoolean(key);
+//                                                param.setSwitchStatus(value);
+                                                    if (value) {
+                                                        param.setLabelValue("true");
+                                                    } else {
+                                                        param.setLabelValue("false");
+                                                    }
+
+                                                } else if (dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")) {
+
+                                                    int value = deviceJson.optInt(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+
+                                                } else if (dataType.equalsIgnoreCase("float") || dataType.equalsIgnoreCase("double")) {
+
+                                                    double value = deviceJson.optDouble(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+
+                                                } else {
+
+                                                    labelValue = deviceJson.optString(key);
+                                                    param.setLabelValue(labelValue);
                                                 }
-                                                param.setLabelValue(value);
                                             }
                                         }
                                     }
+                                } else {
+                                    Log.e(TAG, "DEVICE JSON IS NULL");
                                 }
                             }
 
@@ -702,37 +744,7 @@ public class ApiManager {
                                 Log.e(TAG, "onResponse Success : " + jsonResponse);
                                 JSONObject jsonObject = new JSONObject(jsonResponse);
 
-                                //                            EspNode node = espApp.nodeMap.get(nodeId);
-                                //                            ArrayList<EspDevice> devices = node.getDevices();
-                                //
-                                //                            for (int i = 0; i < devices.size(); i++) {
-                                //
-                                //                                ArrayList<Param> dynamicParams = devices.get(i).getParams();
-                                //
-                                //                                for (int j = 0; j < dynamicParams.size(); j++) {
-                                //
-                                //                                    Param param = dynamicParams.get(j);
-                                //                                    String key = devices.get(i).getDeviceName() + "." + param.getName();
-                                //                                    Log.e(TAG, "Key : " + key);
-                                //                                    Log.e(TAG, "UiType : " + param.getUiType());
-                                //
-                                //                                    if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
-                                //
-                                //                                        int value = jsonObject.optInt(key);
-                                //                                        param.setSliderValue(value);
-                                //                                        Log.e(TAG, "Value : " + value);
-                                //
-                                //                                    } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
-                                //
-                                //                                        boolean value = jsonObject.optBoolean(key);
-                                //                                        param.setSwitchStatus(value);
-                                //                                        Log.e(TAG, "Value : " + value);
-                                //                                    } else {
-                                //                                        // TODO
-                                //                                    }
-                                //                                }
-                                //                            }
-
+                                // TODO
                                 listener.onSuccess(null);
 
                             } catch (IOException e) {
@@ -762,12 +774,71 @@ public class ApiManager {
         }
     }
 
+    private void getOnlineOfflineStatus(final String nodeId) {
+
+        Log.d(TAG, "getOnlineOfflineStatus");
+        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+
+        apiInterface.getOnlineOfflineStatus(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
+
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                Log.d(TAG, "Request : " + call.request().toString());
+                Log.d(TAG, "EspNode mapping status response code : " + response.code());
+
+                if (response.isSuccessful()) {
+
+                    if (response.body() != null) {
+
+                        try {
+
+                            String jsonResponse = response.body().string();
+                            Log.e(TAG, "onResponse Success : " + jsonResponse);
+                            JSONObject jsonObject = new JSONObject(jsonResponse);
+                            boolean nodeStatus = jsonObject.optBoolean("connected");
+
+                            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                                String key = entry.getKey();
+                                EspNode node = entry.getValue();
+
+                                if (nodeId.equalsIgnoreCase(key)) {
+
+                                    if (node.isOnline() != nodeStatus) {
+                                        node.setOnline(nodeStatus);
+                                        EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                                    }
+                                }
+                            }
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Log.e(TAG, "Get node mapping status failed");
+                    }
+
+                } else {
+                    Log.e(TAG, "Get node mapping status failed");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+    }
+
     private void getAddNodeRequestStatus(String userId, final String nodeId, String requestId) {
 
         Log.d(TAG, "getAddDeviceRequestStatus");
         String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
 
-        apiInterface.getAddNodeRequestStatus(authToken, userId, nodeId, requestId, true).enqueue(new Callback<ResponseBody>() {
+        apiInterface.getAddNodeRequestStatus(authToken, userId, requestId, true).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -852,4 +923,34 @@ public class ApiManager {
             EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_ADD_DEVICE_TIME_OUT));
         }
     };
+
+    private Runnable getNodeStatusTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            getAllNodeStatus();
+        }
+    };
+
+    public void getNodeStatus() {
+
+        cancelGetNodeStatusTask();
+        getAllNodeStatus();
+    }
+
+    public void cancelGetNodeStatusTask() {
+
+        handler.removeCallbacks(getNodeStatusTask);
+    }
+
+    private void getAllNodeStatus() {
+
+        Set<String> nodeIdList = espApp.nodeMap.keySet();
+
+        for (String nodeId : nodeIdList) {
+            getOnlineOfflineStatus(nodeId);
+        }
+        handler.postDelayed(getNodeStatusTask, 10000);
+    }
 }

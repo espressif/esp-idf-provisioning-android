@@ -38,7 +38,8 @@ public class AppConstants {
 
     public enum UpdateEventType {
         EVENT_DEVICE_ADDED,
+        EVENT_DEVICE_REMOVED,
         EVENT_ADD_DEVICE_TIME_OUT,
-        EVENT_REMOVE
+        EVENT_DEVICE_STATUS_UPDATE
     }
 }

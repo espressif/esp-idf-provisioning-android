@@ -15,7 +15,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/color_background"
-            android:textAlignment="center">
+            android:textAlignment="center"
+            app:contentInsetEnd="0dp"
+            app:contentInsetStart="0dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"

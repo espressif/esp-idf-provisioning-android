@@ -12,12 +12,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.espressif.AppConstants;
+import com.espressif.EspApplication;
 import com.espressif.provision.R;
 import com.espressif.ui.activities.EspDeviceActivity;
 import com.espressif.ui.models.EspDevice;
+import com.espressif.ui.models.EspNode;
 
 import java.util.ArrayList;
 
@@ -72,6 +75,20 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
             }
         }
 
+        EspApplication espApp = (EspApplication) context.getApplicationContext();
+        EspNode node = espApp.nodeMap.get(device.getNodeId());
+
+        if (node != null && !node.isOnline()) {
+
+            myViewHolder.llOffline.setVisibility(View.VISIBLE);
+            myViewHolder.ivDeviceStatus.setImageResource(R.drawable.ic_device_offline);
+
+        } else {
+
+            myViewHolder.llOffline.setVisibility(View.INVISIBLE);
+            myViewHolder.ivDeviceStatus.setImageResource(R.drawable.ic_device_on);
+        }
+
         // implement setOnClickListener event on item view.
         myViewHolder.itemView.setOnClickListener(new View.OnClickListener() {
 
@@ -98,7 +115,8 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
         // init the item view's
         TextView tvDeviceName;
-        ImageView ivDevice;
+        ImageView ivDevice, ivDeviceStatus;
+        LinearLayout llOffline;
 
         public MyViewHolder(View itemView) {
             super(itemView);
@@ -106,6 +124,8 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
             // get the reference of item view's
             tvDeviceName = itemView.findViewById(R.id.tv_device_name);
             ivDevice = itemView.findViewById(R.id.iv_device);
+            llOffline = itemView.findViewById(R.id.ll_offline);
+            ivDeviceStatus = itemView.findViewById(R.id.iv_on_off);
         }
     }
 }

@@ -8,8 +8,8 @@
     android:layout_marginBottom="1dp"
     card_view:cardBackgroundColor="@color/color_background"
     card_view:cardCornerRadius="8dp"
-    card_view:cardElevation="0dp"
-    card_view:cardUseCompatPadding="false">
+    card_view:cardElevation="1dp"
+    card_view:cardUseCompatPadding="true">
 
     <RelativeLayout
         android:id="@+id/rl_card_switch"

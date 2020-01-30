@@ -85,6 +85,7 @@ public class SignUpConfirmActivity extends AppCompatActivity {
                     String delMed = extras.getString("deliveryMed");
 
                     if (dest != null && delMed != null && dest.length() > 0 && delMed.length() > 0) {
+                        String confMsg = "A confirmation code was sent to " + dest + " via " + delMed;
                         tvConfMsg.setText("A confirmation code was sent to " + dest + " via " + delMed);
                     } else {
                         tvConfMsg.setText("A confirmation code was sent");

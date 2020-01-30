@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <include layout="@layout/main_tool_bar_purple" />
+    <include layout="@layout/tool_bar_main_purple" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
