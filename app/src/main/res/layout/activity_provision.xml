@@ -24,7 +24,7 @@
                 android:id="@+id/iv_provisioning"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="140dp"
+                android:layout_marginTop="110dp"
                 android:src="@drawable/ic_provisioning"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -37,6 +37,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="58dp"
+                android:layout_marginBottom="40dp"
                 android:orientation="vertical"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -85,6 +86,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/tv_prov_error_1"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="32dp"
@@ -139,6 +141,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/tv_prov_error_2"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="32dp"
@@ -194,6 +197,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/tv_prov_error_3"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="32dp"
@@ -251,6 +255,7 @@
                     </LinearLayout>
 
                     <TextView
+                        android:id="@+id/tv_prov_error_4"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="32dp"
@@ -267,13 +272,13 @@
                 android:id="@+id/tv_prov_error"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="80dp"
+                android:layout_marginTop="30dp"
                 android:gravity="center_horizontal"
                 android:lineSpacingExtra="8sp"
-                android:text="Reset your board to factory defaults and retry"
+                android:text="@string/error_provisioning"
                 android:textColor="@color/colorAccent"
                 android:textSize="14sp"
-                android:visibility="gone"
+                android:visibility="invisible"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/layout_prov_process" />

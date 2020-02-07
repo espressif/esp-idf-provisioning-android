@@ -2,7 +2,6 @@ package com.espressif.ui.activities;
 
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -23,6 +22,7 @@ import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.R;
 import com.espressif.ui.adapters.NodeDetailsAdapter;
 import com.espressif.ui.models.EspNode;
+import com.espressif.ui.models.Param;
 
 import java.util.ArrayList;
 
@@ -63,6 +63,7 @@ public class NodeDetailsActivity extends AppCompatActivity {
 
         @Override
         public void onClick(View v) {
+
             confirmForRemoveNode();
         }
     };
@@ -117,6 +118,18 @@ public class NodeDetailsActivity extends AppCompatActivity {
         nodeInfoValueList.add(node.getNodeType());
         nodeInfoValueList.add(node.getFwVersion());
         nodeInfoValueList.add(node.getConfigVersion());
+
+        ArrayList<Param> attributes = node.getAttributes();
+
+        if (attributes != null && attributes.size() > 0) {
+
+            for (int i = 0; i < attributes.size(); i++) {
+
+                Param param = attributes.get(i);
+                nodeInfoList.add(param.getName());
+                nodeInfoValueList.add(param.getLabelValue());
+            }
+        }
     }
 
     private void showLoading() {

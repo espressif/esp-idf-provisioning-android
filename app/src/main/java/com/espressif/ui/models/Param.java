@@ -8,6 +8,7 @@ import java.util.ArrayList;
 public class Param implements Parcelable {
 
     private String name;
+    private String paramType;
     private String dataType;
     private String uiType;
     private ArrayList<String> properties;
@@ -25,6 +26,14 @@ public class Param implements Parcelable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getParamType() {
+        return paramType;
+    }
+
+    public void setParamType(String paramType) {
+        this.paramType = paramType;
     }
 
     public String getDataType() {
@@ -112,6 +121,7 @@ public class Param implements Parcelable {
 
     protected Param(Parcel in) {
         name = in.readString();
+        paramType = in.readString();
         dataType = in.readString();
         uiType = in.readString();
         properties = in.createStringArrayList();
@@ -144,6 +154,7 @@ public class Param implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(name);
+        dest.writeString(paramType);
         dest.writeString(dataType);
         dest.writeString(uiType);
         dest.writeStringList(properties);

@@ -4,7 +4,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -83,12 +82,19 @@ public class SignUpConfirmActivity extends AppCompatActivity {
 
                     String dest = extras.getString("destination");
                     String delMed = extras.getString("deliveryMed");
+                    delMed = delMed.toLowerCase();
 
                     if (dest != null && delMed != null && dest.length() > 0 && delMed.length() > 0) {
+
                         String confMsg = "A confirmation code was sent to " + dest + " via " + delMed;
-                        tvConfMsg.setText("A confirmation code was sent to " + dest + " via " + delMed);
+                        confMsg = confMsg + ". " + getString(R.string.signup_confirm_msg);
+                        tvConfMsg.setText(confMsg);
+
                     } else {
-                        tvConfMsg.setText("A confirmation code was sent");
+
+                        String confMsg = "A confirmation code was sent.";
+                        confMsg = confMsg + " " + getString(R.string.signup_confirm_msg);
+                        tvConfMsg.setText(confMsg);
                     }
                 }
             } else {
@@ -130,7 +136,6 @@ public class SignUpConfirmActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
 
-            Log.e("TAG", "On Cancel button click");
             finish();
         }
     };

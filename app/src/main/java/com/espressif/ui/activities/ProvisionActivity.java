@@ -16,7 +16,6 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -59,6 +58,7 @@ public class ProvisionActivity extends AppCompatActivity {
     private TextView tvTitle, tvBack, tvCancel;
     private ImageView tick1, tick2, tick3, tick4;
     private ContentLoadingProgressBar progress1, progress2, progress3, progress4;
+    private TextView tvErrAtStep1, tvErrAtStep2, tvErrAtStep3, tvErrAtStep4, tvProvError;
 
     private CardView btnOk;
     private TextView txtOkBtn;
@@ -125,7 +125,6 @@ public class ProvisionActivity extends AppCompatActivity {
         switch (event.getEventType()) {
 
             case EVENT_DEVICE_ADDED:
-                goToSuccessPage(getString(R.string.add_device_success_text));
                 tick4.setImageResource(R.drawable.ic_checkbox_on);
                 tick4.setVisibility(View.VISIBLE);
                 progress4.setVisibility(View.GONE);
@@ -135,19 +134,12 @@ public class ProvisionActivity extends AppCompatActivity {
                 tick4.setImageResource(R.drawable.ic_error);
                 tick4.setVisibility(View.VISIBLE);
                 progress4.setVisibility(View.GONE);
-                goToSuccessPage("Add device not confirmed from cloud.");
+                tvErrAtStep4.setVisibility(View.VISIBLE);
+                tvErrAtStep4.setText("Failed to confirm node association");
+                tvProvError.setVisibility(View.VISIBLE);
                 break;
         }
     }
-
-    private View.OnClickListener cancelBtnClickListener = new View.OnClickListener() {
-
-        @Override
-        public void onClick(View v) {
-
-            finish();
-        }
-    };
 
     private View.OnClickListener okBtnClickListener = new View.OnClickListener() {
 
@@ -174,11 +166,15 @@ public class ProvisionActivity extends AppCompatActivity {
         progress3 = findViewById(R.id.prov_progress_3);
         progress4 = findViewById(R.id.prov_progress_4);
 
+        tvErrAtStep1 = findViewById(R.id.tv_prov_error_1);
+        tvErrAtStep2 = findViewById(R.id.tv_prov_error_2);
+        tvErrAtStep3 = findViewById(R.id.tv_prov_error_3);
+        tvErrAtStep4 = findViewById(R.id.tv_prov_error_4);
+        tvProvError = findViewById(R.id.tv_prov_error);
+
         tvTitle.setText(R.string.title_activity_provisioning);
         tvBack.setVisibility(View.GONE);
-        tvCancel.setVisibility(View.VISIBLE);
-
-        tvCancel.setOnClickListener(cancelBtnClickListener);
+        tvCancel.setVisibility(View.GONE);
 
         btnOk = findViewById(R.id.btn_ok);
         txtOkBtn = findViewById(R.id.text_btn);
@@ -229,7 +225,7 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-//                            Toast.makeText(ProvisionActivity2.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(ProvisionActivity.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
@@ -240,6 +236,9 @@ public class ProvisionActivity extends AppCompatActivity {
                     tick3.setImageResource(R.drawable.ic_error);
                     tick3.setVisibility(View.VISIBLE);
                     progress3.setVisibility(View.GONE);
+                    tvErrAtStep3.setVisibility(View.VISIBLE);
+                    tvErrAtStep3.setText("Failed to configure node association");
+                    tvProvError.setVisibility(View.VISIBLE);
                     hideLoading();
 
                     runOnUiThread(new Runnable() {
@@ -248,8 +247,6 @@ public class ProvisionActivity extends AppCompatActivity {
                             Toast.makeText(ProvisionActivity.this, "Add Device Failed", Toast.LENGTH_LONG).show();
                         }
                     });
-                    String statusText = "Add Device Failed";
-                    goToSuccessPage(statusText);
                 }
             });
         } else {
@@ -268,56 +265,9 @@ public class ProvisionActivity extends AppCompatActivity {
         progress4.setVisibility(View.VISIBLE);
     }
 
-//    private void doProvisioning() {
-//
-//        tick1.setVisibility(View.GONE);
-//        progress1.setVisibility(View.VISIBLE);
-//
-//        security = WiFiScanActivity.security;
-//
-//        if (security == null) {
-//            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-//                security = new Security1(pop);
-//            } else {
-//                security = new Security0();
-//            }
-//        }
-//
-//        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
-//
-//            if (ProvisionLanding.softAPTransport != null) {
-//                transport = ProvisionLanding.softAPTransport;
-//            } else {
-//                transport = new SoftAPTransport(baseUrl);
-//            }
-//
-//            associateDevice();
-//
-//        } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-//
-//            if (BLEProvisionLanding.bleTransport == null) {
-//
-//                Log.e(TAG, "BLE Transport is Null. It should not be null.");
-//                BLEProvisionLanding.isBleWorkDone = true;
-//                finish();
-//
-//            } else {
-//                transport = BLEProvisionLanding.bleTransport;
-//                associateDevice();
-//            }
-//        }
-//    }
-
     private void provision() {
 
         Log.d(TAG, "================== PROVISION +++++++++++++++++++++++++++++");
-        runOnUiThread(new Runnable() {
-
-            @Override
-            public void run() {
-//                Toast.makeText(ProvisionActivity2.this, "Sending network credentials", Toast.LENGTH_SHORT).show();
-            }
-        });
 
         if (WiFiScanActivity.session == null) {
 
@@ -329,13 +279,6 @@ public class ProvisionActivity extends AppCompatActivity {
                 @Override
                 public void OnSessionEstablished() {
 
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-//                            Toast.makeText(ProvisionActivity2.this, "Session Established", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-
                     applyConfig();
                 }
 
@@ -346,7 +289,6 @@ public class ProvisionActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             Toast.makeText(ProvisionActivity.this, "Cannot establish session", Toast.LENGTH_LONG).show();
-                            toggleFormState(true);
                         }
                     });
                 }
@@ -372,7 +314,6 @@ public class ProvisionActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-//                        Toast.makeText(ProvisionActivity2.this, "Configurations successfully applied", Toast.LENGTH_LONG).show();
                         doStep2();
                     }
                 });
@@ -389,9 +330,10 @@ public class ProvisionActivity extends AppCompatActivity {
                         tick1.setImageResource(R.drawable.ic_error);
                         tick1.setVisibility(View.VISIBLE);
                         progress1.setVisibility(View.GONE);
+                        tvErrAtStep2.setVisibility(View.VISIBLE);
+                        tvErrAtStep2.setText("Failed to send Wi-Fi credentials");
                         hideLoading();
-
-                        Toast.makeText(ProvisionActivity.this, "Configurations cannot be applied", Toast.LENGTH_LONG).show();
+//                        Toast.makeText(ProvisionActivity.this, "Configurations cannot be applied", Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -426,7 +368,6 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-//                            Toast.makeText(ProvisionActivity2.this, "Adding device to cloud", Toast.LENGTH_SHORT).show();
                             doStep3(true);
                         }
                     });
@@ -450,7 +391,23 @@ public class ProvisionActivity extends AppCompatActivity {
                     } else {
                         statusText = getResources().getString(R.string.error_unknown);
                     }
-                    goToSuccessPage(statusText);
+
+                    final String finalStatusText = statusText;
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+
+                            tick2.setImageResource(R.drawable.ic_error);
+                            tick2.setVisibility(View.VISIBLE);
+                            progress2.setVisibility(View.GONE);
+                            tvErrAtStep2.setVisibility(View.VISIBLE);
+                            tvErrAtStep2.setText(finalStatusText);
+                            tvProvError.setVisibility(View.VISIBLE);
+
+                            Toast.makeText(ProvisionActivity.this, "Provisioning Failed", Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
             }
 
@@ -465,9 +422,11 @@ public class ProvisionActivity extends AppCompatActivity {
                         tick2.setImageResource(R.drawable.ic_error);
                         tick2.setVisibility(View.VISIBLE);
                         progress2.setVisibility(View.GONE);
+                        tvErrAtStep2.setVisibility(View.VISIBLE);
+                        tvErrAtStep2.setText("Provisioning Failed");
+                        tvProvError.setVisibility(View.VISIBLE);
 
                         Toast.makeText(ProvisionActivity.this, "Provisioning Failed", Toast.LENGTH_LONG).show();
-                        toggleFormState(true);
                     }
                 });
                 setResult(RESULT_CANCELED);
@@ -485,44 +444,9 @@ public class ProvisionActivity extends AppCompatActivity {
         });
     }
 
-    private void enableProvisionBtn() {
-
-        if (!TextUtils.isEmpty(ssidValue)/* && !TextUtils.isEmpty(passphraseValue) */) {
-//            btnProvision.setEnabled(true);
-//            btnProvision.setAlpha(1f);
-        } else {
-//            btnProvision.setEnabled(false);
-//            btnProvision.setAlpha(0.5f);
-//            btnProvision.setTextColor(Color.WHITE);
-        }
-    }
-
-    private void toggleFormState(boolean isEnabled) {
-
-        if (isEnabled) {
-
-//            progressBar.setVisibility(View.GONE);
-//            btnProvision.setEnabled(true);
-//            btnProvision.setAlpha(1f);
-//            ssidInput.setEnabled(true);
-//            passwordInput.setEnabled(true);
-
-        } else {
-
-//            progressBar.setVisibility(View.VISIBLE);
-//            btnProvision.setEnabled(false);
-//            btnProvision.setAlpha(0.5f);
-//            btnProvision.setTextColor(Color.WHITE);
-//            ssidInput.setEnabled(false);
-//            passwordInput.setEnabled(false);
-        }
-    }
-
     private void associateDevice() {
 
         Log.d(TAG, "Associate device");
-//        Toast.makeText(ProvisionActivity2.this, "Associating Device", Toast.LENGTH_SHORT).show();
-
         final String secretKey = UUID.randomUUID().toString();
 
         Cloud.CmdGetSetDetails deviceSecretRequest = Cloud.CmdGetSetDetails.newBuilder()
@@ -561,15 +485,14 @@ public class ProvisionActivity extends AppCompatActivity {
                         tick1.setImageResource(R.drawable.ic_error);
                         tick1.setVisibility(View.VISIBLE);
                         progress1.setVisibility(View.GONE);
+                        tvErrAtStep1.setVisibility(View.VISIBLE);
+                        tvErrAtStep1.setText("Failed to associate device");
                         hideLoading();
-
-                        Toast.makeText(ProvisionActivity.this, "Failed to associate device", Toast.LENGTH_SHORT).show();
                     }
                 });
 
                 e.printStackTrace();
                 String statusText = "Failed to associate device.";
-                goToSuccessPage(statusText);
             }
         });
     }
@@ -606,11 +529,11 @@ public class ProvisionActivity extends AppCompatActivity {
                     tick1.setImageResource(R.drawable.ic_error);
                     tick1.setVisibility(View.VISIBLE);
                     progress1.setVisibility(View.GONE);
+                    tvErrAtStep1.setVisibility(View.VISIBLE);
+                    tvErrAtStep1.setText("Failed to associate device");
                     hideLoading();
                 }
             });
-            String statusText = "Failed to associate device.";
-            goToSuccessPage(statusText);
         }
     }
 
@@ -632,22 +555,6 @@ public class ProvisionActivity extends AppCompatActivity {
         });
     }
 
-    private void goToSuccessPage(final String statusText) {
-
-        Log.e(TAG, "goToSuccessPage");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                toggleFormState(true);
-//                finish();
-//                Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
-//                goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
-//                goToSuccessPage.putExtras(getIntent());
-//                startActivity(goToSuccessPage);
-            }
-        });
-    }
-
     private Runnable addDeviceTask = new Runnable() {
 
         @Override
@@ -663,7 +570,7 @@ public class ProvisionActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-//                            Toast.makeText(ProvisionActivity2.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
+//                            Toast.makeText(ProvisionActivity.this, "Getting confirmation from cloud", Toast.LENGTH_SHORT).show();
                         }
                     });
                     doStep4();
@@ -677,16 +584,17 @@ public class ProvisionActivity extends AppCompatActivity {
                         tick3.setImageResource(R.drawable.ic_error);
                         tick3.setVisibility(View.VISIBLE);
                         progress3.setVisibility(View.GONE);
+                        tvErrAtStep3.setVisibility(View.VISIBLE);
+                        tvErrAtStep3.setText("Failed to configure node association");
+                        tvProvError.setVisibility(View.VISIBLE);
                         hideLoading();
 
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(ProvisionActivity.this, "Add Device Failed", Toast.LENGTH_LONG).show();
+//                                Toast.makeText(ProvisionActivity.this, "Add Device Failed", Toast.LENGTH_LONG).show();
                             }
                         });
-                        String statusText = "Add Device Failed";
-                        goToSuccessPage(statusText);
                     } else {
                         handler.postDelayed(addDeviceTask, ADD_DEVICE_REQ_TIME);
                     }

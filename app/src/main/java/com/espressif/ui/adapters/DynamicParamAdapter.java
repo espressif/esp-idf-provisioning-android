@@ -78,11 +78,10 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                     || dataType.equalsIgnoreCase("float")
                     || dataType.equalsIgnoreCase("double"))) {
 
-                double sliderValue = param.getSliderValue();
                 int max = param.getMaxBounds();
                 int min = param.getMinBounds();
 
-                if ((min < max) && (sliderValue >= min && sliderValue <= max)) {
+                if ((min < max)) {
 
                     displaySlider(myViewHolder, param, position);
                 } else {
@@ -140,7 +139,18 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
             myViewHolder.intSlider.setMax(max);
             myViewHolder.intSlider.setMin(min);
             myViewHolder.intSlider.setTickCount(2);
-            myViewHolder.intSlider.setProgress((int) sliderValue);
+
+            if (sliderValue < min) {
+
+                myViewHolder.intSlider.setProgress(min);
+
+            } else if (sliderValue > max) {
+
+                myViewHolder.intSlider.setProgress(max);
+
+            } else {
+                myViewHolder.intSlider.setProgress((int) sliderValue);
+            }
 
             Log.e(TAG, "=================== Param : " + param.getName() + " properties : " + param.getProperties().toString());
 
@@ -205,9 +215,21 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
             myViewHolder.floatSlider.setMax(max);
             myViewHolder.floatSlider.setMin(min);
             myViewHolder.floatSlider.setTickCount(2);
-            myViewHolder.floatSlider.setProgress((float) sliderValue);
-            Log.e(TAG, "FLOAT Slider value : " + myViewHolder.floatSlider.getProgressFloat());
+
+            if (sliderValue < min) {
+
+                myViewHolder.floatSlider.setProgress(min);
+
+            } else if (sliderValue > max) {
+
+                myViewHolder.floatSlider.setProgress(max);
+
+            } else {
+                myViewHolder.floatSlider.setProgress((float) sliderValue);
+            }
+
             Log.e(TAG, "FLOAT Slider value : " + (float) sliderValue);
+            Log.e(TAG, "FLOAT Slider value : " + myViewHolder.floatSlider.getProgressFloat());
 
             if (param.getProperties().contains("write")) {
 

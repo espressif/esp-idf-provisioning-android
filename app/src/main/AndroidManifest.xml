@@ -112,11 +112,6 @@
             android:label="@string/title_activity_change_password"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="com.espressif.ui.user_module.NewPassword"
-            android:label="@string/title_activity_new_password"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
 
     </application>
 

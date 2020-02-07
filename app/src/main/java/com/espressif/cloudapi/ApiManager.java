@@ -6,6 +6,15 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.auth0.android.jwt.Claim;
+import com.auth0.android.jwt.DecodeException;
+import com.auth0.android.jwt.JWT;
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
 import com.espressif.ui.models.EspDevice;
@@ -22,6 +31,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -62,6 +73,19 @@ public class ApiManager {
      */
     public void getSupportedVersions(final ApiResponseListener listener) {
 
+        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        Log.d(TAG, "Auth token : " + authToken);
+
+        JWT jwt = null;
+        try {
+            jwt = new JWT(authToken);
+        } catch (DecodeException e) {
+            e.printStackTrace();
+        }
+
+        Claim claimUserId = jwt.getClaim("custom:user_id");
+        userId = claimUserId.asString();
+        Log.d(TAG, "==============================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
         Log.d(TAG, "Get Supported Versions");
 
         apiInterface.getSupportedVersions()
@@ -126,70 +150,6 @@ public class ApiManager {
     }
 
     /**
-     * This method is used to get user id from user name.
-     *
-     * @param email    User name.
-     * @param listener Listener to send success or failure.
-     */
-    public void getUserId(final String email, final ApiResponseListener listener) {
-
-        Log.d(TAG, "Get User Id for user name : " + email);
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
-        Log.d(TAG, "Auth token : " + authToken);
-
-        apiInterface.getUserId(authToken, email)
-
-                .enqueue(new Callback<ResponseBody>() {
-
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-                        Log.d(TAG, "Request : " + call.request().toString());
-                        Log.d(TAG, "onResponse code  : " + response.code());
-
-                        if (response.isSuccessful()) {
-
-                            if (response.body() != null) {
-
-                                try {
-                                    String jsonResponse = response.body().string();
-                                    Log.e(TAG, "onResponse Success : " + jsonResponse);
-
-                                    JSONObject data = new JSONObject(jsonResponse);
-                                    userId = data.optString("user_id");
-                                    Log.e(TAG, "User id : " + userId);
-
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    listener.onFailure(e);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                    listener.onFailure(e);
-                                }
-                            } else {
-                                Log.e(TAG, "Response received : null");
-                                listener.onFailure(new RuntimeException("Failed to get User ID"));
-                            }
-
-                            Bundle bundle = new Bundle();
-                            bundle.putString("user_id", userId);
-                            listener.onSuccess(bundle);
-
-                        } else {
-                            listener.onFailure(new RuntimeException("Failed to get User ID"));
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        Log.e("TAG", "Error in receiving User id");
-                        t.printStackTrace();
-                        listener.onFailure(new Exception(t));
-                    }
-                });
-    }
-
-    /**
      * This method is used to get all devices for the user.
      *
      * @param listener Listener to send success or failure.
@@ -197,10 +157,10 @@ public class ApiManager {
     public void getAllDevices(final ApiResponseListener listener) {
 
         Log.d(TAG, "Get Devices");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
         Log.d(TAG, "Auth token : " + authToken);
 
-        apiInterface.getDevicesForUser(authToken, userId).enqueue(new Callback<ResponseBody>() {
+        apiInterface.getDevicesForUser(authToken).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -216,7 +176,7 @@ public class ApiManager {
                             if (espApp.nodeMap == null) {
                                 espApp.nodeMap = new HashMap<>();
                             } else {
-                                espApp.nodeMap.clear();
+//                                espApp.nodeMap.clear();
                             }
 
                             String jsonResponse = response.body().string();
@@ -229,8 +189,22 @@ public class ApiManager {
 
                                 String nodeId = jsonArray.optString(i);
                                 Log.e(TAG, "EspNode id : " + nodeId);
-                                espApp.nodeMap.put(nodeId, null);
+
+                                if (espApp.nodeMap.get(nodeId) != null) {
+                                    EspNode node = espApp.nodeMap.get(nodeId);
+                                    espApp.nodeMap.put(nodeId, node);
+                                } else {
+                                    espApp.nodeMap.put(nodeId, null);
+                                }
                                 nodeIds.add(nodeId);
+                            }
+
+                            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                                String key = entry.getKey();
+                                if (!nodeIds.contains(key)) {
+                                    espApp.nodeMap.remove(key);
+                                }
                             }
 
                             if (espApp.nodeMap.size() != 0) {
@@ -311,7 +285,7 @@ public class ApiManager {
     private void getNodeConfigFromNodeId(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Get getNodeConfigFromNodeId : " + nodeId);
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
         Log.d(TAG, "Auth token : " + authToken);
 
         apiInterface.getDevicesFromNodeId(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
@@ -333,13 +307,19 @@ public class ApiManager {
                             Log.e(TAG, "onResponse Success : " + jsonResponse);
 
                             JSONObject jsonObject = new JSONObject(jsonResponse);
-                            EspNode espNode = new EspNode(nodeId);
+                            EspNode espNode;
+                            if (espApp.nodeMap.get(nodeId) != null) {
+                                espNode = espApp.nodeMap.get(nodeId);
+                            } else {
+                                espNode = new EspNode(nodeId);
+                            }
                             espNode.setConfigVersion(jsonObject.optString("config_version"));
 
                             JSONObject infoObj = jsonObject.optJSONObject("info");
                             espNode.setNodeName(infoObj.optString("name"));
                             espNode.setFwVersion(infoObj.optString("fw_version"));
                             espNode.setNodeType(infoObj.optString("type"));
+                            espNode.setOnline(true);
 
                             JSONArray devicesJsonArray = jsonObject.optJSONArray("devices");
                             ArrayList<EspDevice> devices = new ArrayList<>();
@@ -350,10 +330,9 @@ public class ApiManager {
 
                                     JSONObject deviceObj = devicesJsonArray.optJSONObject(i);
                                     EspDevice device = new EspDevice(nodeId);
-                                    Log.e(TAG, "Device name : " + deviceObj.optString("name"));
-                                    Log.e(TAG, "Device type : " + deviceObj.optString("type"));
                                     device.setDeviceName(deviceObj.optString("name"));
                                     device.setDeviceType(deviceObj.optString("type"));
+                                    device.setPrimaryParamName(deviceObj.optString("primary"));
 
                                     JSONArray paramsJson = deviceObj.optJSONArray("params");
                                     ArrayList<Param> params = new ArrayList<>();
@@ -364,8 +343,8 @@ public class ApiManager {
 
                                             JSONObject paraObj = paramsJson.optJSONObject(j);
                                             Param param = new Param();
-                                            Log.e(TAG, "================= Received name" + paraObj.optString("name"));
                                             param.setName(paraObj.optString("name"));
+                                            param.setParamType(paraObj.optString("type"));
                                             param.setDataType(paraObj.optString("data_type"));
                                             param.setUiType(paraObj.optString("ui-type"));
                                             param.setDynamicParam(true);
@@ -398,12 +377,10 @@ public class ApiManager {
                                         for (int j = 0; j < attributesJson.length(); j++) {
 
                                             JSONObject attrObj = attributesJson.optJSONObject(j);
-                                            Log.e(TAG, "Label : " + attrObj.optString("name"));
                                             Param param = new Param();
                                             param.setName(attrObj.optString("name"));
                                             param.setDataType(attrObj.optString("data_type"));
                                             param.setLabelValue(attrObj.optString("value"));
-                                            Log.e(TAG, "Value : " + param.getLabelValue());
                                             params.add(param);
                                         }
                                     }
@@ -414,12 +391,27 @@ public class ApiManager {
                             }
 
                             espNode.setDevices(devices);
+
+                            JSONArray nodeAttributesJson = infoObj.optJSONArray("attributes");
+                            ArrayList<Param> nodeAttributes = new ArrayList<>();
+
+                            if (nodeAttributesJson != null) {
+
+                                for (int j = 0; j < nodeAttributesJson.length(); j++) {
+
+                                    JSONObject attrObj = nodeAttributesJson.optJSONObject(j);
+                                    Param param = new Param();
+                                    param.setName(attrObj.optString("name"));
+                                    param.setLabelValue(attrObj.optString("value"));
+                                    nodeAttributes.add(param);
+                                }
+                            }
+
+                            espNode.setAttributes(nodeAttributes);
+
                             espApp.nodeMap.put(nodeId, espNode);
-//
-//                            Bundle bundle = new Bundle();
-//                            bundle.putParcelableArrayList("nodes", nodeList);
-//
-//                            Log.d(TAG, "Device list : " + nodeList);
+                            getOnlineOfflineStatus(nodeId);
+
                             listener.onSuccess(null);
 
                         } catch (IOException e) {
@@ -468,13 +460,11 @@ public class ApiManager {
     public void addDevice(final String nodeId, String secretKey, final ApiResponseListener listener) {
 
         Log.d(TAG, "Add Device");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
         Log.d(TAG, "Auth token : " + authToken);
         Log.d(TAG, "nodeId : " + nodeId);
-//        Log.d(TAG, "userId : " + userId);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
-        req.setUserId(userId);
         req.setNodeId(nodeId);
         req.setSecretKey(secretKey);
         req.setOperation("add");
@@ -537,11 +527,10 @@ public class ApiManager {
     public void removeDevice(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Remove Device");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
         Log.d(TAG, "Auth token : " + authToken);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
-        req.setUserId(userId);
         req.setNodeId(nodeId);
         req.setOperation("remove");
 
@@ -585,7 +574,7 @@ public class ApiManager {
 
     public void getDynamicParamsValue(final String nodeId, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
 
         apiInterface.getParamValue(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
 
@@ -723,7 +712,7 @@ public class ApiManager {
 
     public void setDynamicParamValue(final String nodeId, JsonObject body, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
 
         try {
             apiInterface.updateParamValue(authToken, nodeId, body).enqueue(new Callback<ResponseBody>() {
@@ -777,7 +766,7 @@ public class ApiManager {
     private void getOnlineOfflineStatus(final String nodeId) {
 
         Log.d(TAG, "getOnlineOfflineStatus");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
 
         apiInterface.getOnlineOfflineStatus(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
 
@@ -819,9 +808,38 @@ public class ApiManager {
                         }
                     } else {
                         Log.e(TAG, "Get node mapping status failed");
+                        boolean nodeStatus = false;
+                        for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                            String key = entry.getKey();
+                            EspNode node = entry.getValue();
+
+                            if (nodeId.equalsIgnoreCase(key)) {
+
+                                if (node.isOnline() != nodeStatus) {
+                                    node.setOnline(nodeStatus);
+                                    EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                                }
+                            }
+                        }
                     }
 
                 } else {
+
+                    boolean nodeStatus = false;
+                    for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                        String key = entry.getKey();
+                        EspNode node = entry.getValue();
+
+                        if (nodeId.equalsIgnoreCase(key)) {
+
+                            if (node.isOnline() != nodeStatus) {
+                                node.setOnline(nodeStatus);
+                                EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                            }
+                        }
+                    }
                     Log.e(TAG, "Get node mapping status failed");
                 }
             }
@@ -833,12 +851,12 @@ public class ApiManager {
         });
     }
 
-    private void getAddNodeRequestStatus(String userId, final String nodeId, String requestId) {
+    private void getAddNodeRequestStatus(final String nodeId, String requestId) {
 
         Log.d(TAG, "getAddDeviceRequestStatus");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
 
-        apiInterface.getAddNodeRequestStatus(authToken, userId, requestId, true).enqueue(new Callback<ResponseBody>() {
+        apiInterface.getAddNodeRequestStatus(authToken, requestId, true).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -902,7 +920,7 @@ public class ApiManager {
 
                     String nodeId = key;
                     String requestId = requestIds.get(nodeId);
-                    getAddNodeRequestStatus(userId, nodeId, requestId);
+                    getAddNodeRequestStatus(nodeId, requestId);
                 }
                 getNodeReqStatus();
             } else {
@@ -951,6 +969,79 @@ public class ApiManager {
         for (String nodeId : nodeIdList) {
             getOnlineOfflineStatus(nodeId);
         }
-        handler.postDelayed(getNodeStatusTask, 10000);
+//        handler.postDelayed(getNodeStatusTask, 10000);
     }
+
+    public boolean isTokenExpired() {
+
+        Log.d(TAG, "Check isTokenExpired");
+
+        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        Log.d(TAG, "Auth token : " + authToken);
+
+        JWT jwt = null;
+        try {
+            jwt = new JWT(authToken);
+        } catch (DecodeException e) {
+            e.printStackTrace();
+        }
+
+        Date expiresAt = jwt.getExpiresAt();
+        Calendar calendar = Calendar.getInstance();
+//        calendar.add(Calendar.MINUTE, 5);
+        Date currentTIme = calendar.getTime();
+        Log.e(TAG, "Expire at : " + expiresAt);
+        Log.e(TAG, "Current time : " + currentTIme);
+
+        if (currentTIme.after(expiresAt)) {
+            Log.e(TAG, "Token has expired");
+            return true;
+        } else {
+            Log.e(TAG, "Token has not expired");
+            return false;
+        }
+    }
+
+    public void getNewToken() {
+
+        AppHelper.getPool().getUser(userName).getSessionInBackground(authenticationHandler);
+    }
+
+    AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
+
+        @Override
+        public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice newDevice) {
+            Log.e(TAG, "onSuccess ");
+            AppHelper.setCurrSession(cognitoUserSession);
+            Log.d(TAG, "Username : " + cognitoUserSession.getUsername());
+            Log.d(TAG, "IdToken : " + cognitoUserSession.getIdToken().getJWTToken());
+            Log.d(TAG, "AccessToken : " + cognitoUserSession.getAccessToken().getJWTToken());
+            Log.d(TAG, "RefreshToken : " + cognitoUserSession.getRefreshToken().getToken());
+            AppHelper.newDevice(newDevice);
+        }
+
+        @Override
+        public void getAuthenticationDetails(AuthenticationContinuation authenticationContinuation, String userId) {
+            Log.e(TAG, "getAuthenticationDetails ");
+        }
+
+        @Override
+        public void getMFACode(MultiFactorAuthenticationContinuation continuation) {
+            Log.e(TAG, "getMFACode ");
+        }
+
+        @Override
+        public void authenticationChallenge(ChallengeContinuation continuation) {
+            Log.e(TAG, "authenticationChallenge ");
+        }
+
+        @Override
+        public void onFailure(Exception exception) {
+            Log.e(TAG, "onFailure ");
+            exception.printStackTrace();
+
+            // TODO
+            // Do Signout
+        }
+    };
 }

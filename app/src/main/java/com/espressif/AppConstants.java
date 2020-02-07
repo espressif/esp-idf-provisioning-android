@@ -33,10 +33,24 @@ public class AppConstants {
     public static final String UI_TYPE_SLIDER = "esp-ui-slider";
 
     // ESP Device Types
-    public static final String ESP_DEVICE_BULB = "esp.device.lightbulb";
     public static final String ESP_DEVICE_SWITCH = "esp.device.switch";
+    public static final String ESP_DEVICE_BULB = "esp.device.lightbulb";
+    public static final String ESP_DEVICE_BULB_CCT = "esp.device.lightbulb-cct";
+    public static final String ESP_DEVICE_BULB_RGB = "esp.device.lightbulb-rgb";
+    public static final String ESP_DEVICE_LOCK = "esp.device.lock";
+    public static final String ESP_DEVICE_THERMOSTAT = "esp.device.thermostat";
+    public static final String ESP_DEVICE_FAN = "esp.device.fan";
+    public static final String ESP_DEVICE_SENSOR = "esp.device.sensor";
+    public static final String ESP_DEVICE_TEMP_SENSOR = "esp.device.temperature_sensor";
+
+
+    // Param Types
+    public static final String PARAM_TYPE_OUTPUT = "esp.param.output";
+    public static final String PARAM_TYPE_BRIGHTNESS = "esp.param.brightness";
+    public static final String PARAM_TYPE_TEMPERATURE = "esp.param.temperature";
 
     public enum UpdateEventType {
+
         EVENT_DEVICE_ADDED,
         EVENT_DEVICE_REMOVED,
         EVENT_ADD_DEVICE_TIME_OUT,

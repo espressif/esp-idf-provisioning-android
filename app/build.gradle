@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
+apply plugin: 'com.google.gms.google-services'
 
 android {
 
@@ -95,7 +96,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
     implementation 'com.google.protobuf:protobuf-lite:3.0.1'
     implementation 'com.google.crypto.tink:tink-android:1.1.0'
-    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.13.6'
+    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.15.2'
     implementation 'com.squareup.retrofit2:retrofit:2.6.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
     implementation 'com.google.code.gson:gson:2.8.2'
@@ -104,7 +105,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-vision:19.0.0'
     implementation project(':barcode-reader')
     implementation 'com.github.warkiz.tickseekbar:tickseekbar:0.1.4'
-//    implementation 'net.openid:appauth:0.7.1'
     implementation('com.amazonaws:aws-android-sdk-iot:2.15.+@aar') { transitive = true }
     implementation('com.amazonaws:aws-android-sdk-mobile-client:2.15.+@aar') { transitive = true }
+    implementation 'com.google.firebase:firebase-analytics:17.2.2'
+    implementation 'com.auth0.android:jwtdecode:1.4.0'
 }

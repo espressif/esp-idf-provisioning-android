@@ -25,7 +25,7 @@ public interface ApiInterface {
 
     // Get Nodes
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes")
-    Call<ResponseBody> getDevicesForUser(@Header(ApiClient.HEADER_AUTHORIZATION) String token, @Query("userid") String userId);
+    Call<ResponseBody> getDevicesForUser(@Header(ApiClient.HEADER_AUTHORIZATION) String token);
 
     // Get EspNode Detail
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/config")
@@ -38,7 +38,6 @@ public interface ApiInterface {
     // Get Add device request status
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user/nodes/mapping")
     Call<ResponseBody> getAddNodeRequestStatus(@Header(ApiClient.HEADER_AUTHORIZATION) String token,
-                                               @Query("userid") String userid,
                                                @Query("request_id") String requestId, @Query("user_request") boolean userReq);
 
     // Get dynamic param value

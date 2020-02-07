@@ -2,8 +2,6 @@
     <string name="app_name">ESP Demo</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_provision_landing">Connect to device</string>
-    <string name="connect_to_device_instructions">To provision your new device, please make sure that your device is turned on. Now connect your phone to the Wi-Fi network with a name like</string>
-    <string name="connected_to_device_instructions">You are now connected to the device. To provision the device, please enter your Network credentials on the next page.</string>
     <string name="no_internet_note">To make sure you are really connected to the device, please make sure you accept the system dialog informing you that network has no internet access.</string>
     <string name="connect_to_device_action">Connect</string>
     <string name="connected_to_device_action">Provision Network</string>
@@ -45,15 +43,11 @@
     <string name="error_ble_not_supported">Sorry! BLE is not supported.</string>
     <string name="error_bluetooth_not_supported">Sorry! Bluetooth is not supported.</string>
     <string name="error_device_not_supported">Communication failed. Device may not be supported.</string>
-    <string name="error_network_not_found">Device provisioning failed. Reason : Network not found. Please reset device to factory settings and retry.</string>
-    <string name="error_authentication_failed">Device provisioning failed. Reason : Wi-Fi Authentication failed. Please reset device to factory settings and retry.</string>
-    <string name="error_unknown">Device provisioning failed. Reason : Unknown. Please reset device to factory settings and retry.</string>
     <string name="error_pop_incorrect">Error establishing session.\n Check if Proof of Possession(POP) is correct!</string>
 
     <!--Screen titles-->
     <string name="title_activity_provision_success">ProvisionSuccessActivity</string>
     <string name="title_activity_settings">Settings</string>
-    <string name="title_activity_new_password">NewPassword</string>
     <string name="title_activity_esp_device">Device</string>
 
     <string name="prefix">Prefix :</string>
@@ -73,10 +67,10 @@
     <string name="Password">Password</string>
     <string name="Menu">Menu</string>
     <string name="app_main_desc">A sample app to showcase Cognito Identity and the SDK for Android.</string>
-    <string name="pick_MFA">MFA Options</string>
     <string name="powered_by_esp">Powered by ESPRESSIF</string>
-
-    <string name="have_qr_code"><u>Do you have QR code to connect device ?</u></string>
+    <string name="no_devices">No devices added</string>
+    <string name="add_device_txt">You can provision a device by scanning the QR code or you can do it manually my tapping on + icon on right-top of this screen.</string>
+    <string name="signup_confirm_msg">Enter verification code.</string>
 
     <!--Tab titles-->
     <string name="tab_login">Login</string>
@@ -142,11 +136,15 @@
     <string name="error_ssid_empty">Network name cannot be empty</string>
     <string name="error_password_not_matched">Passwords not matched</string>
     <string name="error_agree_terms_n_condition">Please agree to privacy policy and terms &amp; conditions.</string>
+    <string name="error_provisioning">Reset your board to factory defaults and retry</string>
+    <string name="error_authentication_failed">Wi-Fi Authentication failed.</string>
+    <string name="error_network_not_found">Network not found.</string>
+    <string name="error_unknown">Unknown Error.</string>
 
     <!--Link texts-->
-    <string name="link_documentation"><a href="https://www.espressif.com/">Documentation</a></string>
-    <string name="link_privacy"><a href="https://www.espressif.com/">Privacy</a></string>
-    <string name="link_terms_condition"><a href="https://www.espressif.com/">Terms &amp; Conditions</a></string>
+    <string name="link_documentation"><a href="http://www.rainmaker.espressif.com/">Documentation</a></string>
+    <string name="link_privacy"><a href="https://rainmaker.espressif.com/docs/privacy-policy.html">Privacy</a></string>
+    <string name="link_terms_condition"><a href="https://rainmaker.espressif.com/docs/privacy-policy.html">Terms &amp; Conditions</a></string>
 
     <!--Dialog texts-->
     <string name="dialog_title_login_failed">Sign-in failed</string>
@@ -170,14 +168,14 @@
     <string name="use_email_id">or use your email id</string>
     <string name="forgot_password">Forgot password?</string>
     <string name="resend_code">Resend Code</string>
-    <string name="connect_your_device">Connect your device</string>
+    <string name="connect_your_device">Connect to your device</string>
     <string name="password_instruction">Password should contain at least one capital letter, one special character and a number.</string>
     <string name="forgot_password_instruction">Please enter your registered email id to reset your password.</string>
     <string name="reset_password_instruction">Set your new password with the verification code that was sent to you.</string>
-    <string name="connect_device_instruction">To provision your device: make sure it is turned ON. Connect your mobile phone to the Wi-Fi network with a name like PROV_XXXXXX</string>
+    <string name="connect_device_instruction">To provision your device, make sure it is turned ON. Connect your mobile phone to the Wi-Fi network with a name like PROV_XXXXXX</string>
     <string name="pop_instruction">Enter your proof of possession PIN for</string>
 
-    <string name="prov_step_1">Sending WI-Fi credentials</string>
+    <string name="prov_step_1">Sending Wi-Fi credentials</string>
     <string name="prov_step_2">Confirming Wi-Fi connection</string>
     <string name="prov_step_3">Configuring User-Node association</string>
     <string name="prov_step_4">Confirming User-Node association</string>

@@ -13,6 +13,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.cardview.widget.CardView;
 import androidx.core.widget.ContentLoadingProgressBar;
@@ -96,6 +97,7 @@ public class LoginFragment extends Fragment {
         linkTerms.setMovementMethod(LinkMovementMethod.getInstance());
 
         btnLogin.setOnClickListener(loginBtnClickListener);
+        btnLoginWithGitHub.setOnClickListener(githubLoginBtnClickListener);
         tvForgotPassword.setOnClickListener(forgotPasswordClickListener);
 
         etPassword.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -206,6 +208,21 @@ public class LoginFragment extends Fragment {
         @Override
         public void onClick(View v) {
             signInUser();
+        }
+    };
+
+    View.OnClickListener githubLoginBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            Toast.makeText(getActivity(), "Feature will be available soon", Toast.LENGTH_SHORT).show();
+//            Intent popIntent = new Intent(getActivity().getApplicationContext(), TestGithub.class);
+//            startActivity(popIntent);
+
+//                        Uri uri = Uri.parse("https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=com.espressif.rainmaker://success&response_type=CODE&client_id=2fmtjlo5cve01ukiisu1b6poft");
+//                        Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
+//                        startActivity(openURL);
         }
     };
 

@@ -3,6 +3,7 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -35,6 +36,7 @@ public class UserProfileActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_profile);
+        overridePendingTransition(R.anim.enter_anim, R.anim.exit_anim);
 
         initViews();
     }
@@ -127,6 +129,10 @@ public class UserProfileActivity extends AppCompatActivity {
             if (str.equals(getString(R.string.title_activity_change_password))) {
 
                 startActivity(new Intent(UserProfileActivity.this, ChangePasswordActivity.class));
+            } else if (str.equals("Privacy Policy")) {
+
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                startActivity(openURL);
             }
         }
     };

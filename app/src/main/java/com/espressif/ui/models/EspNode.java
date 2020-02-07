@@ -14,6 +14,7 @@ public class EspNode implements Parcelable {
     private String nodeType;
     private boolean isOnline;
     private ArrayList<EspDevice> devices;
+    private ArrayList<Param> attributes;
 
     public EspNode(String id) {
         nodeId = id;
@@ -71,6 +72,14 @@ public class EspNode implements Parcelable {
         this.devices = devices;
     }
 
+    public ArrayList<Param> getAttributes() {
+        return attributes;
+    }
+
+    public void setAttributes(ArrayList<Param> attributes) {
+        this.attributes = attributes;
+    }
+
     protected EspNode(Parcel in) {
 
         nodeId = in.readString();
@@ -80,6 +89,7 @@ public class EspNode implements Parcelable {
         nodeType = in.readString();
         isOnline = in.readByte() != 0;
         devices = in.createTypedArrayList(EspDevice.CREATOR);
+        attributes = in.createTypedArrayList(Param.CREATOR);
     }
 
     public static final Creator<EspNode> CREATOR = new Creator<EspNode>() {
@@ -109,5 +119,6 @@ public class EspNode implements Parcelable {
         dest.writeString(nodeType);
         dest.writeByte((byte) (isOnline ? 1 : 0));
         dest.writeTypedList(devices);
+        dest.writeTypedList(attributes);
     }
 }

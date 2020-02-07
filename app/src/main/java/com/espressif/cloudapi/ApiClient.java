@@ -10,7 +10,7 @@ public class ApiClient {
 
     private static Retrofit retrofit = null;
 
-    public static final String BASE_URL = "https://c6rw29xb88.execute-api.us-east-1.amazonaws.com/dev";
+    public static final String BASE_URL = "https://api.staging.rainmaker.espressif.com";
     public static final String CURRENT_VERSION = "v1";
     public static final String PATH_SEPARATOR = "/";
     public static final String HEADER_AUTHORIZATION = "Authorization";

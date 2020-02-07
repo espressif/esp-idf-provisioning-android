@@ -2,10 +2,16 @@ package com.espressif.ui.fragments;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -60,6 +66,7 @@ public class SignUpFragment extends Fragment {
     private ImageView arrowImage;
     private ContentLoadingProgressBar progressBar;
     private AlertDialog userDialog;
+    private TextView tvPolicy;
 
     private String email, password, confirmPassword;
 
@@ -162,6 +169,49 @@ public class SignUpFragment extends Fragment {
         txtRegisterBtn = view.findViewById(R.id.text_btn);
         arrowImage = view.findViewById(R.id.iv_arrow);
         progressBar = view.findViewById(R.id.progress_indicator);
+        tvPolicy = view.findViewById(R.id.tv_terms_condition);
+
+        SpannableString stringForAlexaAppLink = new SpannableString(getString(R.string.read_terms_condition));
+
+        ClickableSpan privacyPolicyClick = new ClickableSpan() {
+
+            @Override
+            public void onClick(View textView) {
+                textView.invalidate();
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                startActivity(openURL);
+            }
+
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(getResources().getColor(R.color.colorPrimary));
+                ds.setUnderlineText(true);
+            }
+        };
+
+        ClickableSpan termsConditionClick = new ClickableSpan() {
+
+            @Override
+            public void onClick(View textView) {
+                textView.invalidate();
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                startActivity(openURL);
+            }
+
+            @Override
+            public void updateDrawState(TextPaint ds) {
+                super.updateDrawState(ds);
+                ds.setColor(getResources().getColor(R.color.colorPrimary));
+                ds.setUnderlineText(true);
+            }
+        };
+
+        stringForAlexaAppLink.setSpan(privacyPolicyClick, 29, 43, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        stringForAlexaAppLink.setSpan(termsConditionClick, 48, 66, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        tvPolicy.setText(stringForAlexaAppLink);
+        tvPolicy.setMovementMethod(LinkMovementMethod.getInstance());
 
         // Email
         etEmail = view.findViewById(R.id.et_email);
