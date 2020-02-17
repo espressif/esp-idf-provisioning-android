@@ -145,7 +145,7 @@ public class EspMainActivity extends AppCompatActivity {
         recyclerView.setVisibility(View.GONE);
 
         showLoading();
-        apiManager = new ApiManager(getApplicationContext());
+        apiManager = ApiManager.getInstance(getApplicationContext());
         getSupportedVersions();
     }
 
@@ -492,7 +492,7 @@ public class EspMainActivity extends AppCompatActivity {
                 rlNoDevices.setVisibility(View.VISIBLE);
                 tvNoDevice.setVisibility(View.VISIBLE);
                 tvAddDevice.setVisibility(View.GONE);
-                ivNoDevice.setVisibility(View.GONE);
+                ivNoDevice.setVisibility(View.VISIBLE);
                 recyclerView.setVisibility(View.GONE);
             }
         });
@@ -527,7 +527,7 @@ public class EspMainActivity extends AppCompatActivity {
                 rlNoDevices.setVisibility(View.VISIBLE);
                 tvNoDevice.setVisibility(View.VISIBLE);
                 tvAddDevice.setVisibility(View.GONE);
-                ivNoDevice.setVisibility(View.GONE);
+                ivNoDevice.setVisibility(View.VISIBLE);
                 recyclerView.setVisibility(View.GONE);
             }
         });

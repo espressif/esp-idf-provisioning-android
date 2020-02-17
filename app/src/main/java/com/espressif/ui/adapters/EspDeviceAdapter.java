@@ -39,7 +39,7 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
     public EspDeviceAdapter(Context context, ArrayList<EspDevice> deviceList) {
         this.context = context;
         this.deviceList = deviceList;
-        apiManager = new ApiManager(context.getApplicationContext());
+        apiManager = ApiManager.getInstance(context.getApplicationContext());
     }
 
     @Override
@@ -94,6 +94,10 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
             } else if (AppConstants.ESP_DEVICE_THERMOSTAT.equals(device.getDeviceType())) {
 
                 myViewHolder.ivDevice.setImageResource(R.drawable.ic_device_thermostat);
+
+            } else if (AppConstants.ESP_DEVICE_FAN.equals(device.getDeviceType())) {
+
+                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device_fan);
 
             } else if (AppConstants.ESP_DEVICE_SENSOR.equals(device.getDeviceType())) {
 

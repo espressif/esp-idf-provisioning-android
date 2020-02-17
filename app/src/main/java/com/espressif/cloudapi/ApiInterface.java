@@ -1,12 +1,18 @@
 package com.espressif.cloudapi;
 
+import com.espressif.AppConstants;
 import com.google.gson.JsonObject;
+
+import java.util.HashMap;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.Field;
+import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
+import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Query;
 
@@ -15,9 +21,24 @@ import retrofit2.http.Query;
  */
 public interface ApiInterface {
 
+    @FormUrlEncoded
+//    @POST(AppConstants.GITHUB_PROD_TOKEN_URL)
+    @POST(AppConstants.GITHUB_STAGING_TOKEN_URL)
+    Call<ResponseBody> loginWithGithub(@Header("Content-type") String contentType,
+                                       @Header(ApiClient.HEADER_AUTHORIZATION) String authorization,
+                                       @Field("grant_type") String grant_type,
+                                       @Field("client_id") String client_id,
+                                       @Field("code") String code,
+                                       @Field("client_secret") String client_secret,
+                                       @Field("redirect_uri") String redirect_uri);
+
     // Get Supported Versions
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + "apiversions")
     Call<ResponseBody> getSupportedVersions();
+
+    // Do login (for GitHub login)
+    @POST(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/login")
+    Call<ResponseBody> getGitHubLoginToken(@Body HashMap<String, String> body);
 
     // Get User Id
     @GET(ApiClient.BASE_URL + ApiClient.PATH_SEPARATOR + ApiClient.CURRENT_VERSION + "/user")

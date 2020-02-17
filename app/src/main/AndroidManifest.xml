@@ -44,6 +44,20 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!--rainmaker://com.espressif.rainmaker/success-->
+                <data
+                    android:host="com.espressif.rainmaker"
+                    android:path="/success"
+                    android:scheme="rainmaker" />
+            </intent-filter>
+
         </activity>
         <activity
             android:name="com.espressif.ui.activities.ProvisionLanding"

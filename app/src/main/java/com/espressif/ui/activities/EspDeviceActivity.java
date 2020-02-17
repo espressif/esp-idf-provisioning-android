@@ -53,7 +53,7 @@ public class EspDeviceActivity extends AppCompatActivity {
         setContentView(R.layout.activity_esp_device);
 
         espApp = (EspApplication) getApplicationContext();
-        apiManager = new ApiManager(getApplicationContext());
+        apiManager = ApiManager.getInstance(getApplicationContext());
         espDevice = getIntent().getParcelableExtra(AppConstants.KEY_ESP_DEVICE);
 
         ArrayList<Param> espDeviceParams = espDevice.getParams();

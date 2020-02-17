@@ -1,9 +1,13 @@
 package com.espressif.ui.fragments;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,6 +24,9 @@ import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.fragment.app.Fragment;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
+import com.espressif.AppConstants;
+import com.espressif.cloudapi.ApiManager;
+import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.R;
 import com.espressif.ui.Utils;
 import com.espressif.ui.activities.MainActivity;
@@ -38,7 +45,7 @@ public class LoginFragment extends Fragment {
     private CardView btnLogin, btnLoginWithGitHub;
     private TextView txtLoginBtn, txtLoginWithGitHubBtn;
     private ImageView arrowImageLogin, imageLoginWithGitHub;
-    private ContentLoadingProgressBar progressBarLogin;
+    private ContentLoadingProgressBar progressBarLogin, progressBarLoginGitHub;
     private TextView tvForgotPassword;
     private TextView linkDoc, linkPrivacy, linkTerms;
 
@@ -67,6 +74,48 @@ public class LoginFragment extends Fragment {
         return root;
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.e(TAG, "ON ACTIVITY RESULT");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        Intent activityIntent = getActivity().getIntent();
+
+        if (activityIntent.getData() != null && activityIntent.getData().toString().contains(AppConstants.REDIRECT_URI)) {
+
+            showGitHubLoginLoading();
+            Log.e(TAG, "Data : " + activityIntent.getData().toString());
+            String code = activityIntent.getData().toString().replace(AppConstants.REDIRECT_URI, "");
+            code = code.replace("?code=", "");
+            Log.e(TAG, "Code : " + code);
+
+            ApiManager apiManager = ApiManager.getInstance(getActivity().getApplicationContext());
+            apiManager.loginGithub(code, new ApiResponseListener() {
+
+                @Override
+                public void onSuccess(Bundle data) {
+
+                    hideGitHubLoginLoading();
+                    ((MainActivity) getActivity()).launchProvisioningApp();
+                }
+
+                @Override
+                public void onFailure(Exception exception) {
+                    hideGitHubLoginLoading();
+                    Toast.makeText(getActivity(), "Fail to login with GitHub", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+        } else {
+            Log.e(TAG, "Data is null");
+        }
+    }
+
     private void init(View view) {
 
         btnLogin = view.findViewById(R.id.btn_login);
@@ -78,6 +127,7 @@ public class LoginFragment extends Fragment {
 
         txtLoginWithGitHubBtn = btnLoginWithGitHub.findViewById(R.id.text_btn);
         imageLoginWithGitHub = btnLoginWithGitHub.findViewById(R.id.iv_arrow);
+        progressBarLoginGitHub = btnLoginWithGitHub.findViewById(R.id.progress_indicator);
 
         txtLoginBtn.setText(R.string.btn_login);
         txtLoginWithGitHubBtn.setVisibility(View.GONE);
@@ -115,12 +165,31 @@ public class LoginFragment extends Fragment {
 
     private void findCurrent() {
 
-        CognitoUser user = AppHelper.getPool().getCurrentUser();
-        email = user.getUserId();
+        SharedPreferences sharedPreferences = getActivity().getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        ApiManager.isGitHubLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, false);
 
-        if (email != null) {
-            AppHelper.setUser(email);
-            etEmail.setText(user.getUserId());
+        if (ApiManager.isGitHubLogin) {
+
+            showGitHubLoginLoading();
+            ApiManager apiManager = ApiManager.getInstance(getActivity().getApplicationContext());
+
+            if (apiManager.isTokenExpired()) {
+
+                apiManager.getNewToken();
+            } else {
+                hideGitHubLoginLoading();
+                ((MainActivity) getActivity()).launchProvisioningApp();
+            }
+
+        } else {
+
+            CognitoUser user = AppHelper.getPool().getCurrentUser();
+            email = user.getUserId();
+
+            if (email != null) {
+                AppHelper.setUser(email);
+                etEmail.setText(user.getUserId());
+            }
         }
     }
 
@@ -203,6 +272,20 @@ public class LoginFragment extends Fragment {
         arrowImageLogin.setVisibility(View.VISIBLE);
     }
 
+    public void showGitHubLoginLoading() {
+
+        btnLoginWithGitHub.setEnabled(false);
+        btnLoginWithGitHub.setAlpha(0.5f);
+        progressBarLoginGitHub.setVisibility(View.VISIBLE);
+    }
+
+    public void hideGitHubLoginLoading() {
+
+        btnLoginWithGitHub.setEnabled(true);
+        btnLoginWithGitHub.setAlpha(1f);
+        progressBarLoginGitHub.setVisibility(View.GONE);
+    }
+
     View.OnClickListener loginBtnClickListener = new View.OnClickListener() {
 
         @Override
@@ -216,13 +299,10 @@ public class LoginFragment extends Fragment {
         @Override
         public void onClick(View v) {
 
-            Toast.makeText(getActivity(), "Feature will be available soon", Toast.LENGTH_SHORT).show();
-//            Intent popIntent = new Intent(getActivity().getApplicationContext(), TestGithub.class);
-//            startActivity(popIntent);
-
-//                        Uri uri = Uri.parse("https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=com.espressif.rainmaker://success&response_type=CODE&client_id=2fmtjlo5cve01ukiisu1b6poft");
-//                        Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
-//                        startActivity(openURL);
+//            Uri uri = Uri.parse(AppConstants.GITHUB_PROD);
+            Uri uri = Uri.parse(AppConstants.GITHUB_STAGING);
+            Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
+            startActivity(openURL);
         }
     };
 

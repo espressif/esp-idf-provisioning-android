@@ -1,9 +1,11 @@
 package com.espressif.cloudapi;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
@@ -17,6 +19,7 @@ import com.auth0.android.jwt.DecodeException;
 import com.auth0.android.jwt.JWT;
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
+import com.espressif.provision.R;
 import com.espressif.ui.models.EspDevice;
 import com.espressif.ui.models.EspNode;
 import com.espressif.ui.models.Param;
@@ -30,6 +33,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -49,8 +53,12 @@ public class ApiManager {
     private static final int REQ_STATUS_TIME = 5000;
     private static final int TIME_OUT = 60000;
 
+    public static boolean isGitHubLogin;
     public static String userName = "";
     public static String userId = "";
+    private static String idToken = "";
+    private static String accessToken = "";
+    private static String refreshToken = "";
     public static HashMap<String, String> requestIds = new HashMap<>(); // Map of node id and request id.
 
     private Context context;
@@ -59,11 +67,101 @@ public class ApiManager {
     private ApiInterface apiInterface;
     private static ArrayList<String> nodeIds = new ArrayList<>();
 
-    public ApiManager(Context context) {
+    private static ApiManager apiManager;
+
+    public static ApiManager getInstance(Context context) {
+
+        if (apiManager == null) {
+            apiManager = new ApiManager(context);
+        }
+        return apiManager;
+    }
+
+    private ApiManager(Context context) {
         this.context = context;
         handler = new Handler();
         espApp = (EspApplication) context.getApplicationContext();
         apiInterface = ApiClient.getClient().create(ApiInterface.class);
+    }
+
+    public void loginGithub(String code, final ApiResponseListener listener) {
+
+        String auth = context.getString(R.string.client_id) + ":" + context.getString(R.string.client_secret);
+        byte[] data = new byte[0];
+        try {
+            data = auth.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
+        String authHeader = "Basic " + base64;
+        Log.e(TAG, "Auth : " + auth);
+        Log.e(TAG, "Base64 : " + base64);
+        Log.e(TAG, "authHeader : " + authHeader);
+
+        try {
+            apiInterface.loginWithGithub("application/x-www-form-urlencoded", authHeader,
+                    "authorization_code", context.getString(R.string.client_id), code,
+                    context.getString(R.string.client_secret), AppConstants.REDIRECT_URI).enqueue(new Callback<ResponseBody>() {
+
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                    Log.d(TAG, "Request : " + call.request().toString());
+                    Log.d(TAG, "onResponse code  : " + response.code());
+                    try {
+                        if (response.isSuccessful()) {
+
+                            String jsonResponse = response.body().string();
+                            JSONObject jsonObject = new JSONObject(jsonResponse);
+                            idToken = jsonObject.getString("id_token");
+                            accessToken = jsonObject.getString("access_token");
+                            refreshToken = jsonObject.getString("refresh_token");
+                            Log.e(TAG, "Access token : " + accessToken);
+
+                            SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
+                            editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
+                            editor.putString(AppConstants.KEY_REFRESH_TOKEN, refreshToken);
+                            editor.putBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, true);
+                            editor.apply();
+
+                            isGitHubLogin = true;
+
+                            JWT jwt = null;
+                            try {
+                                jwt = new JWT(idToken);
+                            } catch (DecodeException e) {
+                                e.printStackTrace();
+                            }
+
+                            Claim claimUserId = jwt.getClaim("cognito:username");
+                            userId = claimUserId.asString();
+                            Claim claimEmail = jwt.getClaim("email");
+                            String email = claimEmail.asString();
+                            userName = email;
+                            listener.onSuccess(null);
+                        } else {
+                            listener.onFailure(new RuntimeException("Failed to login with GitHub"));
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        listener.onFailure(e);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        listener.onFailure(e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    t.printStackTrace();
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -73,18 +171,42 @@ public class ApiManager {
      */
     public void getSupportedVersions(final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
-        Log.d(TAG, "Auth token : " + authToken);
+        if (isGitHubLogin) {
 
-        JWT jwt = null;
-        try {
-            jwt = new JWT(authToken);
-        } catch (DecodeException e) {
-            e.printStackTrace();
+            if (TextUtils.isEmpty(accessToken)) {
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+
+                idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
+                accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
+                refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
+            }
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserId = jwt.getClaim("cognito:username");
+            userId = claimUserId.asString();
+
+        } else {
+
+            String idToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserId = jwt.getClaim("custom:user_id");
+            userId = claimUserId.asString();
         }
 
-        Claim claimUserId = jwt.getClaim("custom:user_id");
-        userId = claimUserId.asString();
         Log.d(TAG, "==============================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
         Log.d(TAG, "Get Supported Versions");
 
@@ -157,7 +279,13 @@ public class ApiManager {
     public void getAllDevices(final ApiResponseListener listener) {
 
         Log.d(TAG, "Get Devices");
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
 
         apiInterface.getDevicesForUser(authToken).enqueue(new Callback<ResponseBody>() {
@@ -266,6 +394,7 @@ public class ApiManager {
 
                 @Override
                 public void onFailure(Exception exception) {
+                    // TODO fix the issue
                     exception.printStackTrace();
 //                        listener.onFailure(exception);
                     getNextNodeDetail(listener);
@@ -285,7 +414,14 @@ public class ApiManager {
     private void getNodeConfigFromNodeId(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Get getNodeConfigFromNodeId : " + nodeId);
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
+
         Log.d(TAG, "Auth token : " + authToken);
 
         apiInterface.getDevicesFromNodeId(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
@@ -460,7 +596,13 @@ public class ApiManager {
     public void addDevice(final String nodeId, String secretKey, final ApiResponseListener listener) {
 
         Log.d(TAG, "Add Device");
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
         Log.d(TAG, "nodeId : " + nodeId);
 
@@ -527,7 +669,13 @@ public class ApiManager {
     public void removeDevice(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Remove Device");
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
@@ -574,7 +722,13 @@ public class ApiManager {
 
     public void getDynamicParamsValue(final String nodeId, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
 
         apiInterface.getParamValue(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
 
@@ -712,7 +866,13 @@ public class ApiManager {
 
     public void setDynamicParamValue(final String nodeId, JsonObject body, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
 
         try {
             apiInterface.updateParamValue(authToken, nodeId, body).enqueue(new Callback<ResponseBody>() {
@@ -766,7 +926,13 @@ public class ApiManager {
     private void getOnlineOfflineStatus(final String nodeId) {
 
         Log.d(TAG, "getOnlineOfflineStatus");
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
 
         apiInterface.getOnlineOfflineStatus(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
 
@@ -774,7 +940,7 @@ public class ApiManager {
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
 
                 Log.d(TAG, "Request : " + call.request().toString());
-                Log.d(TAG, "EspNode mapping status response code : " + response.code());
+                Log.d(TAG, "EspNode status response code : " + response.code());
 
                 if (response.isSuccessful()) {
 
@@ -807,7 +973,7 @@ public class ApiManager {
                             e.printStackTrace();
                         }
                     } else {
-                        Log.e(TAG, "Get node mapping status failed");
+                        Log.e(TAG, "Get node status failed");
                         boolean nodeStatus = false;
                         for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
 
@@ -840,7 +1006,7 @@ public class ApiManager {
                             }
                         }
                     }
-                    Log.e(TAG, "Get node mapping status failed");
+                    Log.e(TAG, "Get node status failed");
                 }
             }
 
@@ -854,7 +1020,13 @@ public class ApiManager {
     private void getAddNodeRequestStatus(final String nodeId, String requestId) {
 
         Log.d(TAG, "getAddDeviceRequestStatus");
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
 
         apiInterface.getAddNodeRequestStatus(authToken, requestId, true).enqueue(new Callback<ResponseBody>() {
 
@@ -976,7 +1148,38 @@ public class ApiManager {
 
         Log.d(TAG, "Check isTokenExpired");
 
-        String authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+
+            if (TextUtils.isEmpty(accessToken)) {
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+
+                idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
+                accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
+                refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
+
+                Log.e(TAG, "ID Token : " + idToken);
+            }
+            authToken = accessToken;
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserName = jwt.getClaim("cognito:username");
+            userId = claimUserName.asString();
+            Claim claimEmail = jwt.getClaim("email");
+            String email = claimEmail.asString();
+            userName = email;
+
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
 
         JWT jwt = null;
@@ -988,7 +1191,6 @@ public class ApiManager {
 
         Date expiresAt = jwt.getExpiresAt();
         Calendar calendar = Calendar.getInstance();
-//        calendar.add(Calendar.MINUTE, 5);
         Date currentTIme = calendar.getTime();
         Log.e(TAG, "Expire at : " + expiresAt);
         Log.e(TAG, "Current time : " + currentTIme);
@@ -1004,13 +1206,77 @@ public class ApiManager {
 
     public void getNewToken() {
 
-        AppHelper.getPool().getUser(userName).getSessionInBackground(authenticationHandler);
+        if (isGitHubLogin) {
+            getNewTokenForGitHub();
+        } else {
+            AppHelper.getPool().getUser(userName).getSessionInBackground(authenticationHandler);
+        }
+    }
+
+    private void getNewTokenForGitHub() {
+
+        HashMap<String, String> body = new HashMap<>();
+        Log.d(TAG, "USER NAME : " + userId);
+        Log.d(TAG, "Refresh token : " + refreshToken);
+        body.put("user_name", userId);
+        body.put("refreshtoken", refreshToken);
+
+        apiInterface.getGitHubLoginToken(body).enqueue(new Callback<ResponseBody>() {
+
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                Log.d(TAG, "Request : " + call.request().toString());
+                Log.d(TAG, "onResponse code  : " + response.code());
+                try {
+                    if (response.isSuccessful()) {
+
+                        String jsonResponse = response.body().string();
+                        JSONObject jsonObject = new JSONObject(jsonResponse);
+                        idToken = jsonObject.getString("idtoken");
+                        accessToken = jsonObject.getString("accesstoken");
+
+                        SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
+                        editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
+                        editor.putBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, true);
+                        editor.apply();
+
+                        isGitHubLogin = true;
+
+                        JWT jwt = null;
+                        try {
+                            jwt = new JWT(idToken);
+                        } catch (DecodeException e) {
+                            e.printStackTrace();
+                        }
+
+                        Claim claimUserId = jwt.getClaim("cognito:username");
+                        userId = claimUserId.asString();
+                        Claim claimEmail = jwt.getClaim("email");
+                        String email = claimEmail.asString();
+                        userName = email;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
     }
 
     AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
 
         @Override
         public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice newDevice) {
+
             Log.e(TAG, "onSuccess ");
             AppHelper.setCurrSession(cognitoUserSession);
             Log.d(TAG, "Username : " + cognitoUserSession.getUsername());

@@ -51,7 +51,7 @@ public class NodeDetailsActivity extends AppCompatActivity {
         nodeInfoList = new ArrayList<>();
         nodeInfoValueList = new ArrayList<>();
         espApp = (EspApplication) getApplicationContext();
-        apiManager = new ApiManager(getApplicationContext());
+        apiManager = ApiManager.getInstance(getApplicationContext());
         String nodeId = getIntent().getStringExtra(AppConstants.KEY_NODE_ID);
         node = espApp.nodeMap.get(nodeId);
         setNodeInfo();

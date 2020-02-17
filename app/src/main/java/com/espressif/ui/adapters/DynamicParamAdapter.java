@@ -48,7 +48,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
         this.nodeId = nodeId;
         this.deviceName = deviceName;
         this.params = deviceList;
-        apiManager = new ApiManager(context.getApplicationContext());
+        apiManager = ApiManager.getInstance(context.getApplicationContext());
     }
 
     @Override

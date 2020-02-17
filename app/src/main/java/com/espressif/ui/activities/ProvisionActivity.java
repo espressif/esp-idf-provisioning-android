@@ -539,7 +539,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private void addDeviceToCloud(final ApiResponseListener responseListener) {
 
-        ApiManager apiManager = new ApiManager(getApplicationContext());
+        ApiManager apiManager = ApiManager.getInstance(getApplicationContext());
         apiManager.addDevice(deviceSecret, secretKey, new ApiResponseListener() {
 
             @Override

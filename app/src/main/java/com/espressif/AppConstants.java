@@ -25,6 +25,10 @@ public class AppConstants {
     public static final String KEY_STATUS_MSG = "status_msg";
     public static final String KEY_ESP_DEVICE = "esp_device";
     public static final String KEY_NODE_ID = "node_id";
+    public static final String KEY_ID_TOKEN = "id_token";
+    public static final String KEY_ACCESS_TOKEN = "access_token";
+    public static final String KEY_REFRESH_TOKEN = "refresh_token";
+    public static final String KEY_IS_GITHUB_LOGIN = "is_github_login";
 
     public static final String ESP_PREFERENCES = "Esp_Preferences";
 
@@ -56,4 +60,12 @@ public class AppConstants {
         EVENT_ADD_DEVICE_TIME_OUT,
         EVENT_DEVICE_STATUS_UPDATE
     }
+
+    public static final String GITHUB_STAGING = "https://rainmaker-staging.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=375pp885nbr3nfbh3ms9vma3v3";
+    public static final String GITHUB_PROD = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=2fmtjlo5cve01ukiisu1b6poft";
+
+    public static final String GITHUB_STAGING_TOKEN_URL = "https://rainmaker-staging.auth.us-east-1.amazoncognito.com/oauth2/token";
+    public static final String GITHUB_PROD_TOKEN_URL = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/token";
+
+    public static final String REDIRECT_URI = "rainmaker://com.espressif.rainmaker/success";
 }
