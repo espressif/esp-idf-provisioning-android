@@ -8,39 +8,68 @@
     tools:context="com.espressif.ui.activities.EspMainActivity"
     tools:showIn="@layout/activity_esp_main">
 
-    <TextView
-        android:id="@+id/txt_devices"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginStart="10dp"
-        android:layout_marginTop="10dp"
-        android:text="Devices"
-        android:textSize="30sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tv_no_device"
+    <RelativeLayout
+        android:id="@+id/rl_no_device"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:text="No devices added"
-        android:textSize="25sp" />
+        android:padding="32dp">
+
+        <ImageView
+            android:id="@+id/iv_no_device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:src="@drawable/ic_no_devices" />
+
+        <TextView
+            android:id="@+id/tv_no_device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/iv_no_device"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="24dp"
+            android:text="@string/no_devices"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_add_device"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tv_no_device"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="8dp"
+            android:gravity="center_horizontal"
+            android:text="@string/add_device_txt"
+            android:textColor="@color/colorAccent"
+            android:textSize="14sp" />
+
+    </RelativeLayout>
+
+    <androidx.core.widget.ContentLoadingProgressBar
+        android:id="@+id/progress_indicator"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="visible" />
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipe_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/btn_provision"
-        android:layout_below="@id/txt_devices"
-        android:layout_margin="10dp">
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_margin="16dp">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_device_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:scrollbars="vertical" />
+            android:scrollbars="vertical"
+            android:visibility="gone" />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 

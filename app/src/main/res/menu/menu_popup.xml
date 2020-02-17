@@ -1,0 +1,16 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.espressif.espressif.MainActivity">
+    <item
+        android:id="@+id/action_qr_code"
+        android:orderInCategory="100"
+        android:title="Add Using QR Code"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_add_device"
+        android:orderInCategory="100"
+        android:title="Add Manually"
+        app:showAsAction="never" />
+</menu>

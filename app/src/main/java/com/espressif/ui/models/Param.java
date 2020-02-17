@@ -8,14 +8,17 @@ import java.util.ArrayList;
 public class Param implements Parcelable {
 
     private String name;
+    private String paramType;
     private String dataType;
     private String uiType;
     private ArrayList<String> properties;
     private int minBounds;
     private int maxBounds;
-    private int sliderValue;
+    private float stepCount;
+    private double sliderValue;
     private boolean switchStatus;
     private String labelValue;
+    private boolean isDynamicParam;
 
     public String getName() {
         return name;
@@ -23,6 +26,14 @@ public class Param implements Parcelable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getParamType() {
+        return paramType;
+    }
+
+    public void setParamType(String paramType) {
+        this.paramType = paramType;
     }
 
     public String getDataType() {
@@ -65,11 +76,19 @@ public class Param implements Parcelable {
         this.maxBounds = maxBounds;
     }
 
-    public int getSliderValue() {
+    public float getStepCount() {
+        return stepCount;
+    }
+
+    public void setStepCount(float stepCount) {
+        this.stepCount = stepCount;
+    }
+
+    public double getSliderValue() {
         return sliderValue;
     }
 
-    public void setSliderValue(int sliderValue) {
+    public void setSliderValue(double sliderValue) {
         this.sliderValue = sliderValue;
     }
 
@@ -89,19 +108,30 @@ public class Param implements Parcelable {
         this.labelValue = labelValue;
     }
 
+    public boolean isDynamicParam() {
+        return isDynamicParam;
+    }
+
+    public void setDynamicParam(boolean dynamicParam) {
+        isDynamicParam = dynamicParam;
+    }
+
     public Param() {
     }
 
     protected Param(Parcel in) {
         name = in.readString();
+        paramType = in.readString();
         dataType = in.readString();
         uiType = in.readString();
         properties = in.createStringArrayList();
         minBounds = in.readInt();
         maxBounds = in.readInt();
-        sliderValue = in.readInt();
+        stepCount = in.readFloat();
+        sliderValue = in.readDouble();
         switchStatus = in.readByte() != 0;
         labelValue = in.readString();
+        isDynamicParam = in.readByte() != 0;
     }
 
     public static final Creator<Param> CREATOR = new Creator<Param>() {
@@ -124,14 +154,17 @@ public class Param implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(name);
+        dest.writeString(paramType);
         dest.writeString(dataType);
         dest.writeString(uiType);
         dest.writeStringList(properties);
         dest.writeInt(minBounds);
         dest.writeInt(maxBounds);
-        dest.writeInt(sliderValue);
+        dest.writeFloat(stepCount);
+        dest.writeDouble(sliderValue);
         dest.writeByte((byte) (switchStatus ? 1 : 0));
         dest.writeString(labelValue);
+        dest.writeByte((byte) (isDynamicParam ? 1 : 0));
     }
 
     @Override

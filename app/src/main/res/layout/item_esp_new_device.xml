@@ -4,8 +4,8 @@
     android:id="@+id/card_view_switch"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    card_view:cardCornerRadius="15dp"
-    card_view:cardElevation="15dp"
+    card_view:cardCornerRadius="16dp"
+    card_view:cardElevation="5dp"
     card_view:cardUseCompatPadding="true">
 
     <RelativeLayout
@@ -14,26 +14,86 @@
         android:layout_height="match_parent"
         android:padding="10dp">
 
-        <ImageView
-            android:id="@+id/iv_device"
+        <LinearLayout
+            android:id="@+id/ll_main"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:padding="10dp"
-            android:src="@drawable/ic_device" />
+            android:layout_marginEnd="10dp"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_device"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="3dp"
+                android:paddingTop="3dp"
+                android:src="@drawable/ic_device" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_device_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:text="Smart Bulb"
+                    android:textColor="@color/colorPrimaryDark"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:id="@+id/ll_offline"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal"
+                    android:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/iv_offline"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_gravity="center_vertical"
+                        android:src="@drawable/ic_status_offline" />
+
+                    <TextView
+                        android:id="@+id/tv_offline"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginStart="4dp"
+                        android:gravity="center_horizontal"
+                        android:text="Offline"
+                        android:textColor="@color/colorAccent"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/iv_on_off"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_output_disable"
+            android:visibility="gone" />
 
         <TextView
-            android:id="@+id/tv_device_name"
+            android:id="@+id/tv_string"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@id/iv_device"
-            android:layout_centerHorizontal="true"
-            android:paddingStart="10dp"
-            android:paddingTop="7dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="10dp"
-            android:text="Light"
-            android:textSize="18sp" />
+            android:layout_alignParentEnd="true"
+            android:layout_toEndOf="@id/ll_main"
+            android:gravity="end"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="16sp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 

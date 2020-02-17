@@ -12,7 +12,6 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.espressif.provision.R;
 import com.espressif.ui.user_module.AppHelper;
 import com.espressif.ui.user_module.ChangePasswordActivity;
-import com.espressif.ui.user_module.MainActivity;
 
 public class SettingsActivity extends AppCompatPreferenceActivity {
 

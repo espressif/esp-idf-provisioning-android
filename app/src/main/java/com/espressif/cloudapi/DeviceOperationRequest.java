@@ -4,9 +4,6 @@ import com.google.gson.annotations.SerializedName;
 
 public class DeviceOperationRequest {
 
-    @SerializedName("user_id")
-    private String userId;
-
     @SerializedName("node_id")
     private String nodeId;
 
@@ -15,14 +12,6 @@ public class DeviceOperationRequest {
 
     @SerializedName("operation")
     private String operation;
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
 
     public String getNodeId() {
         return nodeId;

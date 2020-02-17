@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
+apply plugin: 'com.google.gms.google-services'
 
 android {
 
@@ -43,9 +44,9 @@ android {
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
             buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
-            resValue "string", "user_pool_id", "us-east-1_Vrr3pWTIy"
-            resValue "string", "client_id", "78suluee2rmlltshrt2v4lvuo0"
-            resValue "string", "client_secret", "6d9ekt3eun7osi0nplvip03gb3tnts1jgpnk45knimverpbu62d"
+            resValue "string", "user_pool_id", "us-east-1_Kr951Rlo1"
+            resValue "string", "client_id", "375pp885nbr3nfbh3ms9vma3v3"
+            resValue "string", "client_secret", "1far8m99n7p0aokfop6msfbqop24ng4c1iir1ldm339uppiof4id"
         }
 
         debug {
@@ -55,9 +56,9 @@ android {
             resValue "string", "wifi_network_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
             buildConfigField "boolean", "IS_ALLOWED_FILTERING_BY_PREFIX", "true"
-            resValue "string", "user_pool_id", "us-east-1_Vrr3pWTIy"
-            resValue "string", "client_id", "78suluee2rmlltshrt2v4lvuo0"
-            resValue "string", "client_secret", "6d9ekt3eun7osi0nplvip03gb3tnts1jgpnk45knimverpbu62d"
+            resValue "string", "user_pool_id", "us-east-1_Kr951Rlo1"
+            resValue "string", "client_id", "375pp885nbr3nfbh3ms9vma3v3"
+            resValue "string", "client_secret", "1far8m99n7p0aokfop6msfbqop24ng4c1iir1ldm339uppiof4id"
         }
     }
 
@@ -95,7 +96,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
     implementation 'com.google.protobuf:protobuf-lite:3.0.1'
     implementation 'com.google.crypto.tink:tink-android:1.1.0'
-    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.13.6'
+    implementation 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.15.2'
     implementation 'com.squareup.retrofit2:retrofit:2.6.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.3.0'
     implementation 'com.google.code.gson:gson:2.8.2'
@@ -104,7 +105,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-vision:19.0.0'
     implementation project(':barcode-reader')
     implementation 'com.github.warkiz.tickseekbar:tickseekbar:0.1.4'
-//    implementation 'net.openid:appauth:0.7.1'
     implementation('com.amazonaws:aws-android-sdk-iot:2.15.+@aar') { transitive = true }
     implementation('com.amazonaws:aws-android-sdk-mobile-client:2.15.+@aar') { transitive = true }
+    implementation 'com.google.firebase:firebase-analytics:17.2.2'
+    implementation 'com.auth0.android:jwtdecode:1.4.0'
 }

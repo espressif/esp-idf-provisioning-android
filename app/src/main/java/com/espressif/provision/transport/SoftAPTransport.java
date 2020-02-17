@@ -40,6 +40,7 @@ public class SoftAPTransport implements Transport {
     /**
      * Initialise HTTP transport with baseUrl which
      * is used as host address during HTTP communication
+     *
      * @param baseUrl base URL used for HTTP endpoints
      */
     public SoftAPTransport(String baseUrl) {
@@ -47,7 +48,7 @@ public class SoftAPTransport implements Transport {
         this.workerThreadPool = Executors.newSingleThreadExecutor();
     }
 
-    private byte[] sendPostRequest(String path, byte[] data) {
+    private byte[] sendPostRequest(String path, byte[] data, final ResponseListener listener) {
         byte[] responseBytes = null;
         try {
             URL url = new URL("http://" + baseUrl + "/" + path);
@@ -70,7 +71,7 @@ public class SoftAPTransport implements Transport {
                 byte[] byteChunk = new byte[4096];
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                 InputStream is = urlConnection.getInputStream();
-                while ( (n = is.read(byteChunk)) > 0 ) {
+                while ((n = is.read(byteChunk)) > 0) {
                     outputStream.write(byteChunk, 0, n);
                 }
                 responseBytes = outputStream.toByteArray();
@@ -78,12 +79,15 @@ public class SoftAPTransport implements Transport {
         } catch (MalformedURLException e) {
             e.printStackTrace();
             Log.e(TAG, e.getMessage());
+            listener.onFailure(new RuntimeException("Error ! Connection Lost"));
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, e.getMessage());
+            listener.onFailure(new RuntimeException("Error ! Connection Lost"));
         } catch (Exception e) {
             e.printStackTrace();
-            Log.e(TAG, "Error : ", e);
+            Log.e(TAG, e.getMessage());
+            listener.onFailure(new RuntimeException("Error ! Connection Lost"));
         }
 
         return responseBytes;
@@ -101,13 +105,12 @@ public class SoftAPTransport implements Transport {
                     @Override
                     public void run() {
                         try {
-                            byte[] returnData = sendPostRequest("prov-session", data);
+                            byte[] returnData = sendPostRequest("prov-session", data, listener);
                             listener.onSuccess(returnData);
                         } catch (Exception e) {
                             e.printStackTrace();
                             listener.onFailure(e);
                         }
-
                     }
                 });
     }
@@ -125,12 +128,11 @@ public class SoftAPTransport implements Transport {
                     @Override
                     public void run() {
                         try {
-                            byte[] returnData = sendPostRequest(path, data);
+                            byte[] returnData = sendPostRequest(path, data, listener);
                             listener.onSuccess(returnData);
                         } catch (Exception e) {
                             listener.onFailure(e);
                         }
-
                     }
                 });
     }

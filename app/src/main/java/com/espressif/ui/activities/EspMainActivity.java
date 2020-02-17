@@ -14,7 +14,6 @@
 package com.espressif.ui.activities;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,6 +22,7 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -31,12 +31,15 @@ import android.view.HapticFeedbackConstants;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.widget.PopupMenu;
+import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -78,10 +81,13 @@ public class EspMainActivity extends AppCompatActivity {
     private static final int BARCODE_READER_ACTIVITY_REQUEST = 120;
 
     private FloatingActionButton btnProvision, btnScanQrCode;
-    private ProgressDialog progressDialog;
+    private ContentLoadingProgressBar progressBar;
     private RecyclerView recyclerView;
-    private TextView tvNoDevice, tvTitleDevices;
+    private TextView tvNoDevice, tvAddDevice;
+    private RelativeLayout rlNoDevices;
     private SwipeRefreshLayout swipeRefreshLayout;
+    private TextView tvTitle;
+    private ImageView ivAddDevice, ivUserProfile, ivNoDevice;
 
     private String BASE_URL;
     private String transportVersion, securityVersion;
@@ -89,14 +95,13 @@ public class EspMainActivity extends AppCompatActivity {
     private EspApplication espApp;
     private EspDeviceAdapter deviceAdapter;
     private ArrayList<EspDevice> devices;
+    private boolean isFirstTimeSetupDone, isScanQrCode;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_esp_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         devices = new ArrayList<>();
         BASE_URL = getResources().getString(R.string.wifi_base_url);
@@ -136,11 +141,11 @@ public class EspMainActivity extends AppCompatActivity {
         }
 
         tvNoDevice.setVisibility(View.GONE);
-        tvTitleDevices.setVisibility(View.GONE);
+        rlNoDevices.setVisibility(View.GONE);
         recyclerView.setVisibility(View.GONE);
 
-        showWaitDialog("Getting devices...");
-        apiManager = new ApiManager(getApplicationContext());
+        showLoading();
+        apiManager = ApiManager.getInstance(getApplicationContext());
         getSupportedVersions();
     }
 
@@ -152,6 +157,23 @@ public class EspMainActivity extends AppCompatActivity {
             BLEProvisionLanding.bleTransport.disconnect();
         }
         EventBus.getDefault().register(this);
+
+        if (apiManager.isTokenExpired()) {
+
+            apiManager.getNewToken();
+
+            new Handler().postDelayed(new Runnable() {
+
+                @Override
+                public void run() {
+                    getDevices();
+                }
+            }, 1500);
+
+        } else if (isFirstTimeSetupDone && !isScanQrCode) {
+            getDevices();
+        }
+        isScanQrCode = false;
     }
 
     @Override
@@ -160,10 +182,29 @@ public class EspMainActivity extends AppCompatActivity {
         EventBus.getDefault().unregister(this);
     }
 
+//    @Override
+//    protected void onStop() {
+//        apiManager.cancelGetNodeStatusTask();
+//        super.onStop();
+//    }
+
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onEvent(UpdateEvent event) {
-        showWaitDialog("Getting devices...");
-        getDevices();
+
+        Log.e(TAG, "Update Event Received : " + event.getEventType());
+
+        switch (event.getEventType()) {
+
+            case EVENT_DEVICE_ADDED:
+            case EVENT_DEVICE_REMOVED:
+                showLoading();
+                getDevices();
+                break;
+
+            case EVENT_DEVICE_STATUS_UPDATE:
+                updateUi();
+                break;
+        }
     }
 
     @Override
@@ -182,7 +223,7 @@ public class EspMainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-            startActivity(new Intent(this, SettingsActivity.class));
+            startActivity(new Intent(this, UserProfileActivity.class));
             return true;
         }
 
@@ -345,12 +386,36 @@ public class EspMainActivity extends AppCompatActivity {
 
     private void initViews() {
 
+        tvTitle = findViewById(R.id.esp_toolbar_title);
+        ivAddDevice = findViewById(R.id.btn_add_device);
+        ivUserProfile = findViewById(R.id.btn_user_profile);
         btnProvision = findViewById(R.id.btn_provision);
         btnScanQrCode = findViewById(R.id.btn_scan_qr_code);
+        rlNoDevices = findViewById(R.id.rl_no_device);
         tvNoDevice = findViewById(R.id.tv_no_device);
-        tvTitleDevices = findViewById(R.id.txt_devices);
+        tvAddDevice = findViewById(R.id.tv_add_device);
+        ivNoDevice = findViewById(R.id.iv_no_device);
+        progressBar = findViewById(R.id.progress_indicator);
         recyclerView = findViewById(R.id.rv_device_list);
         swipeRefreshLayout = findViewById(R.id.swipe_container);
+
+        tvTitle.setText(R.string.title_activity_devices);
+        ivAddDevice.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                showPopupMenuForAddDevice(v);
+            }
+        });
+
+        ivUserProfile.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(EspMainActivity.this, UserProfileActivity.class));
+            }
+        });
+
         btnProvision.setOnClickListener(provisionBtnClickListener);
         btnScanQrCode.setOnClickListener(scanQrCodeBtnClickListener);
 
@@ -365,7 +430,21 @@ public class EspMainActivity extends AppCompatActivity {
 
             @Override
             public void onRefresh() {
-                getDevices();
+
+                if (apiManager.isTokenExpired()) {
+
+                    apiManager.getNewToken();
+                    new Handler().postDelayed(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            getDevices();
+                        }
+                    }, 1500);
+
+                } else {
+                    getDevices();
+                }
             }
         });
     }
@@ -403,12 +482,18 @@ public class EspMainActivity extends AppCompatActivity {
                     }
                 }
 
-                getUserId();
+                getDevices();
             }
 
             @Override
             public void onFailure(Exception exception) {
-                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+                tvNoDevice.setText("Error : Device list not received");
+                rlNoDevices.setVisibility(View.VISIBLE);
+                tvNoDevice.setVisibility(View.VISIBLE);
+                tvAddDevice.setVisibility(View.GONE);
+                ivNoDevice.setVisibility(View.VISIBLE);
+                recyclerView.setVisibility(View.GONE);
             }
         });
     }
@@ -420,25 +505,6 @@ public class EspMainActivity extends AppCompatActivity {
         return version;
     }
 
-    private void getUserId() {
-
-        apiManager.getUserId(ApiManager.userName, new ApiResponseListener() {
-
-            @Override
-            public void onSuccess(Bundle data) {
-
-                getDevices();
-            }
-
-            @Override
-            public void onFailure(Exception exception) {
-                closeWaitDialog();
-                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
-                swipeRefreshLayout.setRefreshing(false);
-            }
-        });
-    }
-
     private void getDevices() {
 
         Log.e(TAG, "Get devices");
@@ -448,50 +514,114 @@ public class EspMainActivity extends AppCompatActivity {
             public void onSuccess(Bundle data) {
 
                 Log.e(TAG, "Get devices Success received");
-                closeWaitDialog();
-                swipeRefreshLayout.setRefreshing(false);
-                devices.clear();
-
-                for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
-
-                    String key = entry.getKey();
-                    EspNode node = entry.getValue();
-
-                    if (node != null) {
-                        ArrayList<EspDevice> espDevices = node.getDevices();
-                        devices.addAll(espDevices);
-                        Log.d(TAG, "Devices size : " + espDevices.size());
-                    }
-                }
-
-                Log.d(TAG, "Device list size : " + devices.size());
-
-                if (devices.size() > 0) {
-
-                    tvNoDevice.setVisibility(View.GONE);
-                    tvTitleDevices.setVisibility(View.VISIBLE);
-                    recyclerView.setVisibility(View.VISIBLE);
-
-                } else {
-                    tvNoDevice.setVisibility(View.VISIBLE);
-                    tvTitleDevices.setVisibility(View.GONE);
-                    recyclerView.setVisibility(View.GONE);
-                }
-                deviceAdapter.updateList(devices);
+                getAllValues();
             }
 
             @Override
             public void onFailure(Exception exception) {
+
                 exception.printStackTrace();
-                closeWaitDialog();
-                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+                hideLoading();
                 swipeRefreshLayout.setRefreshing(false);
+                tvNoDevice.setText("Error : Device list not received");
+                rlNoDevices.setVisibility(View.VISIBLE);
+                tvNoDevice.setVisibility(View.VISIBLE);
+                tvAddDevice.setVisibility(View.GONE);
+                ivNoDevice.setVisibility(View.VISIBLE);
+                recyclerView.setVisibility(View.GONE);
             }
         });
     }
 
+    private void getAllValues() {
+
+        if (espApp.nodeMap.size() > 0) {
+
+            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                String key = entry.getKey();
+                EspNode node = entry.getValue();
+
+                if (node != null) {
+
+                    getValues(node.getNodeId());
+                }
+            }
+        } else {
+            updateUi();
+        }
+    }
+
+    private int responseReceivedCnt = 0;
+
+    private void getValues(String nodeId) {
+
+        apiManager.getDynamicParamsValue(nodeId, new ApiResponseListener() {
+
+            @Override
+            public void onSuccess(Bundle data) {
+
+                Log.e("TAG", "Get values success");
+                responseReceivedCnt++;
+
+                if (responseReceivedCnt == espApp.nodeMap.size()) {
+                    updateUi();
+                }
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+
+                responseReceivedCnt++;
+                if (responseReceivedCnt == espApp.nodeMap.size()) {
+                    updateUi();
+                }
+            }
+        });
+    }
+
+    private void updateUi() {
+
+        responseReceivedCnt = 0;
+        devices.clear();
+
+        for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+            String key = entry.getKey();
+            EspNode node = entry.getValue();
+
+            if (node != null) {
+                ArrayList<EspDevice> espDevices = node.getDevices();
+                devices.addAll(espDevices);
+            }
+        }
+
+        Log.d(TAG, "Device list size : " + devices.size());
+
+        if (devices.size() > 0) {
+
+            rlNoDevices.setVisibility(View.GONE);
+            recyclerView.setVisibility(View.VISIBLE);
+
+        } else {
+            tvNoDevice.setText(R.string.no_devices);
+            rlNoDevices.setVisibility(View.VISIBLE);
+            tvNoDevice.setVisibility(View.VISIBLE);
+            tvAddDevice.setVisibility(View.VISIBLE);
+            ivNoDevice.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        }
+
+        deviceAdapter.updateList(devices);
+        swipeRefreshLayout.setRefreshing(false);
+        isFirstTimeSetupDone = true;
+        hideLoading();
+        apiManager.getNodeStatus();
+    }
+
     private void goToBarCodeActivity() {
 
+        isScanQrCode = true;
         Intent launchIntent = BarcodeReaderActivity.getLaunchIntent(this, true, false);
         startActivityForResult(launchIntent, BARCODE_READER_ACTIVITY_REQUEST);
     }
@@ -606,26 +736,55 @@ public class EspMainActivity extends AppCompatActivity {
         return result;
     }
 
-    private void showWaitDialog(String message) {
+    private void showPopupMenuForAddDevice(View view) {
 
-        closeWaitDialog();
+        PopupMenu popupMenu = new PopupMenu(this, view);
+        popupMenu.getMenuInflater().inflate(R.menu.menu_popup, popupMenu.getMenu());
 
-        if (progressDialog == null) {
-            progressDialog = new ProgressDialog(this);
-        }
-        progressDialog.setTitle(message);
-        progressDialog.setCancelable(true);
-        progressDialog.show();
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+
+            public boolean onMenuItemClick(MenuItem item) {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                    if (!isLocationEnabled()) {
+                        askForLocation();
+                        return true;
+                    }
+                }
+
+                switch (item.getItemId()) {
+
+                    case R.id.action_qr_code:
+
+                        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
+                        goToBarCodeActivity();
+                        break;
+
+                    case R.id.action_add_device:
+
+                        HashMap<String, String> config = new HashMap<>();
+                        config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
+                        config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
+                        config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+
+                        Provision.showProvisioningUI(EspMainActivity.this, config);
+                        break;
+                }
+                return true;
+            }
+        });
+
+        popupMenu.show();
     }
 
-    private void closeWaitDialog() {
-        try {
-            if (progressDialog != null) {
-                progressDialog.dismiss();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private void showLoading() {
+
+        progressBar.setVisibility(View.VISIBLE);
+    }
+
+    private void hideLoading() {
+        progressBar.setVisibility(View.GONE);
     }
 
     private void goToPopActivity(String currentSSID) {

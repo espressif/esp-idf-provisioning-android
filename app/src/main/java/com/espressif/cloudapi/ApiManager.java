@@ -1,18 +1,31 @@
 package com.espressif.cloudapi;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.auth0.android.jwt.Claim;
+import com.auth0.android.jwt.DecodeException;
+import com.auth0.android.jwt.JWT;
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
+import com.espressif.provision.R;
 import com.espressif.ui.models.EspDevice;
 import com.espressif.ui.models.EspNode;
 import com.espressif.ui.models.Param;
 import com.espressif.ui.models.UpdateEvent;
 import com.espressif.ui.user_module.AppHelper;
+import com.google.gson.JsonObject;
 
 import org.greenrobot.eventbus.EventBus;
 import org.json.JSONArray;
@@ -20,8 +33,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -35,8 +53,12 @@ public class ApiManager {
     private static final int REQ_STATUS_TIME = 5000;
     private static final int TIME_OUT = 60000;
 
+    public static boolean isGitHubLogin;
     public static String userName = "";
     public static String userId = "";
+    private static String idToken = "";
+    private static String accessToken = "";
+    private static String refreshToken = "";
     public static HashMap<String, String> requestIds = new HashMap<>(); // Map of node id and request id.
 
     private Context context;
@@ -45,11 +67,101 @@ public class ApiManager {
     private ApiInterface apiInterface;
     private static ArrayList<String> nodeIds = new ArrayList<>();
 
-    public ApiManager(Context context) {
+    private static ApiManager apiManager;
+
+    public static ApiManager getInstance(Context context) {
+
+        if (apiManager == null) {
+            apiManager = new ApiManager(context);
+        }
+        return apiManager;
+    }
+
+    private ApiManager(Context context) {
         this.context = context;
         handler = new Handler();
         espApp = (EspApplication) context.getApplicationContext();
         apiInterface = ApiClient.getClient().create(ApiInterface.class);
+    }
+
+    public void loginGithub(String code, final ApiResponseListener listener) {
+
+        String auth = context.getString(R.string.client_id) + ":" + context.getString(R.string.client_secret);
+        byte[] data = new byte[0];
+        try {
+            data = auth.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
+        String authHeader = "Basic " + base64;
+        Log.e(TAG, "Auth : " + auth);
+        Log.e(TAG, "Base64 : " + base64);
+        Log.e(TAG, "authHeader : " + authHeader);
+
+        try {
+            apiInterface.loginWithGithub("application/x-www-form-urlencoded", authHeader,
+                    "authorization_code", context.getString(R.string.client_id), code,
+                    context.getString(R.string.client_secret), AppConstants.REDIRECT_URI).enqueue(new Callback<ResponseBody>() {
+
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                    Log.d(TAG, "Request : " + call.request().toString());
+                    Log.d(TAG, "onResponse code  : " + response.code());
+                    try {
+                        if (response.isSuccessful()) {
+
+                            String jsonResponse = response.body().string();
+                            JSONObject jsonObject = new JSONObject(jsonResponse);
+                            idToken = jsonObject.getString("id_token");
+                            accessToken = jsonObject.getString("access_token");
+                            refreshToken = jsonObject.getString("refresh_token");
+                            Log.e(TAG, "Access token : " + accessToken);
+
+                            SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
+                            editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
+                            editor.putString(AppConstants.KEY_REFRESH_TOKEN, refreshToken);
+                            editor.putBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, true);
+                            editor.apply();
+
+                            isGitHubLogin = true;
+
+                            JWT jwt = null;
+                            try {
+                                jwt = new JWT(idToken);
+                            } catch (DecodeException e) {
+                                e.printStackTrace();
+                            }
+
+                            Claim claimUserId = jwt.getClaim("cognito:username");
+                            userId = claimUserId.asString();
+                            Claim claimEmail = jwt.getClaim("email");
+                            String email = claimEmail.asString();
+                            userName = email;
+                            listener.onSuccess(null);
+                        } else {
+                            listener.onFailure(new RuntimeException("Failed to login with GitHub"));
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        listener.onFailure(e);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        listener.onFailure(e);
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    t.printStackTrace();
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -59,6 +171,43 @@ public class ApiManager {
      */
     public void getSupportedVersions(final ApiResponseListener listener) {
 
+        if (isGitHubLogin) {
+
+            if (TextUtils.isEmpty(accessToken)) {
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+
+                idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
+                accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
+                refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
+            }
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserId = jwt.getClaim("cognito:username");
+            userId = claimUserId.asString();
+
+        } else {
+
+            String idToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserId = jwt.getClaim("custom:user_id");
+            userId = claimUserId.asString();
+        }
+
+        Log.d(TAG, "==============================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
         Log.d(TAG, "Get Supported Versions");
 
         apiInterface.getSupportedVersions()
@@ -123,70 +272,6 @@ public class ApiManager {
     }
 
     /**
-     * This method is used to get user id from user name.
-     *
-     * @param email    User name.
-     * @param listener Listener to send success or failure.
-     */
-    public void getUserId(final String email, final ApiResponseListener listener) {
-
-        Log.d(TAG, "Get User Id for user name : " + email);
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
-        Log.d(TAG, "Auth token : " + authToken);
-
-        apiInterface.getUserId(authToken, email)
-
-                .enqueue(new Callback<ResponseBody>() {
-
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-
-                        Log.d(TAG, "Request : " + call.request().toString());
-                        Log.d(TAG, "onResponse code  : " + response.code());
-
-                        if (response.isSuccessful()) {
-
-                            if (response.body() != null) {
-
-                                try {
-                                    String jsonResponse = response.body().string();
-                                    Log.e(TAG, "onResponse Success : " + jsonResponse);
-
-                                    JSONObject data = new JSONObject(jsonResponse);
-                                    userId = data.optString("user_id");
-                                    Log.e(TAG, "User id : " + userId);
-
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                    listener.onFailure(e);
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                    listener.onFailure(e);
-                                }
-                            } else {
-                                Log.e(TAG, "Response received : null");
-                                listener.onFailure(new RuntimeException("Failed to get User ID"));
-                            }
-
-                            Bundle bundle = new Bundle();
-                            bundle.putString("user_id", userId);
-                            listener.onSuccess(bundle);
-
-                        } else {
-                            listener.onFailure(new RuntimeException("Failed to get User ID"));
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        Log.e("TAG", "Error in receiving User id");
-                        t.printStackTrace();
-                        listener.onFailure(new Exception(t));
-                    }
-                });
-    }
-
-    /**
      * This method is used to get all devices for the user.
      *
      * @param listener Listener to send success or failure.
@@ -194,10 +279,16 @@ public class ApiManager {
     public void getAllDevices(final ApiResponseListener listener) {
 
         Log.d(TAG, "Get Devices");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
 
-        apiInterface.getDevicesForUser(authToken, userId).enqueue(new Callback<ResponseBody>() {
+        apiInterface.getDevicesForUser(authToken).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -213,7 +304,7 @@ public class ApiManager {
                             if (espApp.nodeMap == null) {
                                 espApp.nodeMap = new HashMap<>();
                             } else {
-                                espApp.nodeMap.clear();
+//                                espApp.nodeMap.clear();
                             }
 
                             String jsonResponse = response.body().string();
@@ -226,8 +317,22 @@ public class ApiManager {
 
                                 String nodeId = jsonArray.optString(i);
                                 Log.e(TAG, "EspNode id : " + nodeId);
-                                espApp.nodeMap.put(nodeId, null);
+
+                                if (espApp.nodeMap.get(nodeId) != null) {
+                                    EspNode node = espApp.nodeMap.get(nodeId);
+                                    espApp.nodeMap.put(nodeId, node);
+                                } else {
+                                    espApp.nodeMap.put(nodeId, null);
+                                }
                                 nodeIds.add(nodeId);
+                            }
+
+                            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                                String key = entry.getKey();
+                                if (!nodeIds.contains(key)) {
+                                    espApp.nodeMap.remove(key);
+                                }
                             }
 
                             if (espApp.nodeMap.size() != 0) {
@@ -289,6 +394,7 @@ public class ApiManager {
 
                 @Override
                 public void onFailure(Exception exception) {
+                    // TODO fix the issue
                     exception.printStackTrace();
 //                        listener.onFailure(exception);
                     getNextNodeDetail(listener);
@@ -308,7 +414,14 @@ public class ApiManager {
     private void getNodeConfigFromNodeId(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Get getNodeConfigFromNodeId : " + nodeId);
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
+
         Log.d(TAG, "Auth token : " + authToken);
 
         apiInterface.getDevicesFromNodeId(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
@@ -330,13 +443,19 @@ public class ApiManager {
                             Log.e(TAG, "onResponse Success : " + jsonResponse);
 
                             JSONObject jsonObject = new JSONObject(jsonResponse);
-                            EspNode espNode = new EspNode(nodeId);
+                            EspNode espNode;
+                            if (espApp.nodeMap.get(nodeId) != null) {
+                                espNode = espApp.nodeMap.get(nodeId);
+                            } else {
+                                espNode = new EspNode(nodeId);
+                            }
                             espNode.setConfigVersion(jsonObject.optString("config_version"));
 
                             JSONObject infoObj = jsonObject.optJSONObject("info");
                             espNode.setNodeName(infoObj.optString("name"));
                             espNode.setFwVersion(infoObj.optString("fw_version"));
                             espNode.setNodeType(infoObj.optString("type"));
+                            espNode.setOnline(true);
 
                             JSONArray devicesJsonArray = jsonObject.optJSONArray("devices");
                             ArrayList<EspDevice> devices = new ArrayList<>();
@@ -347,10 +466,9 @@ public class ApiManager {
 
                                     JSONObject deviceObj = devicesJsonArray.optJSONObject(i);
                                     EspDevice device = new EspDevice(nodeId);
-                                    Log.e(TAG, "Device name : " + deviceObj.optString("name"));
-                                    Log.e(TAG, "Device type : " + deviceObj.optString("type"));
                                     device.setDeviceName(deviceObj.optString("name"));
                                     device.setDeviceType(deviceObj.optString("type"));
+                                    device.setPrimaryParamName(deviceObj.optString("primary"));
 
                                     JSONArray paramsJson = deviceObj.optJSONArray("params");
                                     ArrayList<Param> params = new ArrayList<>();
@@ -362,8 +480,10 @@ public class ApiManager {
                                             JSONObject paraObj = paramsJson.optJSONObject(j);
                                             Param param = new Param();
                                             param.setName(paraObj.optString("name"));
+                                            param.setParamType(paraObj.optString("type"));
                                             param.setDataType(paraObj.optString("data_type"));
                                             param.setUiType(paraObj.optString("ui-type"));
+                                            param.setDynamicParam(true);
                                             params.add(param);
 
                                             JSONArray propertiesJson = paraObj.optJSONArray("properties");
@@ -393,12 +513,10 @@ public class ApiManager {
                                         for (int j = 0; j < attributesJson.length(); j++) {
 
                                             JSONObject attrObj = attributesJson.optJSONObject(j);
-                                            Log.e(TAG, "Label : " + attrObj.optString("name"));
                                             Param param = new Param();
                                             param.setName(attrObj.optString("name"));
                                             param.setDataType(attrObj.optString("data_type"));
                                             param.setLabelValue(attrObj.optString("value"));
-                                            Log.e(TAG, "Value : " + param.getLabelValue());
                                             params.add(param);
                                         }
                                     }
@@ -409,12 +527,27 @@ public class ApiManager {
                             }
 
                             espNode.setDevices(devices);
+
+                            JSONArray nodeAttributesJson = infoObj.optJSONArray("attributes");
+                            ArrayList<Param> nodeAttributes = new ArrayList<>();
+
+                            if (nodeAttributesJson != null) {
+
+                                for (int j = 0; j < nodeAttributesJson.length(); j++) {
+
+                                    JSONObject attrObj = nodeAttributesJson.optJSONObject(j);
+                                    Param param = new Param();
+                                    param.setName(attrObj.optString("name"));
+                                    param.setLabelValue(attrObj.optString("value"));
+                                    nodeAttributes.add(param);
+                                }
+                            }
+
+                            espNode.setAttributes(nodeAttributes);
+
                             espApp.nodeMap.put(nodeId, espNode);
-//
-//                            Bundle bundle = new Bundle();
-//                            bundle.putParcelableArrayList("nodes", nodeList);
-//
-//                            Log.d(TAG, "Device list : " + nodeList);
+                            getOnlineOfflineStatus(nodeId);
+
                             listener.onSuccess(null);
 
                         } catch (IOException e) {
@@ -463,13 +596,17 @@ public class ApiManager {
     public void addDevice(final String nodeId, String secretKey, final ApiResponseListener listener) {
 
         Log.d(TAG, "Add Device");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
         Log.d(TAG, "nodeId : " + nodeId);
-        Log.d(TAG, "userId : " + userId);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
-        req.setUserId(userId);
         req.setNodeId(nodeId);
         req.setSecretKey(secretKey);
         req.setOperation("add");
@@ -532,11 +669,16 @@ public class ApiManager {
     public void removeDevice(final String nodeId, final ApiResponseListener listener) {
 
         Log.d(TAG, "Remove Device");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
         Log.d(TAG, "Auth token : " + authToken);
 
         DeviceOperationRequest req = new DeviceOperationRequest();
-        req.setUserId(userId);
         req.setNodeId(nodeId);
         req.setOperation("remove");
 
@@ -580,7 +722,13 @@ public class ApiManager {
 
     public void getDynamicParamsValue(final String nodeId, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
 
         apiInterface.getParamValue(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
 
@@ -605,50 +753,88 @@ public class ApiManager {
                             for (int i = 0; i < devices.size(); i++) {
 
                                 ArrayList<Param> params = devices.get(i).getParams();
+                                String deviceName = devices.get(i).getDeviceName();
+                                JSONObject deviceJson = jsonObject.optJSONObject(deviceName);
 
-                                for (int j = 0; j < params.size(); j++) {
+                                if (deviceJson != null) {
 
-                                    Param param = params.get(j);
-                                    String key = devices.get(i).getDeviceName() + "." + param.getName();
-                                    Log.e(TAG, "Key : " + key);
-                                    Log.e(TAG, "UiType : " + param.getUiType());
+                                    Log.e(TAG, "JSON IS NOT NULL for device name : " + deviceName);
 
-                                    if (jsonResponse.contains(key)) {
+                                    for (int j = 0; j < params.size(); j++) {
 
-                                        if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
+                                        Param param = params.get(j);
+                                        String key = param.getName();
+                                        Log.e(TAG, "=============== Key : " + key);
 
-                                            int value = jsonObject.optInt(key);
-                                            param.setSliderValue(value);
-                                            Log.e(TAG, "Value : " + value);
+                                        if (jsonResponse.contains(key)) {
 
-                                        } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+                                            String dataType = param.getDataType();
 
-                                            boolean value = jsonObject.optBoolean(key);
-                                            param.setSwitchStatus(value);
-                                            Log.e(TAG, "Value : " + value);
-                                        } else {
+                                            if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
 
-                                            if (param.getDataType().equalsIgnoreCase("bool")) {
+                                                String labelValue = "";
 
-                                                boolean value = jsonObject.optBoolean(key);
+                                                if (dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")) {
+
+                                                    int value = deviceJson.optInt(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+                                                    param.setSliderValue(value);
+
+                                                } else if (dataType.equalsIgnoreCase("float") || dataType.equalsIgnoreCase("double")) {
+
+                                                    double value = deviceJson.optDouble(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+                                                    param.setSliderValue(value);
+
+                                                } else {
+
+                                                    labelValue = deviceJson.optString(key);
+                                                    param.setLabelValue(labelValue);
+                                                }
+
+                                            } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
+
+                                                boolean value = deviceJson.optBoolean(key);
                                                 param.setSwitchStatus(value);
-                                                Log.e(TAG, "Value : " + value);
 
                                             } else {
 
-                                                String value = "";
+                                                String labelValue = "";
 
-                                                if (param.getDataType().equalsIgnoreCase("int")) {
-                                                    int labelValue = jsonObject.optInt(key);
-                                                    value = String.valueOf(labelValue);
-                                                } else if (param.getDataType().equalsIgnoreCase("double")) {
-                                                    double labelValue = jsonObject.optDouble(key);
-                                                    value = String.valueOf(labelValue);
+                                                if (dataType.equalsIgnoreCase("bool") || dataType.equalsIgnoreCase("boolean")) {
+
+                                                    boolean value = deviceJson.optBoolean(key);
+//                                                param.setSwitchStatus(value);
+                                                    if (value) {
+                                                        param.setLabelValue("true");
+                                                    } else {
+                                                        param.setLabelValue("false");
+                                                    }
+
+                                                } else if (dataType.equalsIgnoreCase("int") || dataType.equalsIgnoreCase("integer")) {
+
+                                                    int value = deviceJson.optInt(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+
+                                                } else if (dataType.equalsIgnoreCase("float") || dataType.equalsIgnoreCase("double")) {
+
+                                                    double value = deviceJson.optDouble(key);
+                                                    labelValue = String.valueOf(value);
+                                                    param.setLabelValue(labelValue);
+
+                                                } else {
+
+                                                    labelValue = deviceJson.optString(key);
+                                                    param.setLabelValue(labelValue);
                                                 }
-                                                param.setLabelValue(value);
                                             }
                                         }
                                     }
+                                } else {
+                                    Log.e(TAG, "DEVICE JSON IS NULL");
                                 }
                             }
 
@@ -678,14 +864,14 @@ public class ApiManager {
         });
     }
 
-    public void setDynamicParamValue(final String nodeId, HashMap<String, Object> body, final ApiResponseListener listener) {
+    public void setDynamicParamValue(final String nodeId, JsonObject body, final ApiResponseListener listener) {
 
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
 
-        for (String key : body.keySet()) {
-
-            Log.e(TAG, "Key : " + key);
-            Log.e(TAG, "Value : " + body.get(key));
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
         }
 
         try {
@@ -707,37 +893,7 @@ public class ApiManager {
                                 Log.e(TAG, "onResponse Success : " + jsonResponse);
                                 JSONObject jsonObject = new JSONObject(jsonResponse);
 
-                                //                            EspNode node = espApp.nodeMap.get(nodeId);
-                                //                            ArrayList<EspDevice> devices = node.getDevices();
-                                //
-                                //                            for (int i = 0; i < devices.size(); i++) {
-                                //
-                                //                                ArrayList<Param> dynamicParams = devices.get(i).getParams();
-                                //
-                                //                                for (int j = 0; j < dynamicParams.size(); j++) {
-                                //
-                                //                                    Param param = dynamicParams.get(j);
-                                //                                    String key = devices.get(i).getDeviceName() + "." + param.getName();
-                                //                                    Log.e(TAG, "Key : " + key);
-                                //                                    Log.e(TAG, "UiType : " + param.getUiType());
-                                //
-                                //                                    if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
-                                //
-                                //                                        int value = jsonObject.optInt(key);
-                                //                                        param.setSliderValue(value);
-                                //                                        Log.e(TAG, "Value : " + value);
-                                //
-                                //                                    } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
-                                //
-                                //                                        boolean value = jsonObject.optBoolean(key);
-                                //                                        param.setSwitchStatus(value);
-                                //                                        Log.e(TAG, "Value : " + value);
-                                //                                    } else {
-                                //                                        // TODO
-                                //                                    }
-                                //                                }
-                                //                            }
-
+                                // TODO
                                 listener.onSuccess(null);
 
                             } catch (IOException e) {
@@ -767,12 +923,112 @@ public class ApiManager {
         }
     }
 
-    private void getAddNodeRequestStatus(String userId, final String nodeId, String requestId) {
+    private void getOnlineOfflineStatus(final String nodeId) {
+
+        Log.d(TAG, "getOnlineOfflineStatus");
+        String authToken = "";
+
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
+
+        apiInterface.getOnlineOfflineStatus(authToken, nodeId).enqueue(new Callback<ResponseBody>() {
+
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                Log.d(TAG, "Request : " + call.request().toString());
+                Log.d(TAG, "EspNode status response code : " + response.code());
+
+                if (response.isSuccessful()) {
+
+                    if (response.body() != null) {
+
+                        try {
+
+                            String jsonResponse = response.body().string();
+                            Log.e(TAG, "onResponse Success : " + jsonResponse);
+                            JSONObject jsonObject = new JSONObject(jsonResponse);
+                            boolean nodeStatus = jsonObject.optBoolean("connected");
+
+                            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                                String key = entry.getKey();
+                                EspNode node = entry.getValue();
+
+                                if (nodeId.equalsIgnoreCase(key)) {
+
+                                    if (node.isOnline() != nodeStatus) {
+                                        node.setOnline(nodeStatus);
+                                        EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                                    }
+                                }
+                            }
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Log.e(TAG, "Get node status failed");
+                        boolean nodeStatus = false;
+                        for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                            String key = entry.getKey();
+                            EspNode node = entry.getValue();
+
+                            if (nodeId.equalsIgnoreCase(key)) {
+
+                                if (node.isOnline() != nodeStatus) {
+                                    node.setOnline(nodeStatus);
+                                    EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                                }
+                            }
+                        }
+                    }
+
+                } else {
+
+                    boolean nodeStatus = false;
+                    for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
+
+                        String key = entry.getKey();
+                        EspNode node = entry.getValue();
+
+                        if (nodeId.equalsIgnoreCase(key)) {
+
+                            if (node.isOnline() != nodeStatus) {
+                                node.setOnline(nodeStatus);
+                                EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_DEVICE_STATUS_UPDATE));
+                            }
+                        }
+                    }
+                    Log.e(TAG, "Get node status failed");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+    }
+
+    private void getAddNodeRequestStatus(final String nodeId, String requestId) {
 
         Log.d(TAG, "getAddDeviceRequestStatus");
-        String authToken = AppHelper.getCurrSession().getIdToken().getJWTToken();
+        String authToken = "";
 
-        apiInterface.getAddNodeRequestStatus(authToken, userId, nodeId, requestId, true).enqueue(new Callback<ResponseBody>() {
+        if (isGitHubLogin) {
+            authToken = accessToken;
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
+
+        apiInterface.getAddNodeRequestStatus(authToken, requestId, true).enqueue(new Callback<ResponseBody>() {
 
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
@@ -836,7 +1092,7 @@ public class ApiManager {
 
                     String nodeId = key;
                     String requestId = requestIds.get(nodeId);
-                    getAddNodeRequestStatus(userId, nodeId, requestId);
+                    getAddNodeRequestStatus(nodeId, requestId);
                 }
                 getNodeReqStatus();
             } else {
@@ -855,6 +1111,203 @@ public class ApiManager {
             Log.d(TAG, "Stopped Polling Task");
             handler.removeCallbacks(getRequestStatusTask);
             EventBus.getDefault().post(new UpdateEvent(AppConstants.UpdateEventType.EVENT_ADD_DEVICE_TIME_OUT));
+        }
+    };
+
+    private Runnable getNodeStatusTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            getAllNodeStatus();
+        }
+    };
+
+    public void getNodeStatus() {
+
+        cancelGetNodeStatusTask();
+        getAllNodeStatus();
+    }
+
+    public void cancelGetNodeStatusTask() {
+
+        handler.removeCallbacks(getNodeStatusTask);
+    }
+
+    private void getAllNodeStatus() {
+
+        Set<String> nodeIdList = espApp.nodeMap.keySet();
+
+        for (String nodeId : nodeIdList) {
+            getOnlineOfflineStatus(nodeId);
+        }
+//        handler.postDelayed(getNodeStatusTask, 10000);
+    }
+
+    public boolean isTokenExpired() {
+
+        Log.d(TAG, "Check isTokenExpired");
+
+        String authToken = "";
+
+        if (isGitHubLogin) {
+
+            if (TextUtils.isEmpty(accessToken)) {
+
+                SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+
+                idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
+                accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
+                refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
+
+                Log.e(TAG, "ID Token : " + idToken);
+            }
+            authToken = accessToken;
+
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserName = jwt.getClaim("cognito:username");
+            userId = claimUserName.asString();
+            Claim claimEmail = jwt.getClaim("email");
+            String email = claimEmail.asString();
+            userName = email;
+
+        } else {
+            authToken = AppHelper.getCurrSession().getAccessToken().getJWTToken();
+        }
+        Log.d(TAG, "Auth token : " + authToken);
+
+        JWT jwt = null;
+        try {
+            jwt = new JWT(authToken);
+        } catch (DecodeException e) {
+            e.printStackTrace();
+        }
+
+        Date expiresAt = jwt.getExpiresAt();
+        Calendar calendar = Calendar.getInstance();
+        Date currentTIme = calendar.getTime();
+        Log.e(TAG, "Expire at : " + expiresAt);
+        Log.e(TAG, "Current time : " + currentTIme);
+
+        if (currentTIme.after(expiresAt)) {
+            Log.e(TAG, "Token has expired");
+            return true;
+        } else {
+            Log.e(TAG, "Token has not expired");
+            return false;
+        }
+    }
+
+    public void getNewToken() {
+
+        if (isGitHubLogin) {
+            getNewTokenForGitHub();
+        } else {
+            AppHelper.getPool().getUser(userName).getSessionInBackground(authenticationHandler);
+        }
+    }
+
+    private void getNewTokenForGitHub() {
+
+        HashMap<String, String> body = new HashMap<>();
+        Log.d(TAG, "USER NAME : " + userId);
+        Log.d(TAG, "Refresh token : " + refreshToken);
+        body.put("user_name", userId);
+        body.put("refreshtoken", refreshToken);
+
+        apiInterface.getGitHubLoginToken(body).enqueue(new Callback<ResponseBody>() {
+
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+
+                Log.d(TAG, "Request : " + call.request().toString());
+                Log.d(TAG, "onResponse code  : " + response.code());
+                try {
+                    if (response.isSuccessful()) {
+
+                        String jsonResponse = response.body().string();
+                        JSONObject jsonObject = new JSONObject(jsonResponse);
+                        idToken = jsonObject.getString("idtoken");
+                        accessToken = jsonObject.getString("accesstoken");
+
+                        SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
+                        editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
+                        editor.putBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, true);
+                        editor.apply();
+
+                        isGitHubLogin = true;
+
+                        JWT jwt = null;
+                        try {
+                            jwt = new JWT(idToken);
+                        } catch (DecodeException e) {
+                            e.printStackTrace();
+                        }
+
+                        Claim claimUserId = jwt.getClaim("cognito:username");
+                        userId = claimUserId.asString();
+                        Claim claimEmail = jwt.getClaim("email");
+                        String email = claimEmail.asString();
+                        userName = email;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+    }
+
+    AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
+
+        @Override
+        public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice newDevice) {
+
+            Log.e(TAG, "onSuccess ");
+            AppHelper.setCurrSession(cognitoUserSession);
+            Log.d(TAG, "Username : " + cognitoUserSession.getUsername());
+            Log.d(TAG, "IdToken : " + cognitoUserSession.getIdToken().getJWTToken());
+            Log.d(TAG, "AccessToken : " + cognitoUserSession.getAccessToken().getJWTToken());
+            Log.d(TAG, "RefreshToken : " + cognitoUserSession.getRefreshToken().getToken());
+            AppHelper.newDevice(newDevice);
+        }
+
+        @Override
+        public void getAuthenticationDetails(AuthenticationContinuation authenticationContinuation, String userId) {
+            Log.e(TAG, "getAuthenticationDetails ");
+        }
+
+        @Override
+        public void getMFACode(MultiFactorAuthenticationContinuation continuation) {
+            Log.e(TAG, "getMFACode ");
+        }
+
+        @Override
+        public void authenticationChallenge(ChallengeContinuation continuation) {
+            Log.e(TAG, "authenticationChallenge ");
+        }
+
+        @Override
+        public void onFailure(Exception exception) {
+            Log.e(TAG, "onFailure ");
+            exception.printStackTrace();
+
+            // TODO
+            // Do Signout
         }
     };
 }

@@ -5,24 +5,30 @@
     android:id="@+id/card_view_switch"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    card_view:cardBackgroundColor="@android:color/white"
-    card_view:cardCornerRadius="10dp"
-    card_view:cardElevation="10dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    card_view:cardBackgroundColor="@color/color_background"
+    card_view:cardCornerRadius="8dp"
+    card_view:cardElevation="1dp"
     card_view:cardUseCompatPadding="true">
 
     <RelativeLayout
         android:id="@+id/rl_card_slider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10dp"
-        android:visibility="gone">
+        android:padding="8dp"
+        android:visibility="visible">
 
         <TextView
             android:id="@+id/slider_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Title"
-            android:textSize="18sp" />
+            android:layout_alignParentStart="true"
+            android:layout_marginStart="8dp"
+            android:alpha="0.5"
+            android:text="Brightness"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="12sp" />
 
         <!--<SeekBar-->
         <!--android:id="@+id/card_slider"-->
@@ -35,27 +41,59 @@
         <!--android:min="0" />-->
 
         <com.warkiz.tickseekbar.TickSeekBar
-            android:id="@+id/card_slider"
+            android:id="@+id/card_int_slider"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/slider_name"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:visibility="gone"
+            app:tsb_progress_value_float="false"
             app:tsb_seek_smoothly="true"
-            app:tsb_show_thumb_text="below"
+            app:tsb_show_thumb_text="above"
             app:tsb_show_tick_marks_type="oval"
-            app:tsb_show_tick_texts="above"
-            app:tsb_thumb_color="@color/colorAccent"
-            app:tsb_thumb_size="12dp"
+            app:tsb_show_tick_texts="below"
+            app:tsb_thumb_color="@color/colorPrimary"
+            app:tsb_thumb_size="30dp"
             app:tsb_thumb_text_color="@color/colorAccent"
-            app:tsb_tick_marks_color="#AAAAAA"
-            app:tsb_tick_marks_size="0dp"
-            app:tsb_tick_texts_color="#555555"
-            app:tsb_tick_texts_size="13sp"
+            app:tsb_tick_marks_color="@color/colorAccent"
+            app:tsb_tick_marks_size="10dp"
+            app:tsb_tick_texts_color="@color/colorAccent"
+            app:tsb_tick_texts_size="12sp"
             app:tsb_ticks_count="2"
-            app:tsb_track_background_color="#AAAAAA"
+            app:tsb_track_background_color="@color/colorAccent"
             app:tsb_track_background_size="2dp"
-            app:tsb_track_progress_color="@color/colorAccent"
+            app:tsb_track_progress_color="@color/colorPrimary"
+            app:tsb_track_progress_size="3dp" />
+
+        <com.warkiz.tickseekbar.TickSeekBar
+            android:id="@+id/card_float_slider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/slider_name"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:visibility="gone"
+            app:tsb_progress_value_float="true"
+            app:tsb_seek_smoothly="true"
+            app:tsb_show_thumb_text="above"
+            app:tsb_show_tick_marks_type="oval"
+            app:tsb_show_tick_texts="below"
+            app:tsb_thumb_color="@color/colorPrimary"
+            app:tsb_thumb_size="30dp"
+            app:tsb_thumb_text_color="@color/colorAccent"
+            app:tsb_tick_marks_color="@color/colorAccent"
+            app:tsb_tick_marks_size="10dp"
+            app:tsb_tick_texts_color="@color/colorAccent"
+            app:tsb_tick_texts_size="12sp"
+            app:tsb_ticks_count="2"
+            app:tsb_track_background_color="@color/colorAccent"
+            app:tsb_track_background_size="2dp"
+            app:tsb_track_progress_color="@color/colorPrimary"
             app:tsb_track_progress_size="3dp" />
 
     </RelativeLayout>
@@ -64,35 +102,45 @@
         android:id="@+id/rl_card_switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10dp"
+        android:padding="8dp"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/switch_name"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:max="100"
-            android:text="Title"
-            android:textSize="18sp" />
+            android:layout_marginStart="8dp"
+            android:layout_toLeftOf="@id/card_switch"
+            android:orientation="vertical">
 
-        <Switch
+            <TextView
+                android:id="@+id/switch_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.5"
+                android:text="Title"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tv_switch_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/text_on"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/card_switch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true" />
-
-        <TextView
-            android:id="@+id/tv_switch_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:text="@string/text_on"
-            android:textColor="@color/color_text_on"
-            android:textSize="18sp" />
+            android:paddingEnd="8dp" />
 
     </RelativeLayout>
 
@@ -100,26 +148,60 @@
         android:id="@+id/rl_card_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10dp"
-        android:visibility="visible">
+        android:padding="8dp"
+        android:visibility="gone">
 
-        <TextView
-            android:id="@+id/label_name"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_centerVertical="true"
-            android:max="100"
-            android:textSize="18sp" />
+            android:layout_marginStart="8dp"
+            android:layout_toLeftOf="@id/btn_edit"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_label_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:alpha="0.5"
+                android:text="Device Name"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tv_label_value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Smart Light"
+                android:textColor="@color/colorPrimaryDark"
+                android:textSize="16sp" />
+
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/label_value"
+            android:id="@+id/btn_edit"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:max="100"
-            android:textSize="18sp" />
+            android:layout_marginEnd="8dp"
+            android:padding="8dp"
+            android:text="@string/btn_edit"
+            android:textColor="@color/colorPrimary"
+            android:textSize="12sp"
+            android:visibility="visible" />
+
+        <androidx.core.widget.ContentLoadingProgressBar
+            android:id="@+id/progress_indicator"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="16dp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 

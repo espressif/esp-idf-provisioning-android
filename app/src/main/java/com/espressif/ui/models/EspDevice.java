@@ -10,6 +10,7 @@ public class EspDevice implements Parcelable {
     private String nodeId;
     private String deviceName;
     private String deviceType;
+    private String primaryParamName;
     private ArrayList<Param> params;
 
     public EspDevice(String id) {
@@ -36,6 +37,14 @@ public class EspDevice implements Parcelable {
         this.deviceType = deviceType;
     }
 
+    public String getPrimaryParamName() {
+        return primaryParamName;
+    }
+
+    public void setPrimaryParamName(String primaryParamName) {
+        this.primaryParamName = primaryParamName;
+    }
+
     public ArrayList<Param> getParams() {
         return params;
     }
@@ -49,6 +58,7 @@ public class EspDevice implements Parcelable {
         nodeId = in.readString();
         deviceName = in.readString();
         deviceType = in.readString();
+        primaryParamName = in.readString();
         params = in.createTypedArrayList(Param.CREATOR);
     }
 
@@ -75,6 +85,7 @@ public class EspDevice implements Parcelable {
         dest.writeString(nodeId);
         dest.writeString(deviceName);
         dest.writeString(deviceType);
+        dest.writeString(primaryParamName);
         dest.writeTypedList(params);
     }
 

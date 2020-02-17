@@ -15,27 +15,49 @@
 
     <uses-sdk tools:overrideLibrary="com.google.zxing.client.android" />
 
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true" />
+
     <application
         android:name="com.espressif.EspApplication"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_esp_rainmaker_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_esp_rainmaker_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
         <activity
-            android:name="com.espressif.ui.user_module.MainActivity"
+            android:name="com.espressif.ui.activities.MainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:theme="@style/AppTheme.NoActionBar"
+            android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!--rainmaker://com.espressif.rainmaker/success-->
+                <data
+                    android:host="com.espressif.rainmaker"
+                    android:path="/success"
+                    android:scheme="rainmaker" />
+            </intent-filter>
+
         </activity>
         <activity
             android:name="com.espressif.ui.activities.ProvisionLanding"
@@ -74,42 +96,24 @@
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name="com.espressif.ui.activities.SettingsActivity"
+            android:name="com.espressif.ui.activities.UserProfileActivity"
             android:label="@string/title_activity_settings"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.EspDeviceActivity"
             android:label="@string/title_activity_esp_device"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
-
         <activity
-            android:name="com.espressif.ui.user_module.RegisterUser"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar">
-
-            <!--<intent-filter>-->
-            <!--<action android:name="android.intent.action.VIEW" />-->
-
-            <!--<category android:name="android.intent.category.DEFAULT" />-->
-            <!--<category android:name="android.intent.category.BROWSABLE" />-->
-
-            <!--<data-->
-            <!--android:host="@string/com_auth0_domain"-->
-            <!--android:pathPrefix="/com.espressif.ui.user_module/RegisterUser"-->
-            <!--android:scheme="https" />-->
-            <!--</intent-filter>-->
-
-        </activity>
-
-        <activity
-            android:name="com.espressif.ui.user_module.SignUpConfirm"
-            android:label="@string/title_activity_sign_up_confirm"
+            android:name="com.espressif.ui.activities.NodeDetailsActivity"
+            android:label="@string/title_activity_node_details"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+
         <activity
-            android:name="com.espressif.ui.user_module.MFAActivity"
-            android:label="@string/title_activity_mfa"
+            android:name="com.espressif.ui.user_module.SignUpConfirmActivity"
+            android:label="@string/title_activity_sign_up_confirm"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
@@ -120,16 +124,6 @@
         <activity
             android:name="com.espressif.ui.user_module.ChangePasswordActivity"
             android:label="@string/title_activity_change_password"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="com.espressif.ui.user_module.NewPassword"
-            android:label="@string/title_activity_new_password"
-            android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
-            android:name="com.espressif.ui.user_module.ChooseMFA"
-            android:label="@string/title_activity_choose_mfa"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 
