@@ -6,9 +6,12 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Vibrator;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -24,6 +27,7 @@ import com.espressif.AppConstants;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
+import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
@@ -192,9 +196,19 @@ public class ScanLocalDevices extends AppCompatActivity {
 
                             if (foundDevice.getHostAddress().equals(alreadyHere.getHostAddress())) {
 
+                                String name = alreadyHere.getFriendlyName();
+                                if (name != null && name.contains("version")) {
+
+                                    String[] parts = name.split("::");
+                                    if (parts != null && parts.length > 0) {
+                                        name = parts[0];
+                                        Log.d(TAG, "Friendly name : " + name);
+                                    }
+                                }
+
                                 deviceExists = true;
                                 SSDPdevices.remove(alreadyHere);
-                                SSDPadapter.remove("" + alreadyHere.getFriendlyName());
+                                SSDPadapter.remove("" + name);
                                 SSDPadapter.notifyDataSetChanged();
 
                                 Log.d(TAG, "Device already exists -" + foundDevice.getST());
@@ -203,7 +217,17 @@ public class ScanLocalDevices extends AppCompatActivity {
                                 if (alreadyHere.getFriendlyName() != null) {
 
                                     SSDPdevices.add(alreadyHere);
-                                    SSDPadapter.add("" + alreadyHere.getFriendlyName());
+
+                                    String friendlyName = alreadyHere.getFriendlyName();
+                                    if (friendlyName.contains("version")) {
+
+                                        String[] parts = friendlyName.split("::");
+                                        if (parts != null && parts.length > 0) {
+                                            friendlyName = parts[0];
+                                            Log.d(TAG, "Friendly name : " + friendlyName);
+                                        }
+                                    }
+                                    SSDPadapter.add("" + friendlyName);
                                     SSDPadapter.notifyDataSetChanged();
                                 }
                                 break;
@@ -217,8 +241,18 @@ public class ScanLocalDevices extends AppCompatActivity {
 
                             Log.d(TAG, "Adding to list adapter " + foundAlexa.getHostAddress());
 
+                            String name = foundAlexa.getFriendlyName();
+                            if (name != null && name.contains("version")) {
+
+                                String[] parts = name.split("::");
+                                if (parts != null && parts.length > 0) {
+                                    name = parts[0];
+                                    Log.d(TAG, "Friendly name : " + name);
+                                }
+                            }
+
                             SSDPdevices.add(foundAlexa);
-                            SSDPadapter.add("" + foundAlexa.getFriendlyName());
+                            SSDPadapter.add("" + name);
                         }
                     }
                 });
@@ -259,6 +293,31 @@ public class ScanLocalDevices extends AppCompatActivity {
             }
             if (foundDevice.getST().contains("friendlyname")) {
                 foundAlexa.setFriendlyName(foundDevice.getST().replace("friendlyname:", ""));
+
+                String actualDeviceName = foundDevice.getST();
+                actualDeviceName = actualDeviceName.replace("friendlyname:", "");
+
+                if (actualDeviceName.contains("version")) {
+
+                    String[] parts = actualDeviceName.split("::");
+                    if (parts != null && parts.length > 1) {
+                        actualDeviceName = parts[0];
+                    }
+                }
+                foundAlexa.setDeviceName(actualDeviceName);
+            }
+            if (foundDevice.getST().contains("version")) {
+                String version = foundDevice.getST();
+
+                if (version.contains("version")) {
+
+                    String[] parts = version.split("::");
+                    if (parts != null && parts.length > 1) {
+                        version = parts[1];
+                        version = version.replace("version:", "");
+                    }
+                }
+                foundAlexa.setVersion(version);
             }
         }
     }
@@ -287,18 +346,27 @@ public class ScanLocalDevices extends AppCompatActivity {
     private void connectToDevice(AlexaLocalDevices device) {
 
         deviceHostAddress = device.getHostAddress();
-        deviceName = device.getFriendlyName();
+        deviceName = device.getDeviceName();
+        boolean isNewFw = false;
+
+        if (TextUtils.isEmpty(device.getVersion())) {
+            security = new Security0();
+        } else {
+            isNewFw = true;
+            security = new Security1(getResources().getString(R.string.proof_of_possesion));
+        }
         Log.d(TAG, "Device host address : " + deviceHostAddress);
         transport = new SoftAPTransport(deviceHostAddress + ":80");
-        security = new Security0();
+
         session = new Session(this.transport, this.security);
 
+        final boolean finalIsNewFw = isNewFw;
         session.sessionListener = new Session.SessionListener() {
 
             @Override
             public void OnSessionEstablished() {
                 Log.d(TAG, "Session established");
-                getDeviceInfo();
+                getDeviceInfo(finalIsNewFw);
             }
 
             @Override
@@ -311,7 +379,7 @@ public class ScanLocalDevices extends AppCompatActivity {
         session.init(null);
     }
 
-    private void getDeviceInfo() {
+    private void getDeviceInfo(final boolean isNewFw) {
 
         runOnUiThread(new Runnable() {
 
@@ -341,6 +409,7 @@ public class ScanLocalDevices extends AppCompatActivity {
                 DeviceInfo deviceInfo = processDeviceInfoResponse(returnData);
                 if (deviceInfo != null) {
 
+                    deviceInfo.setNewFirmware(isNewFw);
                     runOnUiThread(new Runnable() {
 
                         @Override
@@ -565,7 +634,7 @@ public class ScanLocalDevices extends AppCompatActivity {
         @Override
         public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
 
-            Log.e(TAG, "" + SSDPdevices.get(position).getFriendlyName() + " Device clicked");
+            Log.e(TAG, "" + SSDPdevices.get(position).getDeviceName() + " Device clicked");
             btnScan.setVisibility(View.VISIBLE);
             String progressMsg = getString(R.string.progress_connect_device);
             showProgressDialog(progressMsg);

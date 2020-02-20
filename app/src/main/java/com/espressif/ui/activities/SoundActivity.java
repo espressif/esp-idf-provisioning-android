@@ -3,18 +3,20 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.espressif.AppConstants;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
+import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
@@ -73,7 +75,13 @@ public class SoundActivity extends AppCompatActivity {
         public void onCheckedChanged(CompoundButton buttonView, final boolean isChecked) {
 
             transport = new SoftAPTransport(deviceHostAddress + ":80");
-            security = new Security0();
+
+            if (deviceInfo.isNewFirmware()) {
+                security = new Security1(getResources().getString(R.string.proof_of_possesion));
+            } else {
+                security = new Security0();
+            }
+
             session = new Session(transport, security);
             session.init(null);
 
@@ -103,7 +111,11 @@ public class SoundActivity extends AppCompatActivity {
         public void onCheckedChanged(CompoundButton buttonView, final boolean isChecked) {
 
             transport = new SoftAPTransport(deviceHostAddress + ":80");
-            security = new Security0();
+            if (deviceInfo.isNewFirmware()) {
+                security = new Security1(getResources().getString(R.string.proof_of_possesion));
+            } else {
+                security = new Security0();
+            }
             session = new Session(transport, security);
             session.init(null);
 

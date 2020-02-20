@@ -15,6 +15,7 @@ public class DeviceInfo implements Parcelable {
     private boolean isEndToneEnabled;
     private int language;
     private int volume;
+    private boolean isNewFirmware;
 
     public DeviceInfo() {
     }
@@ -31,6 +32,7 @@ public class DeviceInfo implements Parcelable {
         isEndToneEnabled = in.readByte() != 0;
         language = in.readInt();
         volume = in.readInt();
+        isNewFirmware = in.readByte() != 0;
     }
 
     public static final Creator<DeviceInfo> CREATOR = new Creator<DeviceInfo>() {
@@ -62,6 +64,7 @@ public class DeviceInfo implements Parcelable {
         dest.writeByte((byte) (isEndToneEnabled ? 1 : 0));
         dest.writeInt(language);
         dest.writeInt(volume);
+        dest.writeByte((byte) (isNewFirmware ? 1 : 0));
     }
 
     public String getDeviceName() {
@@ -142,5 +145,13 @@ public class DeviceInfo implements Parcelable {
 
     public void setVolume(int volume) {
         this.volume = volume;
+    }
+
+    public boolean isNewFirmware() {
+        return isNewFirmware;
+    }
+
+    public void setNewFirmware(boolean isNewFirmware) {
+        this.isNewFirmware = isNewFirmware;
     }
 }
