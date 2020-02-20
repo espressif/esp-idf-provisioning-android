@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.protobuf'
+apply plugin: 'io.fabric'
 
 android {
     signingConfigs {
@@ -16,8 +17,8 @@ android {
         applicationId "com.espressif.provbleavs"
         minSdkVersion 21
         targetSdkVersion 28
-        versionCode 12
-        versionName "2.0"
+        versionCode 13
+        versionName "2.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         signingConfig signingConfigs.config
     }
@@ -103,4 +104,12 @@ dependencies {
     implementation 'com.google.crypto.tink:tink-android:1.1.0'
     implementation 'com.github.custanator:upnpdiscovery:1.0.1'
     implementation 'com.github.f0ris.sweetalert:library:1.5.1'
+
+    // (Recommended) Add the Google Analytics dependency.
+    implementation 'com.google.firebase:firebase-analytics:17.2.2'
+
+    // Add the Firebase Crashlytics dependency.
+    implementation 'com.crashlytics.sdk.android:crashlytics:2.10.1'
 }
+
+apply plugin: 'com.google.gms.google-services'
