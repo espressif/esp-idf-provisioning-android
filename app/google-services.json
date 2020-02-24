@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "253563662563",
+    "firebase_url": "https://esp-alexa.firebaseio.com",
+    "project_id": "esp-alexa",
+    "storage_bucket": "esp-alexa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:253563662563:android:b2f036c9dabbe2f5cd55d6",
+        "android_client_info": {
+          "package_name": "com.espressif.provbleavs"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "253563662563-02jclpohuqv7u95upghldhhgmhu7r4l6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9lh-CLTqd318ds_Tw9q3w_eTteU3l-08"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "253563662563-02jclpohuqv7u95upghldhhgmhu7r4l6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

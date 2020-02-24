@@ -3,24 +3,27 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.espressif.AppConstants;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
+import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.provision.transport.Transport;
 import com.espressif.ui.adapters.LanguageListAdapter;
+import com.espressif.ui.models.DeviceInfo;
 import com.espressif.ui.models.Language;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -38,7 +41,7 @@ public class LanguageListActivity extends AppCompatActivity {
     private ArrayList<Language> languages;
     private int selectedLang;
     private SweetAlertDialog pDialog;
-
+    private DeviceInfo deviceInfo;
     private String deviceHostAddress;
 
     private Session session;
@@ -55,8 +58,10 @@ public class LanguageListActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.title_activity_language);
         setSupportActionBar(toolbar);
 
-        deviceHostAddress = getIntent().getStringExtra(LoginWithAmazon.KEY_HOST_ADDRESS);
-        selectedLang = getIntent().getExtras().getInt(AppConstants.KEY_DEVICE_LANGUAGE);
+        Intent intent = getIntent();
+        deviceInfo = intent.getParcelableExtra(AppConstants.KEY_DEVICE_INFO);
+        deviceHostAddress = intent.getStringExtra(LoginWithAmazon.KEY_HOST_ADDRESS);
+        selectedLang = deviceInfo.getLanguage();
 
         initViews();
 
@@ -66,7 +71,11 @@ public class LanguageListActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
 
                 transport = new SoftAPTransport(deviceHostAddress + ":80");
-                security = new Security0();
+                if (deviceInfo.isNewFirmware()) {
+                    security = new Security1(getResources().getString(R.string.proof_of_possesion));
+                } else {
+                    security = new Security0();
+                }
                 session = new Session(transport, security);
                 session.init(null);
 

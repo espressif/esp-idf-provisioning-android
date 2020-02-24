@@ -4,8 +4,10 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextPaint;
@@ -19,9 +21,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
+import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
@@ -47,7 +51,7 @@ public class AlexaActivity extends AppCompatActivity {
     private String deviceName;
 
     private TextView txtDeviceName;
-    private boolean isProv = false;
+    private boolean isProv = false, isNewFw = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -61,6 +65,7 @@ public class AlexaActivity extends AppCompatActivity {
         hostAddress = intent.getStringExtra(LoginWithAmazon.KEY_HOST_ADDRESS);
         deviceName = intent.getStringExtra(LoginWithAmazon.KEY_DEVICE_NAME);
         isProv = intent.getBooleanExtra("is_prov", false);
+        isNewFw = intent.getBooleanExtra(AppConstants.KEY_IS_NEW_FIRMWARE, false);
         initViews();
 
         if (!TextUtils.isEmpty(deviceName)) {
@@ -70,9 +75,13 @@ public class AlexaActivity extends AppCompatActivity {
         if (!isProv) {
 
             transport = new SoftAPTransport(hostAddress + ":80");
-            security = new Security0();
-            session = new Session(transport, security);
 
+            if (isNewFw) {
+                security = new Security1(getResources().getString(R.string.proof_of_possesion));
+            } else {
+                security = new Security0();
+            }
+            session = new Session(transport, security);
             session.init(null);
 
             session.sessionListener = new Session.SessionListener() {
@@ -249,6 +258,7 @@ public class AlexaActivity extends AppCompatActivity {
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, hostAddress);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, false);
+        alexaProvisioningIntent.putExtra(AppConstants.KEY_IS_NEW_FIRMWARE, isNewFw);
         startActivity(alexaProvisioningIntent);
     }
 }

@@ -37,7 +37,7 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Medium"
         android:textSize="18sp" />
 
-    <android.support.design.widget.TextInputLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/ssid_input_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,9 +53,9 @@
             android:hint="@string/ssid_hint_text"
             android:inputType="text" />
 
-    </android.support.design.widget.TextInputLayout>
+    </com.google.android.material.textfield.TextInputLayout>
 
-    <android.support.design.widget.TextInputLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/password_input_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -72,7 +72,7 @@
             android:hint="@string/password_hint_text"
             android:inputType="textPassword" />
 
-    </android.support.design.widget.TextInputLayout>
+    </com.google.android.material.textfield.TextInputLayout>
 
     <RelativeLayout
         android:id="@+id/provision_button_layout"

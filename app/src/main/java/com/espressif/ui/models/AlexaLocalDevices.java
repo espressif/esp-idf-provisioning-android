@@ -8,6 +8,8 @@ public class AlexaLocalDevices implements Serializable {
     private String status;
     private String softwareVersion;
     private String friendlyName;
+    private String version;
+    private String deviceName;
 
     public AlexaLocalDevices(String hostAddr) {
         this.hostAddr = hostAddr;
@@ -50,5 +52,21 @@ public class AlexaLocalDevices implements Serializable {
 
     public void setFriendlyName(String friendlyName) {
         this.friendlyName = friendlyName;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getDeviceName() {
+        return deviceName;
+    }
+
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
 }

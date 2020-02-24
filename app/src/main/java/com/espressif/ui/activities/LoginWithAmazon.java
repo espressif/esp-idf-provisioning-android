@@ -17,9 +17,12 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Vibrator;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+
+import com.google.android.material.snackbar.Snackbar;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -28,7 +31,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -79,7 +81,7 @@ public class LoginWithAmazon extends AppCompatActivity {
     public String[] DeviceDetails = new String[3];
     private String hostAddress;
     private String deviceName;
-    private boolean isProvisioning = false;
+    private boolean isProvisioning = false, isNewFw = false;
     private String productId;
     private String productDSN;
     private String codeVerifier;
@@ -101,6 +103,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         hostAddress = intent.getStringExtra(KEY_HOST_ADDRESS);
         deviceName = intent.getStringExtra(KEY_DEVICE_NAME);
         isProvisioning = intent.getBooleanExtra(KEY_IS_PROVISIONING, false);
+        isNewFw = intent.getBooleanExtra(AppConstants.KEY_IS_NEW_FIRMWARE, false);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(deviceName);
@@ -128,7 +131,12 @@ public class LoginWithAmazon extends AppCompatActivity {
 
             Log.d(TAG, "Host Address : " + hostAddress);
             transport = new SoftAPTransport(hostAddress + ":80");
-            security = new Security0();
+
+            if (isNewFw) {
+                security = new Security1(getResources().getString(R.string.proof_of_possesion));
+            } else {
+                security = new Security0();
+            }
         }
 
         session = new Session(transport, security);
@@ -491,6 +499,7 @@ public class LoginWithAmazon extends AppCompatActivity {
         Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
         alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, hostAddress);
         alexaIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
+        alexaIntent.putExtra(AppConstants.KEY_IS_NEW_FIRMWARE, isNewFw);
         alexaIntent.putExtras(getIntent());
         startActivity(alexaIntent);
     }

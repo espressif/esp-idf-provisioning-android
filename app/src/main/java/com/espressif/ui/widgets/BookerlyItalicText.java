@@ -4,7 +4,7 @@ import android.content.Context;
 import android.graphics.Typeface;
 import android.util.AttributeSet;
 
-public class BookerlyItalicText extends android.support.v7.widget.AppCompatTextView {
+public class BookerlyItalicText extends androidx.appcompat.widget.AppCompatTextView {
 
     public BookerlyItalicText(Context context, AttributeSet attrs) {
         super(context, attrs);

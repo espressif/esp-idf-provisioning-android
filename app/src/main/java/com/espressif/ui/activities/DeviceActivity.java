@@ -4,10 +4,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,6 +24,7 @@ import com.espressif.AppConstants;
 import com.espressif.provision.R;
 import com.espressif.provision.security.Security;
 import com.espressif.provision.security.Security0;
+import com.espressif.provision.security.Security1;
 import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
 import com.espressif.provision.transport.SoftAPTransport;
@@ -54,6 +57,7 @@ public class DeviceActivity extends AppCompatActivity {
     private DeviceInfo deviceInfo;
     private String deviceHostAddress;
     private String deviceName;
+    private boolean isNewFw;
 
     private Session session;
     private Security security;
@@ -70,6 +74,7 @@ public class DeviceActivity extends AppCompatActivity {
         deviceHostAddress = intent.getStringExtra(LoginWithAmazon.KEY_HOST_ADDRESS);
         deviceName = intent.getStringExtra(LoginWithAmazon.KEY_DEVICE_NAME);
         deviceInfo = intent.getParcelableExtra(AppConstants.KEY_DEVICE_INFO);
+        isNewFw = deviceInfo.isNewFirmware();
 
         toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(deviceName);
@@ -96,7 +101,11 @@ public class DeviceActivity extends AppCompatActivity {
         super.onResume();
 
         transport = new SoftAPTransport(deviceHostAddress + ":80");
-        security = new Security0();
+        if (deviceInfo.isNewFirmware()) {
+            security = new Security1(getResources().getString(R.string.proof_of_possesion));
+        } else {
+            security = new Security0();
+        }
         session = new Session(transport, security);
         session.init(null);
 
@@ -169,7 +178,11 @@ public class DeviceActivity extends AppCompatActivity {
 
             Log.e(TAG, "onStopTrackingTouch : " + seekBar.getProgress());
             transport = new SoftAPTransport(deviceHostAddress + ":80");
-            security = new Security0();
+            if (deviceInfo.isNewFirmware()) {
+                security = new Security1(getResources().getString(R.string.proof_of_possesion));
+            } else {
+                security = new Security0();
+            }
             session = new Session(transport, security);
             session.init(null);
 
@@ -216,7 +229,7 @@ public class DeviceActivity extends AppCompatActivity {
 
             Intent languageIntent = new Intent(DeviceActivity.this, LanguageListActivity.class);
             languageIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
-            languageIntent.putExtra(AppConstants.KEY_DEVICE_LANGUAGE, deviceInfo.getLanguage());
+            languageIntent.putExtra(AppConstants.KEY_DEVICE_INFO, deviceInfo);
             startActivityForResult(languageIntent, REQUEST_CODE_LANGUAGE);
         }
     };
@@ -272,10 +285,18 @@ public class DeviceActivity extends AppCompatActivity {
                 if (TextUtils.isEmpty(newDeviceName)) {
                     Toast.makeText(DeviceActivity.this, R.string.error_device_name_empty, Toast.LENGTH_SHORT).show();
                     return;
+                } else if (newDeviceName.contains("::")) {
+                    String errMsg = "Please enter a valid name which does not contain ::";
+                    Toast.makeText(DeviceActivity.this, errMsg, Toast.LENGTH_SHORT).show();
+                    return;
                 }
 
                 transport = new SoftAPTransport(deviceHostAddress + ":80");
-                security = new Security0();
+                if (deviceInfo.isNewFirmware()) {
+                    security = new Security1(getResources().getString(R.string.proof_of_possesion));
+                } else {
+                    security = new Security0();
+                }
                 session = new Session(transport, security);
                 session.init(null);
 
@@ -561,6 +582,7 @@ public class DeviceActivity extends AppCompatActivity {
                 if (device != null) {
 
                     deviceInfo = device;
+                    deviceInfo.setNewFirmware(isNewFw);
                     runOnUiThread(new Runnable() {
 
                         @Override
@@ -612,6 +634,7 @@ public class DeviceActivity extends AppCompatActivity {
                 deviceInfo.setEndToneEnabled(specificInfo.getEORAudioCue());
                 deviceInfo.setVolume(specificInfo.getVolume());
                 deviceInfo.setLanguage(specificInfo.getAssistantLangValue());
+                deviceInfo.setNewFirmware(isNewFw);
             }
 
         } catch (InvalidProtocolBufferException e) {
@@ -650,6 +673,7 @@ public class DeviceActivity extends AppCompatActivity {
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
         alexaProvisioningIntent.putExtra(LoginWithAmazon.KEY_IS_PROVISIONING, false);
+        alexaProvisioningIntent.putExtra(AppConstants.KEY_IS_NEW_FIRMWARE, deviceInfo.isNewFirmware());
         startActivity(alexaProvisioningIntent);
     }
 
@@ -658,6 +682,7 @@ public class DeviceActivity extends AppCompatActivity {
         Intent alexaIntent = new Intent(getApplicationContext(), AlexaActivity.class);
         alexaIntent.putExtra(LoginWithAmazon.KEY_HOST_ADDRESS, deviceHostAddress);
         alexaIntent.putExtra(LoginWithAmazon.KEY_DEVICE_NAME, deviceName);
+        alexaIntent.putExtra(AppConstants.KEY_IS_NEW_FIRMWARE, deviceInfo.isNewFirmware());
         alexaIntent.putExtras(getIntent());
         startActivity(alexaIntent);
     }
