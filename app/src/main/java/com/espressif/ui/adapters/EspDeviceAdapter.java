@@ -63,7 +63,22 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
         // set the data in items
         Log.e("TAG", "Device name : " + device.getDeviceName());
         Log.e("TAG", "Device Primary Param : " + device.getPrimaryParamName());
-        myViewHolder.tvDeviceName.setText(device.getDeviceName());
+
+        boolean isParamTypeNameAvailable = false;
+
+        for (int i = 0; i < device.getParams().size(); i++) {
+
+            Param p = device.getParams().get(i);
+            if (p != null && p.getParamType() != null && p.getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+                isParamTypeNameAvailable = true;
+                myViewHolder.tvDeviceName.setText(p.getLabelValue());
+                break;
+            }
+        }
+
+        if (!isParamTypeNameAvailable) {
+            myViewHolder.tvDeviceName.setText(device.getDeviceName());
+        }
 
         if (TextUtils.isEmpty(device.getDeviceType())) {
 

@@ -26,6 +26,7 @@ import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.R;
+import com.espressif.ui.activities.EspDeviceActivity;
 import com.espressif.ui.models.Param;
 import com.google.gson.JsonObject;
 import com.warkiz.tickseekbar.OnSeekChangeListener;
@@ -542,6 +543,10 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(value);
                             params.get(position).setLabelValue(value);
+
+                            if (params.get(position).getParamType() != null && params.get(position).getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+                                ((EspDeviceActivity) context).setDeviceName(value);
+                            }
                         }
 
                         @Override
