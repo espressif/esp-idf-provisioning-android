@@ -103,10 +103,10 @@ dependencies {
     implementation 'androidx.recyclerview:recyclerview:1.0.0'
     implementation 'org.greenrobot:eventbus:3.1.1'
     implementation 'com.google.android.gms:play-services-vision:19.0.0'
-    implementation project(':barcode-reader')
     implementation 'com.github.warkiz.tickseekbar:tickseekbar:0.1.4'
     implementation('com.amazonaws:aws-android-sdk-iot:2.15.+@aar') { transitive = true }
     implementation('com.amazonaws:aws-android-sdk-mobile-client:2.15.+@aar') { transitive = true }
     implementation 'com.google.firebase:firebase-analytics:17.2.2'
     implementation 'com.auth0.android:jwtdecode:1.4.0'
+    implementation 'com.wang.avi:library:2.1.3'
 }

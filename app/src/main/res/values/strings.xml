@@ -107,10 +107,12 @@
     <string name="btn_ok">OK</string>
     <string name="btn_back">Back</string>
     <string name="btn_cancel">Cancel</string>
-    <string name="btn_join">Join</string>
+    <string name="btn_join">Provision</string>
     <string name="btn_yes">YES</string>
     <string name="btn_no">NO</string>
     <string name="btn_edit">Edit</string>
+    <string name="btn_no_qr_code">I don\'t have a QR code</string>
+    <string name="btn_add_device">Add Device</string>
 
     <!--Screen titles-->
     <string name="title_activity_devices">Devices</string>

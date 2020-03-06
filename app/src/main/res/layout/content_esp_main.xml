@@ -31,8 +31,7 @@
             android:layout_marginTop="24dp"
             android:text="@string/no_devices"
             android:textColor="@color/colorPrimaryDark"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="18sp" />
 
         <TextView
             android:id="@+id/tv_add_device"
@@ -44,12 +43,21 @@
             android:gravity="center_horizontal"
             android:text="@string/add_device_txt"
             android:textColor="@color/colorAccent"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:visibility="gone" />
 
     </RelativeLayout>
 
+    <include
+        android:id="@+id/btn_add_device_1"
+        layout="@layout/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="32dp" />
+
     <androidx.core.widget.ContentLoadingProgressBar
-        android:id="@+id/progress_indicator"
+        android:id="@+id/progress_get_devices"
         style="?android:attr/progressBarStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

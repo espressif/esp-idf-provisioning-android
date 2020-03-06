@@ -38,7 +38,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
+import androidx.cardview.widget.CardView;
 import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -58,8 +58,6 @@ import com.espressif.ui.adapters.EspDeviceAdapter;
 import com.espressif.ui.models.EspDevice;
 import com.espressif.ui.models.EspNode;
 import com.espressif.ui.models.UpdateEvent;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.notbytes.barcode_reader.BarcodeReaderActivity;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -80,7 +78,6 @@ public class EspMainActivity extends AppCompatActivity {
     private static final int REQUEST_LOCATION = 1;
     private static final int BARCODE_READER_ACTIVITY_REQUEST = 120;
 
-    private FloatingActionButton btnProvision, btnScanQrCode;
     private ContentLoadingProgressBar progressBar;
     private RecyclerView recyclerView;
     private TextView tvNoDevice, tvAddDevice;
@@ -88,6 +85,10 @@ public class EspMainActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefreshLayout;
     private TextView tvTitle;
     private ImageView ivAddDevice, ivUserProfile, ivNoDevice;
+
+    private CardView btnAddDevice;
+    private TextView txtAddDeviceBtn;
+    private ImageView arrowImage;
 
     private String BASE_URL;
     private String transportVersion, securityVersion;
@@ -263,7 +264,16 @@ public class EspMainActivity extends AppCompatActivity {
             }
 
             if (resultCode != RESULT_OK) {
-                Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
+
+                if (data != null) {
+                    String errMsg = data.getStringExtra("err_msg");
+
+                    if (!TextUtils.isEmpty(errMsg)) {
+                        Toast.makeText(this, errMsg, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
+                    }
+                }
                 return;
             }
 
@@ -339,7 +349,7 @@ public class EspMainActivity extends AppCompatActivity {
         }
     }
 
-    View.OnClickListener provisionBtnClickListener = new View.OnClickListener() {
+    View.OnClickListener addDeviceBtnClickListener = new View.OnClickListener() {
 
         @Override
         public void onClick(View v) {
@@ -354,32 +364,6 @@ public class EspMainActivity extends AppCompatActivity {
                     return;
                 }
             }
-
-            HashMap<String, String> config = new HashMap<>();
-            config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
-            config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
-            config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-
-            Provision.showProvisioningUI(EspMainActivity.this, config);
-        }
-    };
-
-    View.OnClickListener scanQrCodeBtnClickListener = new View.OnClickListener() {
-
-        @Override
-        public void onClick(View v) {
-
-            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-
-                if (!isLocationEnabled()) {
-                    askForLocation();
-                    return;
-                }
-            }
-            ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
             goToBarCodeActivity();
         }
     };
@@ -389,24 +373,24 @@ public class EspMainActivity extends AppCompatActivity {
         tvTitle = findViewById(R.id.esp_toolbar_title);
         ivAddDevice = findViewById(R.id.btn_add_device);
         ivUserProfile = findViewById(R.id.btn_user_profile);
-        btnProvision = findViewById(R.id.btn_provision);
-        btnScanQrCode = findViewById(R.id.btn_scan_qr_code);
         rlNoDevices = findViewById(R.id.rl_no_device);
         tvNoDevice = findViewById(R.id.tv_no_device);
         tvAddDevice = findViewById(R.id.tv_add_device);
         ivNoDevice = findViewById(R.id.iv_no_device);
-        progressBar = findViewById(R.id.progress_indicator);
+        progressBar = findViewById(R.id.progress_get_devices);
         recyclerView = findViewById(R.id.rv_device_list);
         swipeRefreshLayout = findViewById(R.id.swipe_container);
 
-        tvTitle.setText(R.string.title_activity_devices);
-        ivAddDevice.setOnClickListener(new View.OnClickListener() {
+        btnAddDevice = findViewById(R.id.btn_add_device_1);
+        txtAddDeviceBtn = findViewById(R.id.text_btn);
+        arrowImage = findViewById(R.id.iv_arrow);
+        txtAddDeviceBtn.setText(R.string.btn_add_device);
+        btnAddDevice.setVisibility(View.GONE);
+        arrowImage.setVisibility(View.GONE);
 
-            @Override
-            public void onClick(View v) {
-                showPopupMenuForAddDevice(v);
-            }
-        });
+        tvTitle.setText(R.string.title_activity_devices);
+        ivAddDevice.setOnClickListener(addDeviceBtnClickListener);
+        btnAddDevice.setOnClickListener(addDeviceBtnClickListener);
 
         ivUserProfile.setOnClickListener(new View.OnClickListener() {
 
@@ -415,9 +399,6 @@ public class EspMainActivity extends AppCompatActivity {
                 startActivity(new Intent(EspMainActivity.this, UserProfileActivity.class));
             }
         });
-
-        btnProvision.setOnClickListener(provisionBtnClickListener);
-        btnScanQrCode.setOnClickListener(scanQrCodeBtnClickListener);
 
         // set a LinearLayoutManager with default orientation
         GridLayoutManager linearLayoutManager = new GridLayoutManager(getApplicationContext(), 2);
@@ -487,7 +468,7 @@ public class EspMainActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Exception exception) {
-//                Toast.makeText(EspMainActivity.this, "Failed to get Devices", Toast.LENGTH_SHORT).show();
+                hideLoading();
                 tvNoDevice.setText("Error : Device list not received");
                 rlNoDevices.setVisibility(View.VISIBLE);
                 tvNoDevice.setVisibility(View.VISIBLE);
@@ -601,15 +582,19 @@ public class EspMainActivity extends AppCompatActivity {
         if (devices.size() > 0) {
 
             rlNoDevices.setVisibility(View.GONE);
+            btnAddDevice.setVisibility(View.GONE);
+            ivAddDevice.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.VISIBLE);
 
         } else {
             tvNoDevice.setText(R.string.no_devices);
             rlNoDevices.setVisibility(View.VISIBLE);
             tvNoDevice.setVisibility(View.VISIBLE);
-            tvAddDevice.setVisibility(View.VISIBLE);
+            tvAddDevice.setVisibility(View.GONE);
             ivNoDevice.setVisibility(View.VISIBLE);
+            btnAddDevice.setVisibility(View.VISIBLE);
             recyclerView.setVisibility(View.GONE);
+            ivAddDevice.setVisibility(View.GONE);
         }
 
         deviceAdapter.updateList(devices);
@@ -621,9 +606,10 @@ public class EspMainActivity extends AppCompatActivity {
 
     private void goToBarCodeActivity() {
 
+        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork(this);
         isScanQrCode = true;
-        Intent launchIntent = BarcodeReaderActivity.getLaunchIntent(this, true, false);
-        startActivityForResult(launchIntent, BARCODE_READER_ACTIVITY_REQUEST);
+        Intent intent = new Intent(this, AddDeviceActivity.class);
+        startActivityForResult(intent, BARCODE_READER_ACTIVITY_REQUEST);
     }
 
     private void alertForForceUpdate(String message) {
@@ -734,48 +720,6 @@ public class EspMainActivity extends AppCompatActivity {
 
         boolean result = gps_enabled || network_enabled;
         return result;
-    }
-
-    private void showPopupMenuForAddDevice(View view) {
-
-        PopupMenu popupMenu = new PopupMenu(this, view);
-        popupMenu.getMenuInflater().inflate(R.menu.menu_popup, popupMenu.getMenu());
-
-        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-
-            public boolean onMenuItemClick(MenuItem item) {
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-
-                    if (!isLocationEnabled()) {
-                        askForLocation();
-                        return true;
-                    }
-                }
-
-                switch (item.getItemId()) {
-
-                    case R.id.action_qr_code:
-
-                        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
-                        goToBarCodeActivity();
-                        break;
-
-                    case R.id.action_add_device:
-
-                        HashMap<String, String> config = new HashMap<>();
-                        config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
-                        config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
-                        config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
-
-                        Provision.showProvisioningUI(EspMainActivity.this, config);
-                        break;
-                }
-                return true;
-            }
-        });
-
-        popupMenu.show();
     }
 
     private void showLoading() {
