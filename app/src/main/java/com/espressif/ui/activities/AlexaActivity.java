@@ -43,10 +43,6 @@ public class AlexaActivity extends AppCompatActivity {
 
     private AvsEmberLightText txtAlexaAppLink;
 
-    private Session session;
-    private Security security;
-    private Transport transport;
-
     private String hostAddress;
     private String deviceName;
 
@@ -70,32 +66,6 @@ public class AlexaActivity extends AppCompatActivity {
 
         if (!TextUtils.isEmpty(deviceName)) {
             txtDeviceName.setText(deviceName);
-        }
-
-        if (!isProv) {
-
-            transport = new SoftAPTransport(hostAddress + ":80");
-
-            if (isNewFw) {
-                security = new Security1(getResources().getString(R.string.proof_of_possesion));
-            } else {
-                security = new Security0();
-            }
-            session = new Session(transport, security);
-            session.init(null);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-                    Log.d(TAG, "Session established");
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.d(TAG, "Session failed");
-                }
-            };
         }
     }
 
@@ -122,10 +92,9 @@ public class AlexaActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_sign_out) {
 
-            if (session.isEstablished()) {
-                sendSignOutCommand();
-            }
+            sendSignOutCommand();
             return true;
+
         } else if (id == R.id.action_done) {
 
             finish();
@@ -185,20 +154,6 @@ public class AlexaActivity extends AppCompatActivity {
         }
     }
 
-    private View.OnClickListener signOutBtnClickListener = new View.OnClickListener() {
-
-        @Override
-        public void onClick(View v) {
-
-            Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-            vib.vibrate(HapticFeedbackConstants.VIRTUAL_KEY);
-
-            if (session.isEstablished()) {
-                sendSignOutCommand();
-            }
-        }
-    };
-
     private void sendSignOutCommand() {
 
         Avsconfig.CmdSignInStatus configRequest = Avsconfig.CmdSignInStatus.newBuilder()
@@ -210,8 +165,8 @@ public class AlexaActivity extends AppCompatActivity {
                 .setCmdSigninStatus(configRequest)
                 .build();
 
-        byte[] message = security.encrypt(payload.toByteArray());
-        transport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
+        ScanLocalDevices.transport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -237,7 +192,7 @@ public class AlexaActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processAVSConfigResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 

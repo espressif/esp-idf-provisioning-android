@@ -95,16 +95,22 @@ public class WiFiScanActivity extends AppCompatActivity {
             }
         });
 
-        if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-            this.security = new Security1(pop);
-        } else {
-            this.security = new Security0();
-        }
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
-            if (BLEProvisionLanding.bleTransport == null) {
-            } else {
+            if (BLEProvisionLanding.bleTransport != null) {
                 transport = BLEProvisionLanding.bleTransport;
             }
+            if (BLEProvisionLanding.security != null) {
+                security = BLEProvisionLanding.security;
+            } else {
+                if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+                    security = new Security1(pop);
+                } else {
+                    security = new Security0();
+                }
+                BLEProvisionLanding.security = security;
+            }
+        } else {
+            // TODO
         }
         fetchScanList();
     }
@@ -119,32 +125,45 @@ public class WiFiScanActivity extends AppCompatActivity {
 
         Log.d(TAG, "Fetch Scan List");
 
-        session = new Session(this.transport, security);
-        session.sessionListener = new Session.SessionListener() {
+        if (BLEProvisionLanding.session != null) {
 
-            @Override
-            public void OnSessionEstablished() {
-                Log.e(TAG, "Session established");
-                try {
-                    startWifiScan();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+            session = BLEProvisionLanding.session;
 
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                Log.e(TAG, "Session failed");
+            try {
+                startWifiScan();
+            } catch (Exception e) {
                 e.printStackTrace();
-                String statusText = getResources().getString(R.string.error_pop_incorrect);
-                finish();
-                Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
-                goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
-                goToSuccessPage.putExtras(getIntent());
-                startActivity(goToSuccessPage);
             }
-        };
-        session.init(null);
+
+        } else {
+            session = new Session(this.transport, security);
+
+            session.sessionListener = new Session.SessionListener() {
+
+                @Override
+                public void OnSessionEstablished() {
+                    Log.e(TAG, "Session established");
+                    try {
+                        startWifiScan();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void OnSessionEstablishFailed(Exception e) {
+                    Log.e(TAG, "Session failed");
+                    e.printStackTrace();
+                    String statusText = getResources().getString(R.string.error_pop_incorrect);
+                    finish();
+                    Intent goToSuccessPage = new Intent(getApplicationContext(), ProvisionSuccessActivity.class);
+                    goToSuccessPage.putExtra(AppConstants.KEY_STATUS_MSG, statusText);
+                    goToSuccessPage.putExtras(getIntent());
+                    startActivity(goToSuccessPage);
+                }
+            };
+            session.init(null);
+        }
     }
 
     private void startWifiScan() {

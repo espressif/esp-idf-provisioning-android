@@ -44,10 +44,6 @@ public class LanguageListActivity extends AppCompatActivity {
     private DeviceInfo deviceInfo;
     private String deviceHostAddress;
 
-    private Session session;
-    private Security security;
-    private Transport transport;
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
 
@@ -70,32 +66,7 @@ public class LanguageListActivity extends AppCompatActivity {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
 
-                transport = new SoftAPTransport(deviceHostAddress + ":80");
-                if (deviceInfo.isNewFirmware()) {
-                    security = new Security1(getResources().getString(R.string.proof_of_possesion));
-                } else {
-                    security = new Security0();
-                }
-                session = new Session(transport, security);
-                session.init(null);
-
-                session.sessionListener = new Session.SessionListener() {
-
-                    @Override
-                    public void OnSessionEstablished() {
-
-                        Log.d(TAG, "Session established");
-                        changeLanguage(position);
-                    }
-
-                    @Override
-                    public void OnSessionEstablishFailed(Exception e) {
-                        Log.e(TAG, "Session failed");
-                        e.printStackTrace();
-                        Toast.makeText(LanguageListActivity.this, R.string.error_session_init_failed, Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-                };
+                changeLanguage(position);
             }
         });
     }
@@ -140,8 +111,8 @@ public class LanguageListActivity extends AppCompatActivity {
                 .setCmdAssistantLang(languageChangeRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -180,7 +151,7 @@ public class LanguageListActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processLanguageChangeResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 
