@@ -30,9 +30,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.ParcelUuid;
 import android.os.Vibrator;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -88,8 +90,8 @@ public class BLEProvisionLanding extends AppCompatActivity {
     private ProgressBar progressBar;
     private ListView listView;
 
-    private Session session;
-    private Security security;
+    public static Session session;
+    public static Security security;
     public static BLETransport bleTransport;
     private BLETransport.BLETransportListener transportListener;
 
@@ -321,6 +323,10 @@ public class BLEProvisionLanding extends AppCompatActivity {
         if (bleTransport != null) {
             bleTransport.disconnect();
         }
+        security = null;
+        session = null;
+        Log.e(TAG, "Make session null");
+        isBleWorkDone = false;
 
         deviceList.clear();
         bluetoothDevices.clear();

@@ -124,24 +124,50 @@ public class LoginWithAmazon extends AppCompatActivity {
         if (isProvisioning) {
 
             transport = BLEProvisionLanding.bleTransport;
-            String proofOfPossession = intent.getStringExtra(AppConstants.KEY_PROOF_OF_POSSESSION);
-            security = new Security1(proofOfPossession);
+            security = BLEProvisionLanding.security;
+            session = BLEProvisionLanding.session;
+
+            if (BLEProvisionLanding.security == null) {
+                Log.e(TAG, "SECURITY IS NULL");
+                // TODO
+            }
+
+            getDeviceDetails(new ConfigureAVSActionListener() {
+
+                @Override
+                public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
+
+                    // This is where we fetch the code verifier from the ESP32 device
+                    productId = DeviceDetails[0];
+                    productDSN = DeviceDetails[1];
+                    codeVerifier = DeviceDetails[2];
+                }
+            });
+            btnLogin.setAlpha(1f);
+            btnLogin.setEnabled(true);
 
         } else {
 
             Log.d(TAG, "Host Address : " + hostAddress);
-            transport = new SoftAPTransport(hostAddress + ":80");
 
-            if (isNewFw) {
-                security = new Security1(getResources().getString(R.string.proof_of_possesion));
-            } else {
-                security = new Security0();
-            }
+            transport = ScanLocalDevices.transport;
+            security = ScanLocalDevices.security;
+            session = ScanLocalDevices.session;
+
+            getDeviceDetails(new ConfigureAVSActionListener() {
+
+                @Override
+                public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
+
+                    // This is where we fetch the code verifier from the ESP32 device
+                    productId = DeviceDetails[0];
+                    productDSN = DeviceDetails[1];
+                    codeVerifier = DeviceDetails[2];
+                }
+            });
+            btnLogin.setAlpha(1f);
+            btnLogin.setEnabled(true);
         }
-
-        session = new Session(transport, security);
-        session.sessionListener = sessionListener;
-        session.init(null);
 
         requestContext.registerListener(amazonAuthorizeListener);
         btnLogin.setOnClickListener(loginBtnClickListener);
@@ -197,36 +223,6 @@ public class LoginWithAmazon extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
-
-    Session.SessionListener sessionListener = new Session.SessionListener() {
-
-        @Override
-        public void OnSessionEstablished() {
-
-            Log.d(TAG, "Session established");
-
-            getDeviceDetails(new ConfigureAVSActionListener() {
-
-                @Override
-                public void onComplete(Avsconfig.AVSConfigStatus status, Exception e) {
-
-                    // This is where we fetch the code verifier from the ESP32 device
-                    productId = DeviceDetails[0];
-                    productDSN = DeviceDetails[1];
-                    codeVerifier = DeviceDetails[2];
-                }
-            });
-            btnLogin.setAlpha(1f);
-            btnLogin.setEnabled(true);
-        }
-
-        @Override
-        public void OnSessionEstablishFailed(Exception e) {
-
-            Log.e(TAG, "Session failed");
-            e.printStackTrace();
-        }
-    };
 
     private View.OnClickListener loginBtnClickListener = new View.OnClickListener() {
 

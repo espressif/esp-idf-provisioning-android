@@ -6,11 +6,6 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Vibrator;
-
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.HapticFeedbackConstants;
@@ -22,6 +17,10 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.espressif.AppConstants;
 import com.espressif.provision.R;
@@ -64,9 +63,9 @@ public class ScanLocalDevices extends AppCompatActivity {
     private ArrayList<AlexaLocalDevices> SSDPdevices;
     private ArrayAdapter<String> SSDPadapter;
 
-    private Session session;
-    private Security security;
-    private Transport transport;
+    public static Session session;
+    public static Security security;
+    public static Transport transport;
 
     private Handler mHandler;
 
@@ -358,9 +357,10 @@ public class ScanLocalDevices extends AppCompatActivity {
         Log.d(TAG, "Device host address : " + deviceHostAddress);
         transport = new SoftAPTransport(deviceHostAddress + ":80");
 
-        session = new Session(this.transport, this.security);
+        session = new Session(transport, security);
 
         final boolean finalIsNewFw = isNewFw;
+        Log.d(TAG, "IS NEW FW : " + isNewFw);
         session.sessionListener = new Session.SessionListener() {
 
             @Override
@@ -371,6 +371,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
             @Override
             public void OnSessionEstablishFailed(Exception e) {
+                e.printStackTrace();
                 Log.d(TAG, "Session failed");
                 hideProgressDialog();
                 Toast.makeText(ScanLocalDevices.this, R.string.error_device_connection_failed, Toast.LENGTH_SHORT).show();
@@ -439,7 +440,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
     private DeviceInfo processDeviceInfoResponse(byte[] responseData) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = security.decrypt(responseData);
         DeviceInfo deviceInfo = null;
 
         try {
@@ -473,26 +474,7 @@ public class ScanLocalDevices extends AppCompatActivity {
 
     private void getSignedInStatus() {
 
-        transport = new SoftAPTransport(deviceHostAddress + ":80");
-        security = new Security0();
-        session = new Session(this.transport, this.security);
-
-        session.sessionListener = new Session.SessionListener() {
-
-            @Override
-            public void OnSessionEstablished() {
-                Log.d(TAG, "Session established");
-                getAlexaSignedInStatus();
-            }
-
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                Log.d(TAG, "Session failed");
-                hideProgressDialog();
-                Toast.makeText(ScanLocalDevices.this, R.string.error_device_connection_failed, Toast.LENGTH_SHORT).show();
-            }
-        };
-        session.init(null);
+        getAlexaSignedInStatus();
     }
 
     private void getAlexaSignedInStatus() {
@@ -553,7 +535,7 @@ public class ScanLocalDevices extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processSignInStatusResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = security.decrypt(responseData);
 
         try {
 

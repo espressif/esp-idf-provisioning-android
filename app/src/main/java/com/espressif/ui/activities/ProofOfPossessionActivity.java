@@ -2,8 +2,11 @@ package com.espressif.ui.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.widget.ContentLoadingProgressBar;
+
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -11,6 +14,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import com.espressif.AppConstants;
 import com.espressif.provision.Provision;
@@ -26,16 +30,16 @@ import avs.Avsconfig;
 
 import static com.espressif.avs.ConfigureAVS.AVS_CONFIG_PATH;
 
-// TODO start in only Sec1 condition
 public class ProofOfPossessionActivity extends AppCompatActivity {
 
     private static final String TAG = "Espressif::" + ProofOfPossessionActivity.class.getSimpleName();
 
     private Button btnNext;
+    private TextView textDeviceName;
     private EditText etDeviceKey;
+    private ContentLoadingProgressBar progressBar;
 
-    private Session session;
-    private Security security;
+    private String securityVersion, transportVersion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,10 +51,27 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         btnNext = findViewById(R.id.btn_next);
+        textDeviceName = findViewById(R.id.device_name);
         etDeviceKey = findViewById(R.id.et_pop);
-        btnNext.setEnabled(false);
-        btnNext.setAlpha(0.5f);
+        progressBar = findViewById(R.id.progress_indicator);
+
+        String deviceName = getIntent().getStringExtra(AppConstants.KEY_DEVICE_NAME);
+        transportVersion = getIntent().getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
+        securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+
+        progressBar.setVisibility(View.INVISIBLE);
+        textDeviceName.setText(deviceName);
         btnNext.setOnClickListener(nextBtnClickListener);
+        String key = getString(R.string.proof_of_possesion);
+
+        if (!TextUtils.isEmpty(key)) {
+
+            etDeviceKey.setText(key);
+            etDeviceKey.setSelection(etDeviceKey.getText().length());
+        } else {
+            btnNext.setEnabled(false);
+            btnNext.setAlpha(0.5f);
+        }
 
         etDeviceKey.addTextChangedListener(new TextWatcher() {
 
@@ -83,37 +104,75 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onBackPressed() {
+        BLEProvisionLanding.isBleWorkDone = true;
+        super.onBackPressed();
+    }
+
     private View.OnClickListener nextBtnClickListener = new View.OnClickListener() {
 
         @Override
         public void onClick(View v) {
 
-            final String pop = etDeviceKey.getText().toString();
-            Log.e(TAG, "POP : " + pop);
-            final String securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
+            btnNext.setEnabled(false);
+            btnNext.setAlpha(0.5f);
+            progressBar.setVisibility(View.VISIBLE);
 
-            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-                security = new Security1(pop);
+            final String pop = etDeviceKey.getText().toString();
+            Log.d(TAG, "POP : " + pop);
+            boolean shouldCreateSession = false;
+
+            if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
+
+                if (BLEProvisionLanding.security == null) {
+
+                    if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+                        BLEProvisionLanding.security = new Security1(pop);
+                    } else {
+                        BLEProvisionLanding.security = new Security0();
+                    }
+
+                    shouldCreateSession = true;
+
+                } else {
+
+                    if (BLEProvisionLanding.session != null) {
+                        getStatus();
+                    } else {
+                        shouldCreateSession = true;
+                    }
+                }
+
             } else {
-                security = new Security0();
+
+                if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+                    Security security = new Security1(pop);
+                } else {
+                    Security security = new Security0();
+                }
+                // TODO Create session for SoftAP Transport
+                Log.e(TAG, "Currently BLE transport is supported in AVS app.");
             }
 
-            session = new Session(BLEProvisionLanding.bleTransport, security);
+            if (shouldCreateSession) {
 
-            session.sessionListener = new Session.SessionListener() {
+                BLEProvisionLanding.session = new Session(BLEProvisionLanding.bleTransport, BLEProvisionLanding.security);
+                BLEProvisionLanding.session.sessionListener = new Session.SessionListener() {
 
-                @Override
-                public void OnSessionEstablished() {
-                    Log.d(TAG, "Session established");
-                    getStatus();
-                }
+                    @Override
+                    public void OnSessionEstablished() {
+                        Log.d(TAG, "Session established");
+                        getStatus();
+                    }
 
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.d(TAG, "Session failed");
-                }
-            };
-            session.init(null);
+                    @Override
+                    public void OnSessionEstablishFailed(Exception e) {
+                        Log.d(TAG, "Session failed");
+                    }
+                };
+                BLEProvisionLanding.session.init(null);
+            }
         }
     };
 
@@ -128,7 +187,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
                 .setCmdSigninStatus(configRequest)
                 .build();
 
-        byte[] message = security.encrypt(payload.toByteArray());
+        byte[] message = BLEProvisionLanding.security.encrypt(payload.toByteArray());
 
         BLEProvisionLanding.bleTransport.sendConfigData(AVS_CONFIG_PATH, message, new ResponseListener() {
 
@@ -159,7 +218,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processSignInStatusResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = BLEProvisionLanding.security.decrypt(responseData);
 
         try {
 

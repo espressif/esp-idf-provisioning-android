@@ -17,8 +17,10 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Vibrator;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -59,6 +61,7 @@ public class ProvisionActivity extends AppCompatActivity {
     private int wifiSecurityType;
     private String ssidValue, passphraseValue;
     private String pop, baseUrl, transportVersion, securityVersion;
+    private Session session;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,7 +131,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable editable) {
-                ssidValue = editable.toString().trim();
+                ssidValue = editable.toString();
                 enableProvisionBtn();
             }
         });
@@ -145,7 +148,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable editable) {
-                passphraseValue = editable.toString().trim();
+                passphraseValue = editable.toString();
                 enableProvisionBtn();
             }
         });
@@ -176,30 +179,30 @@ public class ProvisionActivity extends AppCompatActivity {
         passwordInput.setEnabled(false);
         progressBar.setVisibility(View.VISIBLE);
 
-        final Security security;
-        final Transport transport;
-
-        if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-            security = new Security1(pop);
-        } else {
-            security = new Security0();
-        }
-
         if (transportVersion.equals(Provision.CONFIG_TRANSPORT_WIFI)) {
 
-            transport = new SoftAPTransport(baseUrl);
+            Security security;
+            Transport transport = new SoftAPTransport(baseUrl);
+
+            if (securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+                security = new Security1(pop);
+            } else {
+                security = new Security0();
+            }
+
             provision(transport, security);
 
         } else if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE)) {
 
-            if (BLEProvisionLanding.bleTransport == null) {
+            if (BLEProvisionLanding.bleTransport == null || BLEProvisionLanding.security == null) {
 
                 Log.e(TAG, "BLE Transport is Null. It should not be null.");
                 BLEProvisionLanding.isBleWorkDone = true;
                 finish();
 
             } else {
-                provision(BLEProvisionLanding.bleTransport, security);
+
+                provision(BLEProvisionLanding.bleTransport, BLEProvisionLanding.security);
             }
         }
     }
@@ -208,129 +211,230 @@ public class ProvisionActivity extends AppCompatActivity {
 
         Log.e(TAG, "================== PROVISION +++++++++++++++++++++++++++++");
 
-        final Session session = new Session(transport, security);
-        session.sessionListener = new Session.SessionListener() {
-            @Override
-            public void OnSessionEstablished() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(ProvisionActivity.this,
-                                "Session Established",
-                                Toast.LENGTH_SHORT)
-                                .show();
-                    }
-                });
+        if (transportVersion.equals(Provision.CONFIG_TRANSPORT_BLE) && BLEProvisionLanding.session != null) {
 
-                final Provision provision = new Provision(session);
-                provision.provisioningListener = new Provision.ProvisioningListener() {
-                    @Override
-                    public void OnApplyConfigurationsSucceeded() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Configurations successfully applied",
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                            }
-                        });
-                    }
+            session = BLEProvisionLanding.session;
 
-                    @Override
-                    public void OnApplyConfigurationsFailed() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Configurations cannot be applied",
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void OnWifiConnectionStatusUpdated(final WifiConstants.WifiStationState newStatus,
-                                                              final WifiConstants.WifiConnectFailedReason failedReason,
-                                                              final Exception e) {
-                        String statusText = "";
-                        if (e != null) {
-                            statusText = e.getMessage();
-                        } else if (newStatus == WifiConstants.WifiStationState.Connected) {
-                            statusText = getResources().getString(R.string.success_text);
-                        } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
-                            statusText = getResources().getString(R.string.wifi_disconnected_text);
-                        } else {
-                            if (failedReason == WifiConstants.WifiConnectFailedReason.AuthError) {
-                                statusText = getResources().getString(R.string.error_authentication_failed);
-                            } else if (failedReason == WifiConstants.WifiConnectFailedReason.NetworkNotFound) {
-                                statusText = getResources().getString(R.string.error_network_not_found);
-                            } else {
-                                statusText = getResources().getString(R.string.error_unknown);
-                            }
+            final Provision provision = new Provision(session);
+            provision.provisioningListener = new Provision.ProvisioningListener() {
+                @Override
+                public void OnApplyConfigurationsSucceeded() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this,
+                                    "Configurations successfully applied",
+                                    Toast.LENGTH_LONG)
+                                    .show();
                         }
-                        final String finalStatusText = statusText;
+                    });
+                }
 
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
+                @Override
+                public void OnApplyConfigurationsFailed() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this,
+                                    "Configurations cannot be applied",
+                                    Toast.LENGTH_LONG)
+                                    .show();
+                        }
+                    });
+                }
 
-                                if (newStatus != WifiConstants.WifiStationState.Connected) {
+                @Override
+                public void OnWifiConnectionStatusUpdated(final WifiConstants.WifiStationState newStatus,
+                                                          final WifiConstants.WifiConnectFailedReason failedReason,
+                                                          final Exception e) {
+                    String statusText = "";
+                    if (e != null) {
+                        statusText = e.getMessage();
+                    } else if (newStatus == WifiConstants.WifiStationState.Connected) {
+                        statusText = getResources().getString(R.string.success_text);
+                    } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
+                        statusText = getResources().getString(R.string.wifi_disconnected_text);
+                    } else {
+                        if (failedReason == WifiConstants.WifiConnectFailedReason.AuthError) {
+                            statusText = getResources().getString(R.string.error_authentication_failed);
+                        } else if (failedReason == WifiConstants.WifiConnectFailedReason.NetworkNotFound) {
+                            statusText = getResources().getString(R.string.error_network_not_found);
+                        } else {
+                            statusText = getResources().getString(R.string.error_unknown);
+                        }
+                    }
+                    final String finalStatusText = statusText;
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            if (newStatus != WifiConstants.WifiStationState.Connected) {
+                                goToSuccessPage(finalStatusText);
+                            } else {
+                                if (LoginWithAmazon.isLoginSkipped) {
                                     goToSuccessPage(finalStatusText);
                                 } else {
-                                    if (LoginWithAmazon.isLoginSkipped) {
-                                        goToSuccessPage(finalStatusText);
-                                    } else {
-                                        goToAlexaScreen();
-                                    }
+                                    goToAlexaScreen();
                                 }
                             }
-                        });
-                    }
+                        }
+                    });
+                }
 
-                    @Override
-                    public void OnProvisioningFailed(Exception e) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(ProvisionActivity.this,
-                                        "Provisioning Failed",
-                                        Toast.LENGTH_LONG)
-                                        .show();
-                                toggleFormState(true);
+                @Override
+                public void OnProvisioningFailed(Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this,
+                                    "Provisioning Failed",
+                                    Toast.LENGTH_LONG)
+                                    .show();
+                            toggleFormState(true);
+                        }
+                    });
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+            };
+
+            provision.configureWifi(ssidValue, passphraseValue, new Provision.ProvisionActionListener() {
+
+                @Override
+                public void onComplete(Constants.Status status, Exception e) {
+
+                    provision.applyConfigurations(null);
+                }
+            });
+
+        } else {
+            Log.e(TAG, "Session not available");
+            session = new Session(transport, security);
+
+            session.sessionListener = new Session.SessionListener() {
+                @Override
+                public void OnSessionEstablished() {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this,
+                                    "Session Established",
+                                    Toast.LENGTH_SHORT)
+                                    .show();
+                        }
+                    });
+
+                    final Provision provision = new Provision(session);
+                    provision.provisioningListener = new Provision.ProvisioningListener() {
+                        @Override
+                        public void OnApplyConfigurationsSucceeded() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(ProvisionActivity.this,
+                                            "Configurations successfully applied",
+                                            Toast.LENGTH_LONG)
+                                            .show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void OnApplyConfigurationsFailed() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(ProvisionActivity.this,
+                                            "Configurations cannot be applied",
+                                            Toast.LENGTH_LONG)
+                                            .show();
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void OnWifiConnectionStatusUpdated(final WifiConstants.WifiStationState newStatus,
+                                                                  final WifiConstants.WifiConnectFailedReason failedReason,
+                                                                  final Exception e) {
+                            String statusText = "";
+                            if (e != null) {
+                                statusText = e.getMessage();
+                            } else if (newStatus == WifiConstants.WifiStationState.Connected) {
+                                statusText = getResources().getString(R.string.success_text);
+                            } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
+                                statusText = getResources().getString(R.string.wifi_disconnected_text);
+                            } else {
+                                if (failedReason == WifiConstants.WifiConnectFailedReason.AuthError) {
+                                    statusText = getResources().getString(R.string.error_authentication_failed);
+                                } else if (failedReason == WifiConstants.WifiConnectFailedReason.NetworkNotFound) {
+                                    statusText = getResources().getString(R.string.error_network_not_found);
+                                } else {
+                                    statusText = getResources().getString(R.string.error_unknown);
+                                }
                             }
-                        });
-                        setResult(RESULT_CANCELED);
-                        finish();
-                    }
-                };
+                            final String finalStatusText = statusText;
 
-                provision.configureWifi(ssidValue, passphraseValue, new Provision.ProvisionActionListener() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
 
-                    @Override
-                    public void onComplete(Constants.Status status, Exception e) {
+                                    if (newStatus != WifiConstants.WifiStationState.Connected) {
+                                        goToSuccessPage(finalStatusText);
+                                    } else {
+                                        if (LoginWithAmazon.isLoginSkipped) {
+                                            goToSuccessPage(finalStatusText);
+                                        } else {
+                                            goToAlexaScreen();
+                                        }
+                                    }
+                                }
+                            });
+                        }
 
-                        provision.applyConfigurations(null);
-                    }
-                });
-            }
+                        @Override
+                        public void OnProvisioningFailed(Exception e) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(ProvisionActivity.this,
+                                            "Provisioning Failed",
+                                            Toast.LENGTH_LONG)
+                                            .show();
+                                    toggleFormState(true);
+                                }
+                            });
+                            setResult(RESULT_CANCELED);
+                            finish();
+                        }
+                    };
 
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(ProvisionActivity.this,
-                                "Cannot establish session",
-                                Toast.LENGTH_LONG)
-                                .show();
-                        toggleFormState(true);
-                    }
-                });
-            }
-        };
-        session.init(null);
+                    provision.configureWifi(ssidValue, passphraseValue, new Provision.ProvisionActionListener() {
+
+                        @Override
+                        public void onComplete(Constants.Status status, Exception e) {
+
+                            provision.applyConfigurations(null);
+                        }
+                    });
+                }
+
+                @Override
+                public void OnSessionEstablishFailed(Exception e) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(ProvisionActivity.this,
+                                    "Cannot establish session",
+                                    Toast.LENGTH_LONG)
+                                    .show();
+                            toggleFormState(true);
+                        }
+                    });
+                }
+            };
+            session.init(null);
+        }
     }
 
     private void enableProvisionBtn() {

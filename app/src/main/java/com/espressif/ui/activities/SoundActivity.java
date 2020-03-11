@@ -14,13 +14,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.espressif.AppConstants;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
-import com.espressif.provision.transport.SoftAPTransport;
-import com.espressif.provision.transport.Transport;
 import com.espressif.ui.models.DeviceInfo;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -36,10 +30,6 @@ public class SoundActivity extends AppCompatActivity {
 
     private DeviceInfo deviceInfo;
     private String deviceHostAddress;
-
-    private Session session;
-    private Security security;
-    private Transport transport;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -74,34 +64,7 @@ public class SoundActivity extends AppCompatActivity {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, final boolean isChecked) {
 
-            transport = new SoftAPTransport(deviceHostAddress + ":80");
-
-            if (deviceInfo.isNewFirmware()) {
-                security = new Security1(getResources().getString(R.string.proof_of_possesion));
-            } else {
-                security = new Security0();
-            }
-
-            session = new Session(transport, security);
-            session.init(null);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-
-                    Log.d(TAG, "Session established");
-                    sendStartOfToneRequest(isChecked);
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.e(TAG, "Session failed");
-                    e.printStackTrace();
-                    Toast.makeText(SoundActivity.this, R.string.error_session_init_failed, Toast.LENGTH_SHORT).show();
-                    finish();
-                }
-            };
+            sendStartOfToneRequest(isChecked);
         }
     };
 
@@ -110,32 +73,7 @@ public class SoundActivity extends AppCompatActivity {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, final boolean isChecked) {
 
-            transport = new SoftAPTransport(deviceHostAddress + ":80");
-            if (deviceInfo.isNewFirmware()) {
-                security = new Security1(getResources().getString(R.string.proof_of_possesion));
-            } else {
-                security = new Security0();
-            }
-            session = new Session(transport, security);
-            session.init(null);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-
-                    Log.d(TAG, "Session established");
-                    sendEndOfToneRequest(isChecked);
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.e(TAG, "Session failed");
-                    e.printStackTrace();
-                    Toast.makeText(SoundActivity.this, R.string.error_session_init_failed, Toast.LENGTH_SHORT).show();
-                    finish();
-                }
-            };
+            sendEndOfToneRequest(isChecked);
         }
     };
 
@@ -158,8 +96,8 @@ public class SoundActivity extends AppCompatActivity {
                 .setCmdSorAudioCue(alexaToneChangeRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -195,7 +133,7 @@ public class SoundActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processStartToneChangeResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 
@@ -229,8 +167,8 @@ public class SoundActivity extends AppCompatActivity {
                 .setCmdEorAudioCue(alexaToneChangeRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -266,7 +204,7 @@ public class SoundActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processEndToneChangeResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 

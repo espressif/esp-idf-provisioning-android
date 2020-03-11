@@ -4,12 +4,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -20,15 +14,14 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.espressif.AppConstants;
 import com.espressif.provision.R;
-import com.espressif.provision.security.Security;
-import com.espressif.provision.security.Security0;
-import com.espressif.provision.security.Security1;
-import com.espressif.provision.session.Session;
 import com.espressif.provision.transport.ResponseListener;
-import com.espressif.provision.transport.SoftAPTransport;
-import com.espressif.provision.transport.Transport;
 import com.espressif.ui.models.DeviceInfo;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -58,10 +51,6 @@ public class DeviceActivity extends AppCompatActivity {
     private String deviceHostAddress;
     private String deviceName;
     private boolean isNewFw;
-
-    private Session session;
-    private Security security;
-    private Transport transport;
 
     private boolean isAvsSignedIn = false;
 
@@ -100,30 +89,7 @@ public class DeviceActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        transport = new SoftAPTransport(deviceHostAddress + ":80");
-        if (deviceInfo.isNewFirmware()) {
-            security = new Security1(getResources().getString(R.string.proof_of_possesion));
-        } else {
-            security = new Security0();
-        }
-        session = new Session(transport, security);
-        session.init(null);
-
-        session.sessionListener = new Session.SessionListener() {
-
-            @Override
-            public void OnSessionEstablished() {
-
-                Log.d(TAG, "Session established");
-                getDeviceInfo();
-            }
-
-            @Override
-            public void OnSessionEstablishFailed(Exception e) {
-                Log.d(TAG, "Session failed");
-                e.printStackTrace();
-            }
-        };
+        getDeviceInfo();
     }
 
     private void initViews() {
@@ -177,29 +143,7 @@ public class DeviceActivity extends AppCompatActivity {
         public void onStopTrackingTouch(final SeekBar seekBar) {
 
             Log.e(TAG, "onStopTrackingTouch : " + seekBar.getProgress());
-            transport = new SoftAPTransport(deviceHostAddress + ":80");
-            if (deviceInfo.isNewFirmware()) {
-                security = new Security1(getResources().getString(R.string.proof_of_possesion));
-            } else {
-                security = new Security0();
-            }
-            session = new Session(transport, security);
-            session.init(null);
-
-            session.sessionListener = new Session.SessionListener() {
-
-                @Override
-                public void OnSessionEstablished() {
-
-                    Log.d(TAG, "Session established");
-                    changeVolume(seekBar.getProgress());
-                }
-
-                @Override
-                public void OnSessionEstablishFailed(Exception e) {
-                    Log.d(TAG, "Session failed");
-                }
-            };
+            changeVolume(seekBar.getProgress());
         }
     };
 
@@ -291,30 +235,7 @@ public class DeviceActivity extends AppCompatActivity {
                     return;
                 }
 
-                transport = new SoftAPTransport(deviceHostAddress + ":80");
-                if (deviceInfo.isNewFirmware()) {
-                    security = new Security1(getResources().getString(R.string.proof_of_possesion));
-                } else {
-                    security = new Security0();
-                }
-                session = new Session(transport, security);
-                session.init(null);
-
-                final String finalNewDeviceName = newDeviceName;
-                session.sessionListener = new Session.SessionListener() {
-
-                    @Override
-                    public void OnSessionEstablished() {
-
-                        Log.d(TAG, "Session established");
-                        setDeviceName(finalNewDeviceName);
-                    }
-
-                    @Override
-                    public void OnSessionEstablishFailed(Exception e) {
-                        Log.d(TAG, "Session failed");
-                    }
-                };
+                setDeviceName(newDeviceName);
             }
         });
 
@@ -349,9 +270,9 @@ public class DeviceActivity extends AppCompatActivity {
                 .setCmdUserVisibleName(changeNameRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
 
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -391,7 +312,7 @@ public class DeviceActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processDeviceNameChangeResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 
@@ -427,8 +348,8 @@ public class DeviceActivity extends AppCompatActivity {
                 .setCmdSetVolume(volumeChangeRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -463,7 +384,7 @@ public class DeviceActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processVolumeChangeResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 
@@ -498,9 +419,9 @@ public class DeviceActivity extends AppCompatActivity {
                 .setMsg(msgType)
                 .setCmdSigninStatus(configRequest)
                 .build();
-        byte[] message = this.security.encrypt(payload.toByteArray());
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
 
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -535,7 +456,7 @@ public class DeviceActivity extends AppCompatActivity {
     private Avsconfig.AVSConfigStatus processSignInStatusResponse(byte[] responseData) {
 
         Avsconfig.AVSConfigStatus status = Avsconfig.AVSConfigStatus.InvalidState;
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
 
         try {
 
@@ -571,9 +492,9 @@ public class DeviceActivity extends AppCompatActivity {
                 .setCmdGetDeviceInfo(deviceInfoRequest)
                 .build();
 
-        byte[] message = this.security.encrypt(payload.toByteArray());
+        byte[] message = ScanLocalDevices.security.encrypt(payload.toByteArray());
 
-        this.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
+        ScanLocalDevices.transport.sendConfigData(AppConstants.HANDLER_AVS_CONFIG, message, new ResponseListener() {
 
             @Override
             public void onSuccess(byte[] returnData) {
@@ -610,7 +531,7 @@ public class DeviceActivity extends AppCompatActivity {
 
     private DeviceInfo processDeviceInfoResponse(byte[] responseData) {
 
-        byte[] decryptedData = this.security.decrypt(responseData);
+        byte[] decryptedData = ScanLocalDevices.security.decrypt(responseData);
         DeviceInfo deviceInfo = null;
 
         try {

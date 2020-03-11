@@ -123,6 +123,8 @@
     <string name="fw_version">Firmware Version :</string>
     <string name="connected_wifi">Connected Wi-Fi :</string>
     <string name="app_version">App Version :</string>
+    <string name="enter_device_key">Enter Your Proof Of Possession PIN</string>
+    <string name="hint_key">Enter PIN</string>
 
     <string-array name="language_array">
         <item>Deutsche</item>
