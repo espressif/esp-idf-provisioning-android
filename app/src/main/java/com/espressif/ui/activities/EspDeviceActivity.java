@@ -1,16 +1,16 @@
 package com.espressif.ui.activities;
 
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -25,17 +25,19 @@ import com.espressif.ui.adapters.DynamicParamAdapter;
 import com.espressif.ui.models.EspDevice;
 import com.espressif.ui.models.Param;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 public class EspDeviceActivity extends AppCompatActivity {
 
     private static final int NODE_DETAILS_ACTIVITY_REQUEST = 10;
+    private static final int UPDATE_INTERVAL = 5000;
 
-    private TextView tvTitle, tvBack, tvNoParam;
+    private TextView tvTitle, tvBack, tvNoParam, tvNodeOffline;
     private ImageView ivNodeInfo;
     private RecyclerView paramRecyclerView;
     private RecyclerView attrRecyclerView;
-    private ProgressDialog progressDialog;
     private SwipeRefreshLayout swipeRefreshLayout;
 
     private EspDevice espDevice;
@@ -45,6 +47,10 @@ public class EspDeviceActivity extends AppCompatActivity {
     private AttrParamAdapter attrAdapter;
     private ArrayList<Param> paramList;
     private ArrayList<Param> attributeList;
+    private Handler handler;
+    private ContentLoadingProgressBar progressBar;
+    private boolean isNodeOnline;
+    private long timeStampOfStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,14 +61,34 @@ public class EspDeviceActivity extends AppCompatActivity {
         espApp = (EspApplication) getApplicationContext();
         apiManager = ApiManager.getInstance(getApplicationContext());
         espDevice = getIntent().getParcelableExtra(AppConstants.KEY_ESP_DEVICE);
+        handler = new Handler();
+        isNodeOnline = espApp.nodeMap.get(espDevice.getNodeId()).isOnline();
+        timeStampOfStatus = espApp.nodeMap.get(espDevice.getNodeId()).getTimeStampOfStatus();
 
         ArrayList<Param> espDeviceParams = espDevice.getParams();
         setParamList(espDeviceParams);
 
         initViews();
+        showLoading();
+        getNodeDetails();
+    }
 
-        showWaitDialog("Getting values...");
-        getValues();
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startUpdateValueTask();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopUpdateValueTask();
+    }
+
+    @Override
+    protected void onDestroy() {
+        handler.removeCallbacks(updateValuesTask);
+        super.onDestroy();
     }
 
     @Override
@@ -72,6 +98,14 @@ public class EspDeviceActivity extends AppCompatActivity {
         if (requestCode == NODE_DETAILS_ACTIVITY_REQUEST && resultCode == RESULT_OK) {
             finish();
         }
+    }
+
+    public void setDeviceName(String deviceName) {
+        tvTitle.setText(deviceName);
+    }
+
+    public boolean isNodeOnline() {
+        return isNodeOnline;
     }
 
     private View.OnClickListener backButtonClickListener = new View.OnClickListener() {
@@ -100,8 +134,25 @@ public class EspDeviceActivity extends AppCompatActivity {
         tvBack = findViewById(R.id.btn_back);
         tvNoParam = findViewById(R.id.tv_no_params);
         ivNodeInfo = findViewById(R.id.btn_info);
+        progressBar = findViewById(R.id.progress_get_params);
+        tvNodeOffline = findViewById(R.id.tv_device_offline);
 
-        tvTitle.setText(espDevice.getDeviceName());
+        boolean isParamTypeNameAvailable = false;
+
+        for (int i = 0; i < espDevice.getParams().size(); i++) {
+
+            Param p = espDevice.getParams().get(i);
+            if (p != null && p.getParamType() != null && p.getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+                isParamTypeNameAvailable = true;
+                tvTitle.setText(p.getLabelValue());
+                break;
+            }
+        }
+
+        if (!isParamTypeNameAvailable) {
+            tvTitle.setText(espDevice.getDeviceName());
+        }
+
         tvBack.setVisibility(View.VISIBLE);
 
         paramRecyclerView = findViewById(R.id.rv_dynamic_param_list);
@@ -130,33 +181,86 @@ public class EspDeviceActivity extends AppCompatActivity {
 
             @Override
             public void onRefresh() {
-                getValues();
+                getNodeDetails();
+            }
+        });
+    }
+
+    private void getNodeDetails() {
+
+        Log.d("TAG", "Get Node Details");
+        stopUpdateValueTask();
+
+        apiManager.getNodeDetails(espDevice.getNodeId(), new ApiResponseListener() {
+
+            @Override
+            public void onSuccess(Bundle data) {
+
+                Log.e("TAG", "Get node details success");
+                hideLoading();
+                swipeRefreshLayout.setRefreshing(false);
+
+                if (espApp.nodeMap.containsKey(espDevice.getNodeId())) {
+
+                    ArrayList<EspDevice> devices = espApp.nodeMap.get(espDevice.getNodeId()).getDevices();
+                    isNodeOnline = espApp.nodeMap.get(espDevice.getNodeId()).isOnline();
+                    timeStampOfStatus = espApp.nodeMap.get(espDevice.getNodeId()).getTimeStampOfStatus();
+
+                    for (int i = 0; i < devices.size(); i++) {
+
+                        if (espDevice.getDeviceName().equals(devices.get(i).getDeviceName())) {
+
+                            espDevice = devices.get(i);
+                            ArrayList<Param> espDeviceParams = espDevice.getParams();
+                            setParamList(espDeviceParams);
+                            updateUi();
+                            break;
+                        }
+                    }
+                } else {
+                    finish();
+                }
+                startUpdateValueTask();
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+
+                exception.printStackTrace();
+                hideLoading();
+                swipeRefreshLayout.setRefreshing(false);
+                startUpdateValueTask();
             }
         });
     }
 
     private void getValues() {
 
-        apiManager.getDynamicParamsValue(espDevice.getNodeId(), new ApiResponseListener() {
+        apiManager.getParamsValues(espDevice.getNodeId(), new ApiResponseListener() {
 
             @Override
             public void onSuccess(Bundle data) {
 
-                Log.e("TAG", "Get values success");
-                closeWaitDialog();
+                hideLoading();
                 swipeRefreshLayout.setRefreshing(false);
-                ArrayList<EspDevice> devices = espApp.nodeMap.get(espDevice.getNodeId()).getDevices();
 
-                for (int i = 0; i < devices.size(); i++) {
+                if (espApp.nodeMap.containsKey(espDevice.getNodeId())) {
 
-                    if (espDevice.getDeviceName().equals(devices.get(i).getDeviceName())) {
+                    ArrayList<EspDevice> devices = espApp.nodeMap.get(espDevice.getNodeId()).getDevices();
 
-                        espDevice = devices.get(i);
-                        ArrayList<Param> espDeviceParams = espDevice.getParams();
-                        setParamList(espDeviceParams);
-                        updateUi();
-                        break;
+                    for (int i = 0; i < devices.size(); i++) {
+
+                        if (espDevice.getDeviceName().equals(devices.get(i).getDeviceName())) {
+
+                            espDevice = devices.get(i);
+                            ArrayList<Param> espDeviceParams = espDevice.getParams();
+                            setParamList(espDeviceParams);
+                            updateUi();
+                            break;
+                        }
                     }
+                } else {
+                    finish();
                 }
             }
 
@@ -164,12 +268,29 @@ public class EspDeviceActivity extends AppCompatActivity {
             public void onFailure(Exception exception) {
 
                 exception.printStackTrace();
-                closeWaitDialog();
-                Toast.makeText(EspDeviceActivity.this, "Failed to get values", Toast.LENGTH_SHORT).show();
+                hideLoading();
                 swipeRefreshLayout.setRefreshing(false);
             }
         });
     }
+
+    public void startUpdateValueTask() {
+        handler.removeCallbacks(updateValuesTask);
+        handler.postDelayed(updateValuesTask, UPDATE_INTERVAL);
+    }
+
+    public void stopUpdateValueTask() {
+        handler.removeCallbacks(updateValuesTask);
+    }
+
+    private Runnable updateValuesTask = new Runnable() {
+
+        @Override
+        public void run() {
+            getValues();
+            handler.postDelayed(updateValuesTask, UPDATE_INTERVAL);
+        }
+    };
 
     private void setParamList(ArrayList<Param> paramArrayList) {
 
@@ -178,31 +299,83 @@ public class EspDeviceActivity extends AppCompatActivity {
             paramList = new ArrayList<>();
             attributeList = new ArrayList<>();
         }
-        paramList.clear();
-        attributeList.clear();
 
         for (int i = 0; i < paramArrayList.size(); i++) {
 
-            if (paramArrayList.get(i).isDynamicParam()) {
+            Param updatedParam = paramArrayList.get(i);
+            boolean isFound = false;
 
-//                if (espDevice.getDeviceName().equalsIgnoreCase("Integers")) {
-//
-//                    if (paramArrayList.get(i).getName().equalsIgnoreCase("with-ui-writeonly")
-//                            || paramArrayList.get(i).getName().equalsIgnoreCase("with-ui-bounds-readonly")) {
-//                        paramList.add(paramArrayList.get(i));
-//                    }
-//
-//                } else {
-                paramList.add(paramArrayList.get(i));
-//                }
+            if (updatedParam.isDynamicParam()) {
+
+                for (int j = 0; j < paramList.size(); j++) {
+
+                    if (paramList.get(j).getName() != null && paramList.get(j).getName().equals(updatedParam.getName())) {
+
+                        isFound = true;
+                        paramList.set(j, updatedParam);
+                        break;
+                    }
+                }
+
+                if (!isFound) {
+                    paramList.add(updatedParam);
+                }
 
             } else {
-                attributeList.add(paramArrayList.get(i));
+
+                for (int j = 0; j < attributeList.size(); j++) {
+
+                    if (attributeList.get(j).getName() != null && attributeList.get(j).getName().equals(updatedParam.getName())) {
+
+                        isFound = true;
+                        attributeList.set(j, updatedParam);
+                        break;
+                    }
+                }
+
+                if (!isFound) {
+                    attributeList.add(updatedParam);
+                }
             }
         }
     }
 
     private void updateUi() {
+
+        if (!isNodeOnline) {
+
+            tvNodeOffline.setVisibility(View.VISIBLE);
+
+            String offlineText = getString(R.string.offline_at);
+            tvNodeOffline.setText(offlineText);
+
+            if (timeStampOfStatus != 0) {
+
+                Calendar calendar = Calendar.getInstance();
+                int day = calendar.get(Calendar.DATE);
+
+                calendar.setTimeInMillis(timeStampOfStatus);
+                int offlineDay = calendar.get(Calendar.DATE);
+
+                if (day == offlineDay) {
+
+                    SimpleDateFormat formatter = new SimpleDateFormat("HH:mm");
+                    String time = formatter.format(calendar.getTime());
+                    offlineText = getString(R.string.offline_at) + " " + time;
+
+                } else {
+
+                    SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yy, HH:mm");
+                    String time = formatter.format(calendar.getTime());
+                    offlineText = getString(R.string.offline_at) + " " + time;
+                }
+                tvNodeOffline.setText(offlineText);
+            }
+
+        } else {
+
+            tvNodeOffline.setVisibility(View.GONE);
+        }
 
         paramAdapter.updateList(paramList);
         paramAdapter.notifyDataSetChanged();
@@ -222,27 +395,33 @@ public class EspDeviceActivity extends AppCompatActivity {
             paramRecyclerView.setVisibility(View.VISIBLE);
             attrRecyclerView.setVisibility(View.VISIBLE);
         }
-    }
 
-    private void showWaitDialog(String message) {
+        boolean isParamTypeNameAvailable = false;
 
-        closeWaitDialog();
+        for (int i = 0; i < espDevice.getParams().size(); i++) {
 
-        if (progressDialog == null) {
-            progressDialog = new ProgressDialog(this);
-        }
-        progressDialog.setTitle(message);
-        progressDialog.setCancelable(false);
-        progressDialog.show();
-    }
-
-    private void closeWaitDialog() {
-        try {
-            if (progressDialog != null) {
-                progressDialog.dismiss();
+            Param p = espDevice.getParams().get(i);
+            if (p != null && p.getParamType() != null && p.getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+                isParamTypeNameAvailable = true;
+                tvTitle.setText(p.getLabelValue());
+                break;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        if (!isParamTypeNameAvailable) {
+            tvTitle.setText(espDevice.getDeviceName());
+        }
+    }
+
+    private void showLoading() {
+
+        progressBar.setVisibility(View.VISIBLE);
+        swipeRefreshLayout.setVisibility(View.GONE);
+    }
+
+    private void hideLoading() {
+
+        progressBar.setVisibility(View.GONE);
+        swipeRefreshLayout.setVisibility(View.VISIBLE);
     }
 }

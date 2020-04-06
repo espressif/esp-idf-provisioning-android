@@ -2,10 +2,6 @@ package com.espressif.ui.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -16,6 +12,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
@@ -28,7 +27,9 @@ import com.espressif.ui.models.EspNode;
 import com.espressif.ui.models.Param;
 import com.google.gson.JsonObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyViewHolder> {
 
@@ -63,7 +64,26 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
         // set the data in items
         Log.e("TAG", "Device name : " + device.getDeviceName());
         Log.e("TAG", "Device Primary Param : " + device.getPrimaryParamName());
-        myViewHolder.tvDeviceName.setText(device.getDeviceName());
+
+        boolean isParamTypeNameAvailable = false;
+
+        for (int i = 0; i < device.getParams().size(); i++) {
+
+            Param p = device.getParams().get(i);
+            if (p != null && p.getParamType() != null && p.getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+
+                if (!TextUtils.isEmpty(p.getLabelValue())) {
+
+                    isParamTypeNameAvailable = true;
+                    myViewHolder.tvDeviceName.setText(p.getLabelValue());
+                }
+                break;
+            }
+        }
+
+        if (!isParamTypeNameAvailable) {
+            myViewHolder.tvDeviceName.setText(device.getDeviceName());
+        }
 
         if (TextUtils.isEmpty(device.getDeviceType())) {
 
@@ -105,7 +125,7 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
             } else if (AppConstants.ESP_DEVICE_TEMP_SENSOR.equals(device.getDeviceType())) {
 
-                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device);
+                myViewHolder.ivDevice.setImageResource(R.drawable.ic_device_temp_sensor);
 
             } else {
                 myViewHolder.ivDevice.setImageResource(R.drawable.ic_device);
@@ -137,13 +157,11 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
                     myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
                     myViewHolder.tvStringValue.setVisibility(View.GONE);
-                    Log.e("TAG", "tvStringValue.setVisibility(View.GONE) 1");
 
                 } else if (AppConstants.UI_TYPE_TOGGLE.equalsIgnoreCase(param.getUiType())) {
 
                     myViewHolder.ivDeviceStatus.setVisibility(View.VISIBLE);
                     myViewHolder.tvStringValue.setVisibility(View.GONE);
-                    Log.e("TAG", "tvStringValue.setVisibility(View.GONE) 2");
 
                     final boolean isOn = param.getSwitchStatus();
 
@@ -195,7 +213,6 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
                     myViewHolder.ivDeviceStatus.setVisibility(View.VISIBLE);
                     myViewHolder.tvStringValue.setVisibility(View.GONE);
-                    Log.e("TAG", "tvStringValue.setVisibility(View.GONE) 3");
 
                     String value = param.getLabelValue();
                     boolean isOn = false;
@@ -261,7 +278,6 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
 
                     myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
                     myViewHolder.tvStringValue.setVisibility(View.VISIBLE);
-                    Log.e("TAG", "tvStringValue.setVisibility(View.VISIBLE) 4");
                     Log.e("TAG", "Value : " + param.getLabelValue());
                     myViewHolder.tvStringValue.setText(param.getLabelValue());
 
@@ -270,26 +286,22 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
                     myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
                     myViewHolder.tvStringValue.setVisibility(View.VISIBLE);
                     myViewHolder.tvStringValue.setText(param.getLabelValue());
-                    Log.e("TAG", "tvStringValue.setVisibility(View.VISIBLE) 5");
 
                 } else if (dataType.equalsIgnoreCase("string")) {
 
                     myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
                     myViewHolder.tvStringValue.setVisibility(View.VISIBLE);
                     myViewHolder.tvStringValue.setText(param.getLabelValue());
-                    Log.e("TAG", "tvStringValue.setVisibility(View.VISIBLE) 6");
                 }
             } else {
 
                 myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
                 myViewHolder.tvStringValue.setVisibility(View.GONE);
-                Log.e("TAG", "tvStringValue.setVisibility(View.GONE) 7");
             }
         } else {
 
             myViewHolder.ivDeviceStatus.setVisibility(View.GONE);
             myViewHolder.tvStringValue.setVisibility(View.GONE);
-            Log.e("TAG", "tvStringValue.setVisibility(View.GONE) 8");
         }
 
         if (node != null && !node.isOnline()) {
@@ -297,7 +309,31 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
             myViewHolder.llOffline.setVisibility(View.VISIBLE);
             myViewHolder.ivDeviceStatus.setImageResource(R.drawable.ic_output_disable);
             myViewHolder.ivDeviceStatus.setOnClickListener(null);
+            String offlineText = context.getString(R.string.offline_at);
+            myViewHolder.tvOffline.setText(offlineText);
 
+            if (node.getTimeStampOfStatus() != 0) {
+
+                Calendar calendar = Calendar.getInstance();
+                int day = calendar.get(Calendar.DATE);
+
+                calendar.setTimeInMillis(node.getTimeStampOfStatus());
+                int offlineDay = calendar.get(Calendar.DATE);
+
+                if (day == offlineDay) {
+
+                    SimpleDateFormat formatter = new SimpleDateFormat("HH:mm");
+                    String time = formatter.format(calendar.getTime());
+                    offlineText = context.getString(R.string.offline_at) + " " + time;
+
+                } else {
+
+                    SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yy, HH:mm");
+                    String time = formatter.format(calendar.getTime());
+                    offlineText = context.getString(R.string.offline_at) + " " + time;
+                }
+                myViewHolder.tvOffline.setText(offlineText);
+            }
         } else {
 
             myViewHolder.llOffline.setVisibility(View.INVISIBLE);
@@ -328,7 +364,7 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
     public class MyViewHolder extends RecyclerView.ViewHolder {
 
         // init the item view's
-        TextView tvDeviceName, tvStringValue;
+        TextView tvDeviceName, tvStringValue, tvOffline;
         ImageView ivDevice, ivDeviceStatus;
         LinearLayout llOffline;
 
@@ -339,6 +375,7 @@ public class EspDeviceAdapter extends RecyclerView.Adapter<EspDeviceAdapter.MyVi
             tvDeviceName = itemView.findViewById(R.id.tv_device_name);
             ivDevice = itemView.findViewById(R.id.iv_device);
             llOffline = itemView.findViewById(R.id.ll_offline);
+            tvOffline = itemView.findViewById(R.id.tv_offline);
             ivDeviceStatus = itemView.findViewById(R.id.iv_on_off);
             tvStringValue = itemView.findViewById(R.id.tv_string);
         }

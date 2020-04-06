@@ -21,7 +21,7 @@
                 android:id="@+id/iv_provisioning"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="198dp"
+                android:layout_marginTop="150dp"
                 android:src="@drawable/ic_connect_device"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

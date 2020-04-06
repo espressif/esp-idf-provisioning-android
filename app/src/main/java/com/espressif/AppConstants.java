@@ -25,16 +25,17 @@ public class AppConstants {
     public static final String KEY_STATUS_MSG = "status_msg";
     public static final String KEY_ESP_DEVICE = "esp_device";
     public static final String KEY_NODE_ID = "node_id";
+    public static final String KEY_EMAIL = "email";
     public static final String KEY_ID_TOKEN = "id_token";
     public static final String KEY_ACCESS_TOKEN = "access_token";
     public static final String KEY_REFRESH_TOKEN = "refresh_token";
-    public static final String KEY_IS_GITHUB_LOGIN = "is_github_login";
+    public static final String KEY_IS_OAUTH_LOGIN = "is_github_login";
 
     public static final String ESP_PREFERENCES = "Esp_Preferences";
 
     // UI Types of Device
-    public static final String UI_TYPE_TOGGLE = "esp-ui-toggle";
-    public static final String UI_TYPE_SLIDER = "esp-ui-slider";
+    public static final String UI_TYPE_TOGGLE = "esp.ui.toggle";
+    public static final String UI_TYPE_SLIDER = "esp.ui.slider";
 
     // ESP Device Types
     public static final String ESP_DEVICE_SWITCH = "esp.device.switch";
@@ -45,10 +46,10 @@ public class AppConstants {
     public static final String ESP_DEVICE_THERMOSTAT = "esp.device.thermostat";
     public static final String ESP_DEVICE_FAN = "esp.device.fan";
     public static final String ESP_DEVICE_SENSOR = "esp.device.sensor";
-    public static final String ESP_DEVICE_TEMP_SENSOR = "esp.device.temperature_sensor";
-
+    public static final String ESP_DEVICE_TEMP_SENSOR = "esp.device.temperature-sensor";
 
     // Param Types
+    public static final String PARAM_TYPE_NAME = "esp.param.name";
     public static final String PARAM_TYPE_OUTPUT = "esp.param.output";
     public static final String PARAM_TYPE_BRIGHTNESS = "esp.param.brightness";
     public static final String PARAM_TYPE_TEMPERATURE = "esp.param.temperature";
@@ -61,11 +62,17 @@ public class AppConstants {
         EVENT_DEVICE_STATUS_UPDATE
     }
 
-    public static final String GITHUB_STAGING = "https://rainmaker-staging.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=375pp885nbr3nfbh3ms9vma3v3";
-    public static final String GITHUB_PROD = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=2fmtjlo5cve01ukiisu1b6poft";
+    public static final String BASE_URL = "https://api.rainmaker.espressif.com";
+    public static final String CURRENT_VERSION = "v1";
+    public static final String PATH_SEPARATOR = "/";
+    public static final String HEADER_AUTHORIZATION = "Authorization";
 
-    public static final String GITHUB_STAGING_TOKEN_URL = "https://rainmaker-staging.auth.us-east-1.amazoncognito.com/oauth2/token";
-    public static final String GITHUB_PROD_TOKEN_URL = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/token";
-
+    public static final String GITHUB_URL = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Github&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=";
+    public static final String GOOGLE_URL = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/authorize?identity_provider=Google&redirect_uri=rainmaker://com.espressif.rainmaker/success&response_type=CODE&client_id=";
+    public static final String TOKEN_URL = "https://rainmaker-prod.auth.us-east-1.amazoncognito.com/oauth2/token";
     public static final String REDIRECT_URI = "rainmaker://com.espressif.rainmaker/success";
+
+    public static final String DOCUMENTATION_URL = "https://rainmaker.espressif.com/";
+    public static final String PRIVACY_URL = "https://rainmaker.espressif.com/docs/privacy-policy.html";
+    public static final String TERMS_URL = "https://rainmaker.espressif.com/docs/terms-of-use.html";
 }

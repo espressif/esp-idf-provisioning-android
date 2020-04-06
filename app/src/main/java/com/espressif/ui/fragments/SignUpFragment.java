@@ -1,7 +1,9 @@
 package com.espressif.ui.fragments;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
@@ -40,6 +42,7 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.Chal
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
+import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.provision.R;
 import com.espressif.ui.Utils;
@@ -69,6 +72,7 @@ public class SignUpFragment extends Fragment {
     private TextView tvPolicy;
 
     private String email, password, confirmPassword;
+    private SharedPreferences sharedPreferences;
 
     public SignUpFragment() {
         // Required empty public constructor
@@ -166,19 +170,20 @@ public class SignUpFragment extends Fragment {
 
     private void init(View view) {
 
+        sharedPreferences = getActivity().getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         txtRegisterBtn = view.findViewById(R.id.text_btn);
         arrowImage = view.findViewById(R.id.iv_arrow);
         progressBar = view.findViewById(R.id.progress_indicator);
         tvPolicy = view.findViewById(R.id.tv_terms_condition);
 
-        SpannableString stringForAlexaAppLink = new SpannableString(getString(R.string.read_terms_condition));
+        SpannableString stringForPolicy = new SpannableString(getString(R.string.read_terms_condition));
 
         ClickableSpan privacyPolicyClick = new ClickableSpan() {
 
             @Override
             public void onClick(View textView) {
                 textView.invalidate();
-                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse(AppConstants.PRIVACY_URL));
                 startActivity(openURL);
             }
 
@@ -190,12 +195,12 @@ public class SignUpFragment extends Fragment {
             }
         };
 
-        ClickableSpan termsConditionClick = new ClickableSpan() {
+        ClickableSpan termsOfUseClick = new ClickableSpan() {
 
             @Override
             public void onClick(View textView) {
                 textView.invalidate();
-                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse(AppConstants.TERMS_URL));
                 startActivity(openURL);
             }
 
@@ -207,10 +212,10 @@ public class SignUpFragment extends Fragment {
             }
         };
 
-        stringForAlexaAppLink.setSpan(privacyPolicyClick, 29, 43, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        stringForAlexaAppLink.setSpan(termsConditionClick, 48, 66, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        stringForPolicy.setSpan(privacyPolicyClick, 29, 43, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        stringForPolicy.setSpan(termsOfUseClick, 48, 60, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-        tvPolicy.setText(stringForAlexaAppLink);
+        tvPolicy.setText(stringForPolicy);
         tvPolicy.setMovementMethod(LinkMovementMethod.getInstance());
 
         // Email
@@ -448,15 +453,22 @@ public class SignUpFragment extends Fragment {
         public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice device) {
 
             Log.d(TAG, " -- Auth Success");
-            AppHelper.setCurrSession(cognitoUserSession);
-            ApiManager.userName = email;
-
             Log.d(TAG, "Username : " + cognitoUserSession.getUsername());
             Log.d(TAG, "IdToken : " + cognitoUserSession.getIdToken().getJWTToken());
             Log.d(TAG, "AccessToken : " + cognitoUserSession.getAccessToken().getJWTToken());
             Log.d(TAG, "RefreshToken : " + cognitoUserSession.getRefreshToken().getToken());
+
+            AppHelper.setCurrSession(cognitoUserSession);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString(AppConstants.KEY_EMAIL, email);
+            editor.putString(AppConstants.KEY_ID_TOKEN, cognitoUserSession.getIdToken().getJWTToken());
+            editor.putString(AppConstants.KEY_ACCESS_TOKEN, cognitoUserSession.getAccessToken().getJWTToken());
+            editor.putString(AppConstants.KEY_REFRESH_TOKEN, cognitoUserSession.getRefreshToken().getToken());
+            editor.putBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
+            editor.apply();
+
             AppHelper.newDevice(device);
-//            hideLoginLoading();
+            ApiManager.getInstance(getActivity().getApplicationContext()).setTokenAndUserId();
             ((MainActivity) getActivity()).launchProvisioningApp();
         }
 

@@ -35,20 +35,6 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <TextView
-                android:id="@+id/tv_sign_up_confirm_msg_2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_marginTop="5dp"
-                android:lineSpacingExtra="6sp"
-                android:text="Please enter the code below to confirm your account."
-                android:textColor="@color/colorPrimaryDark"
-                android:textSize="14sp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_sign_up_confirm_msg_1" />
-
             <EditText
                 android:id="@+id/et_email"
                 android:layout_width="match_parent"
@@ -65,7 +51,7 @@
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_sign_up_confirm_msg_2" />
+                app:layout_constraintTop_toBottomOf="@id/tv_sign_up_confirm_msg_1" />
 
             <EditText
                 android:id="@+id/et_verification_code"

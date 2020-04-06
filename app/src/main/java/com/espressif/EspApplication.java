@@ -1,12 +1,16 @@
 package com.espressif;
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.espressif.ui.models.EspNode;
@@ -28,7 +32,7 @@ public class EspApplication extends Application {
         Log.d(TAG, "ESP Application is created");
     }
 
-    public void enableOnlyWifiNetwork() {
+    public void enableOnlyWifiNetwork(final Activity activity) {
 
         if (Build.VERSION.SDK_INT >= 21) {
 
@@ -43,15 +47,31 @@ public class EspApplication extends Application {
                 public void onAvailable(Network network) {
 
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                        connectivityManager.setProcessDefaultNetwork(network);
+
+                        ConnectivityManager.setProcessDefaultNetwork(network);
+
                     } else {
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            Log.e(TAG, "bindProcessToNetwork : " + connectivityManager.bindProcessToNetwork(network));
+
+//                            Log.e(TAG, "bindProcessToNetwork : " + connectivityManager.bindProcessToNetwork(network));
+//                            connectivityManager.bindProcessToNetwork(network);
+
+                            if (Build.VERSION.RELEASE.equalsIgnoreCase("6.0")) {
+
+                                if (!Settings.System.canWrite(getApplicationContext())) {
+                                    Intent goToSettings = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                                    goToSettings.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
+                                    getApplicationContext().startActivity(goToSettings);
+                                }
+                            }
+//                            connectivityManager.bindProcessToNetwork(null);
                             connectivityManager.bindProcessToNetwork(network);
                         }
                     }
                 }
             };
+
             connectivityManager.registerNetworkCallback(request.build(), networkCallback);
         }
     }
@@ -62,7 +82,7 @@ public class EspApplication extends Application {
 
         if (connectivityManager != null) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                connectivityManager.setProcessDefaultNetwork(null);
+                ConnectivityManager.setProcessDefaultNetwork(null);
             } else {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     connectivityManager.bindProcessToNetwork(null);
