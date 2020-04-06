@@ -91,7 +91,6 @@ public class WiFiScanActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> adapterView, View view, int pos, long l) {
 
                 Log.d(TAG, "Device to be connected -" + apDevices.get(pos));
-//                callProvision(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
                 askForNetwork(apDevices.get(pos).getWifiName(), apDevices.get(pos).getSecurity());
             }
         });
@@ -309,6 +308,11 @@ public class WiFiScanActivity extends AppCompatActivity {
     private void getWiFiScanList(int start, int count) {
 
         Log.d(TAG, "Getting " + count + " SSIDs");
+
+        if (count <= 0) {
+            completeWifiList();
+            return;
+        }
         WifiScan.CmdScanResult configRequest = WifiScan.CmdScanResult.newBuilder()
                 .setStartIndex(start)
                 .setCount(count)
@@ -425,22 +429,6 @@ public class WiFiScanActivity extends AppCompatActivity {
                 handler.removeCallbacks(stopScanningTask);
             }
         });
-    }
-
-    private void callProvision(String ssid, int security) {
-
-        Log.e(TAG, "Selected AP -" + ssid);
-        finish();
-        Intent launchProvisionInstructions = new Intent(getApplicationContext(), ProvisionActivity.class);
-        launchProvisionInstructions.putExtras(getIntent());
-
-        if (!ssid.equals(getString(R.string.join_other_network))) {
-
-            progressBar.setVisibility(View.VISIBLE);
-            launchProvisionInstructions.putExtra(Provision.PROVISIONING_WIFI_SSID, ssid);
-            launchProvisionInstructions.putExtra(AppConstants.KEY_WIFI_SECURITY_TYPE, security);
-        }
-        startActivity(launchProvisionInstructions);
     }
 
     private void askForNetwork(final String ssid, final int authMode) {

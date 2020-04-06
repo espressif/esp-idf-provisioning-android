@@ -23,6 +23,7 @@ import android.net.NetworkInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
@@ -30,6 +31,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
@@ -69,6 +71,8 @@ public class ProvisionLanding extends AppCompatActivity {
     private TextView txtConnectBtn;
     private ImageView arrowImage;
     private ContentLoadingProgressBar progressBar;
+    private int deviceConnectionReqCount = 0;
+    private Handler handler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,8 +83,9 @@ public class ProvisionLanding extends AppCompatActivity {
         deviceNamePrefix = sharedPreferences.getString(AppConstants.KEY_WIFI_NETWORK_NAME_PREFIX, "");
         securityVersion = getIntent().getStringExtra(Provision.CONFIG_SECURITY_KEY);
         deviceCapabilities = new ArrayList<>();
-
+        handler = new Handler();
         initViews();
+        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork(this);
     }
 
     @Override
@@ -139,58 +144,15 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private void connectDevice() {
 
-        String baseUrl = getIntent().getStringExtra(Provision.CONFIG_BASE_URL_KEY);
-        softAPTransport = new SoftAPTransport(baseUrl);
-        String tempData = "ESP";
+        Log.e(TAG, "Connect device method");
+        btnConnect.setEnabled(false);
+        btnConnect.setAlpha(0.5f);
+        txtConnectBtn.setText(R.string.btn_connecting);
+        progressBar.setVisibility(View.VISIBLE);
+        arrowImage.setVisibility(View.GONE);
 
-        softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
-
-            @Override
-            public void onSuccess(byte[] returnData) {
-
-                String data = new String(returnData, StandardCharsets.UTF_8);
-                Log.d(TAG, "Value : " + data);
-
-                try {
-                    JSONObject jsonObject = new JSONObject(data);
-                    JSONObject provInfo = jsonObject.getJSONObject("prov");
-
-                    String versionInfo = provInfo.getString("ver");
-                    Log.d(TAG, "Device Version : " + versionInfo);
-
-                    JSONArray capabilities = provInfo.getJSONArray("cap");
-                    deviceCapabilities = new ArrayList<>();
-
-                    for (int i = 0; i < capabilities.length(); i++) {
-                        String cap = capabilities.getString(i);
-                        deviceCapabilities.add(cap);
-                    }
-                    Log.d(TAG, "Capabilities : " + deviceCapabilities);
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                    Log.d(TAG, "Capabilities JSON not available.");
-                }
-
-                if (!deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-
-                    goToPopActivity();
-
-                } else if (deviceCapabilities.contains("wifi_scan")) {
-
-                    goToWifiScanListActivity();
-
-                } else {
-
-                    goToProvisionActivity();
-                }
-            }
-
-            @Override
-            public void onFailure(Exception e) {
-                e.printStackTrace();
-            }
-        });
+        handler.removeCallbacks(connectWithDeviceTask);
+        handler.postDelayed(connectWithDeviceTask, 100);
     }
 
     private View.OnClickListener cancelButtonClickListener = new View.OnClickListener() {
@@ -225,8 +187,6 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private void updateUi() {
 
-        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
-
         currentSSID = fetchWifiSSID();
         Log.d(TAG, "SSID : " + currentSSID);
 
@@ -251,7 +211,6 @@ public class ProvisionLanding extends AppCompatActivity {
 
     private String fetchWifiSSID() {
 
-        ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork();
         String ssid = null;
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -302,4 +261,102 @@ public class ProvisionLanding extends AppCompatActivity {
         launchProvisionInstructions.putExtra(AppConstants.KEY_PROOF_OF_POSSESSION, "");
         startActivityForResult(launchProvisionInstructions, Provision.REQUEST_PROVISIONING_CODE);
     }
+
+    private void sendDeviceConnectionFailure() {
+        handler.postDelayed(deviceConnectionFailedTask, 1000);
+    }
+
+    private Runnable deviceConnectionFailedTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            handler.removeCallbacks(connectWithDeviceTask);
+            Toast.makeText(ProvisionLanding.this, "Error! Unable to communicate with device.", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    };
+
+    private Runnable connectWithDeviceTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            Log.e(TAG, "Connecting to device");
+            deviceConnectionReqCount++;
+            String baseUrl = getIntent().getStringExtra(Provision.CONFIG_BASE_URL_KEY);
+            softAPTransport = new SoftAPTransport(baseUrl);
+            String tempData = "ESP";
+
+            softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
+
+                @Override
+                public void onSuccess(byte[] returnData) {
+
+                    String data = new String(returnData, StandardCharsets.UTF_8);
+                    Log.d(TAG, "Value : " + data);
+
+                    try {
+                        JSONObject jsonObject = new JSONObject(data);
+                        JSONObject provInfo = jsonObject.getJSONObject("prov");
+
+                        String versionInfo = provInfo.getString("ver");
+                        Log.d(TAG, "Device Version : " + versionInfo);
+
+                        JSONArray capabilities = provInfo.getJSONArray("cap");
+                        deviceCapabilities = new ArrayList<>();
+
+                        for (int i = 0; i < capabilities.length(); i++) {
+                            String cap = capabilities.getString(i);
+                            deviceCapabilities.add(cap);
+                        }
+                        Log.d(TAG, "Capabilities : " + deviceCapabilities);
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        Log.d(TAG, "Capabilities JSON not available.");
+                    }
+
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+
+                            if (!deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                                goToPopActivity();
+
+                            } else if (deviceCapabilities.contains("wifi_scan")) {
+
+                                goToWifiScanListActivity();
+
+                            } else {
+
+                                goToProvisionActivity();
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    e.printStackTrace();
+
+                    if (deviceConnectionReqCount == 3) {
+
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                handler.removeCallbacks(connectWithDeviceTask);
+                                sendDeviceConnectionFailure();
+                            }
+                        });
+                    } else {
+                        connectDevice();
+                    }
+                }
+            });
+        }
+    };
 }

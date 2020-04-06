@@ -26,8 +26,7 @@
                 android:lineSpacingExtra="8sp"
                 android:text="@string/btn_reset_password"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="18sp" />
 
             <TextView
                 android:id="@+id/btn_back"
@@ -35,8 +34,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_centerVertical="true"
-                android:clickable="true"
-                android:padding="16dp"
+                android:paddingStart="16dp"
                 android:text="@string/btn_back"
                 android:textColor="@android:color/white"
                 android:textSize="17sp" />
@@ -47,8 +45,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:clickable="true"
-                android:padding="16dp"
+                android:paddingEnd="16dp"
                 android:text="@string/btn_cancel"
                 android:textColor="@android:color/white"
                 android:textSize="17sp" />

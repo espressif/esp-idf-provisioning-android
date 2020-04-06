@@ -46,14 +46,11 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.espressif.AppConstants;
 import com.espressif.EspApplication;
-import com.espressif.cloudapi.ApiClient;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
-import com.espressif.provision.transport.ResponseListener;
-import com.espressif.provision.transport.SoftAPTransport;
 import com.espressif.ui.adapters.EspDeviceAdapter;
 import com.espressif.ui.models.EspDevice;
 import com.espressif.ui.models.EspNode;
@@ -62,11 +59,7 @@ import com.espressif.ui.models.UpdateEvent;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,7 +69,7 @@ public class EspMainActivity extends AppCompatActivity {
     private static final String TAG = "Espressif::" + EspMainActivity.class.getSimpleName();
 
     private static final int REQUEST_LOCATION = 1;
-    private static final int BARCODE_READER_ACTIVITY_REQUEST = 120;
+    private static final int QR_CODE_READER_ACTIVITY_REQUEST = 120;
 
     private ContentLoadingProgressBar progressBar;
     private RecyclerView recyclerView;
@@ -154,6 +147,8 @@ public class EspMainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        Log.d(TAG, "On Resume, isFirstTimeSetupDone : " + isFirstTimeSetupDone + " , isScanQrCode : " + isScanQrCode);
+
         if (BuildConfig.FLAVOR_transport.equals("ble") && BLEProvisionLanding.isBleWorkDone) {
             BLEProvisionLanding.bleTransport.disconnect();
         }
@@ -167,12 +162,12 @@ public class EspMainActivity extends AppCompatActivity {
 
                 @Override
                 public void run() {
-                    getDevices();
+                    getNodes();
                 }
             }, 1500);
 
         } else if (isFirstTimeSetupDone && !isScanQrCode) {
-            getDevices();
+            getNodes();
         }
         isScanQrCode = false;
     }
@@ -199,11 +194,13 @@ public class EspMainActivity extends AppCompatActivity {
             case EVENT_DEVICE_ADDED:
             case EVENT_DEVICE_REMOVED:
                 showLoading();
-                getDevices();
+                getNodes();
                 break;
 
             case EVENT_DEVICE_STATUS_UPDATE:
-                updateUi();
+                if (isFirstTimeSetupDone) {
+                    updateUi();
+                }
                 break;
         }
     }
@@ -237,115 +234,81 @@ public class EspMainActivity extends AppCompatActivity {
 
         Log.d(TAG, "onActivityResult, resultCode : " + resultCode + ", requestCode : " + requestCode);
 
-        if (requestCode == REQUEST_LOCATION) {
+        switch (requestCode) {
 
-            Log.d(TAG, "REQUEST_LOCATION result received");
+            case REQUEST_LOCATION:
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                Log.d(TAG, "REQUEST_LOCATION result received");
 
-                if (isLocationEnabled()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 
-                    HashMap<String, String> config = new HashMap<>();
-                    config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
-                    config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
-                    config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+                    if (isLocationEnabled()) {
 
-                    Provision.showProvisioningUI(EspMainActivity.this, config);
+                        HashMap<String, String> config = new HashMap<>();
+                        config.put(Provision.CONFIG_TRANSPORT_KEY, transportVersion);
+                        config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
+                        config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
+
+                        Provision.showProvisioningUI(EspMainActivity.this, config);
+                    }
                 }
-            }
-        } else if (requestCode == BARCODE_READER_ACTIVITY_REQUEST) {
+                break;
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
 
-                if (!isLocationEnabled()) {
-                    askForLocation();
+            case QR_CODE_READER_ACTIVITY_REQUEST:
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+
+                    if (!isLocationEnabled()) {
+                        askForLocation();
+                        return;
+                    }
+                }
+
+                if (resultCode != RESULT_OK) {
+
+                    isScanQrCode = false;
+
+                    if (data != null) {
+                        String errMsg = data.getStringExtra("err_msg");
+
+                        if (!TextUtils.isEmpty(errMsg)) {
+                            Toast.makeText(this, errMsg, Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
+                        }
+                    }
                     return;
                 }
-            }
-
-            if (resultCode != RESULT_OK) {
 
                 if (data != null) {
-                    String errMsg = data.getStringExtra("err_msg");
 
-                    if (!TextUtils.isEmpty(errMsg)) {
-                        Toast.makeText(this, errMsg, Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "Data is not null");
+                    final String deviceName = data.getStringExtra("deviceName");
+                    final String pop = data.getStringExtra("pop");
+
+                    if (!ProvisionLanding.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
+
+                        if (!TextUtils.isEmpty(pop)) {
+                            goToWifiScanListActivity(pop);
+                        } else {
+                            goToPopActivity(deviceName);
+                        }
+
+                    } else if (ProvisionLanding.deviceCapabilities.contains("wifi_scan")) {
+
+                        goToWifiScanListActivity("");
+
                     } else {
-                        Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
+
+                        if (!TextUtils.isEmpty(pop)) {
+                            goToProvisionActivity(pop);
+                        } else {
+                            goToProvisionActivity("");
+                        }
                     }
                 }
-                return;
-            }
-
-            if (data != null) {
-
-                Log.e(TAG, "Data is not null");
-                final String deviceName = data.getStringExtra("deviceName");
-                String password = data.getStringExtra("password");
-                final String pop = data.getStringExtra("pop");
-                String transportValue = data.getStringExtra("transport");
-
-                Log.e(TAG, "deviceName : " + deviceName + " password : " + password + " pop : " + pop + " transportValue : " + transportValue);
-                ProvisionLanding.softAPTransport = new SoftAPTransport(BASE_URL);
-                String tempData = "ESP";
-
-                ProvisionLanding.softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
-
-                    @Override
-                    public void onSuccess(byte[] returnData) {
-
-                        String data = new String(returnData, StandardCharsets.UTF_8);
-                        Log.d(TAG, "Value : " + data);
-
-                        try {
-                            JSONObject jsonObject = new JSONObject(data);
-                            JSONObject provInfo = jsonObject.getJSONObject("prov");
-
-                            String versionInfo = provInfo.getString("ver");
-                            Log.d(TAG, "Device Version : " + versionInfo);
-
-                            JSONArray capabilities = provInfo.getJSONArray("cap");
-                            ProvisionLanding.deviceCapabilities = new ArrayList<>();
-
-                            for (int i = 0; i < capabilities.length(); i++) {
-                                String cap = capabilities.getString(i);
-                                ProvisionLanding.deviceCapabilities.add(cap);
-                            }
-                            Log.d(TAG, "Capabilities : " + ProvisionLanding.deviceCapabilities);
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Log.d(TAG, "Capabilities JSON not available.");
-                        }
-
-                        if (!ProvisionLanding.deviceCapabilities.contains("no_pop") && securityVersion.equals(Provision.CONFIG_SECURITY_SECURITY1)) {
-
-                            if (!TextUtils.isEmpty(pop)) {
-                                goToWifiScanListActivity(pop);
-                            } else {
-                                goToPopActivity(deviceName);
-                            }
-
-                        } else if (ProvisionLanding.deviceCapabilities.contains("wifi_scan")) {
-
-                            goToWifiScanListActivity("");
-
-                        } else {
-
-                            if (!TextUtils.isEmpty(pop)) {
-                                goToProvisionActivity(pop);
-                            } else {
-                                goToProvisionActivity("");
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-            }
+                break;
         }
     }
 
@@ -419,12 +382,12 @@ public class EspMainActivity extends AppCompatActivity {
 
                         @Override
                         public void run() {
-                            getDevices();
+                            getNodes();
                         }
                     }, 1500);
 
                 } else {
-                    getDevices();
+                    getNodes();
                 }
             }
         });
@@ -440,11 +403,11 @@ public class EspMainActivity extends AppCompatActivity {
                 String updateMsg = data.getString("additional_info");
                 ArrayList<String> versions = data.getStringArrayList("supported_versions");
 
-                if (!versions.contains(ApiClient.CURRENT_VERSION)) {
+                if (!versions.contains(AppConstants.CURRENT_VERSION)) {
                     alertForForceUpdate(updateMsg);
                 } else {
 
-                    int currentVersion = getVersionNumber(ApiClient.CURRENT_VERSION);
+                    int currentVersion = getVersionNumber(AppConstants.CURRENT_VERSION);
 
                     for (int i = 0; i < versions.size(); i++) {
 
@@ -463,12 +426,13 @@ public class EspMainActivity extends AppCompatActivity {
                     }
                 }
 
-                getDevices();
+                getNodes();
             }
 
             @Override
             public void onFailure(Exception exception) {
                 hideLoading();
+                isFirstTimeSetupDone = true;
                 tvNoDevice.setText("Error : Device list not received");
                 rlNoDevices.setVisibility(View.VISIBLE);
                 tvNoDevice.setVisibility(View.VISIBLE);
@@ -486,16 +450,16 @@ public class EspMainActivity extends AppCompatActivity {
         return version;
     }
 
-    private void getDevices() {
+    private void getNodes() {
 
-        Log.e(TAG, "Get devices");
-        apiManager.getAllDevices(new ApiResponseListener() {
+        Log.e(TAG, "Get Nodes");
+        apiManager.getNodes(new ApiResponseListener() {
 
             @Override
             public void onSuccess(Bundle data) {
 
                 Log.e(TAG, "Get devices Success received");
-                getAllValues();
+                updateUi();
             }
 
             @Override
@@ -503,6 +467,7 @@ public class EspMainActivity extends AppCompatActivity {
 
                 exception.printStackTrace();
                 hideLoading();
+                isFirstTimeSetupDone = true;
                 swipeRefreshLayout.setRefreshing(false);
                 tvNoDevice.setText("Error : Device list not received");
                 rlNoDevices.setVisibility(View.VISIBLE);
@@ -514,56 +479,8 @@ public class EspMainActivity extends AppCompatActivity {
         });
     }
 
-    private void getAllValues() {
-
-        if (espApp.nodeMap.size() > 0) {
-
-            for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
-
-                String key = entry.getKey();
-                EspNode node = entry.getValue();
-
-                if (node != null) {
-
-                    getValues(node.getNodeId());
-                }
-            }
-        } else {
-            updateUi();
-        }
-    }
-
-    private int responseReceivedCnt = 0;
-
-    private void getValues(String nodeId) {
-
-        apiManager.getDynamicParamsValue(nodeId, new ApiResponseListener() {
-
-            @Override
-            public void onSuccess(Bundle data) {
-
-                Log.e("TAG", "Get values success");
-                responseReceivedCnt++;
-
-                if (responseReceivedCnt == espApp.nodeMap.size()) {
-                    updateUi();
-                }
-            }
-
-            @Override
-            public void onFailure(Exception exception) {
-
-                responseReceivedCnt++;
-                if (responseReceivedCnt == espApp.nodeMap.size()) {
-                    updateUi();
-                }
-            }
-        });
-    }
-
     private void updateUi() {
 
-        responseReceivedCnt = 0;
         devices.clear();
 
         for (Map.Entry<String, EspNode> entry : espApp.nodeMap.entrySet()) {
@@ -601,7 +518,6 @@ public class EspMainActivity extends AppCompatActivity {
         swipeRefreshLayout.setRefreshing(false);
         isFirstTimeSetupDone = true;
         hideLoading();
-        apiManager.getNodeStatus();
     }
 
     private void goToBarCodeActivity() {
@@ -609,7 +525,7 @@ public class EspMainActivity extends AppCompatActivity {
         ((EspApplication) getApplicationContext()).enableOnlyWifiNetwork(this);
         isScanQrCode = true;
         Intent intent = new Intent(this, AddDeviceActivity.class);
-        startActivityForResult(intent, BARCODE_READER_ACTIVITY_REQUEST);
+        startActivityForResult(intent, QR_CODE_READER_ACTIVITY_REQUEST);
     }
 
     private void alertForForceUpdate(String message) {

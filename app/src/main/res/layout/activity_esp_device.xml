@@ -5,51 +5,8 @@
     android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
-    <include layout="@layout/esp_tool_bar" />
+    <include layout="@layout/tool_bar_device_details" />
 
-    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-        android:id="@+id/swipe_container"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_margin="32dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <androidx.core.widget.NestedScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <TextView
-                    android:id="@+id/tv_no_params"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerInParent="true"
-                    android:text="Device has no parameters"
-                    android:textColor="@color/colorPrimaryDark"
-                    android:textSize="18sp"
-                    android:visibility="gone" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_dynamic_param_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="vertical" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_static_param_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_below="@id/rv_dynamic_param_list"
-                    android:layout_marginTop="40dp"
-                    android:scrollbars="vertical" />
-
-            </RelativeLayout>
-
-        </androidx.core.widget.NestedScrollView>
-
-    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+    <include layout="@layout/content_esp_device" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

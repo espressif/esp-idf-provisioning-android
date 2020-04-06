@@ -1,7 +1,9 @@
 package com.espressif.ui.activities;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -14,13 +16,13 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.ViewPager;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
-import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.provision.R;
 import com.espressif.ui.adapters.TabsPagerAdapter;
@@ -54,9 +56,6 @@ public class MainActivity extends AppCompatActivity {
 
         TabLayout tabs = findViewById(R.id.tabs);
         tabs.setupWithViewPager(viewPager);
-
-        AppHelper.init(getApplicationContext());
-        findCurrent();
     }
 
     @Override
@@ -77,25 +76,12 @@ public class MainActivity extends AppCompatActivity {
                     email = data.getStringExtra("email");
                     password = data.getStringExtra("password");
                     ((LoginFragment) page).updateUi(email, password);
+                } else {
+                    ((LoginFragment) page).hideLoginLoading();
                 }
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void findCurrent() {
-
-        CognitoUser user = AppHelper.getPool().getCurrentUser();
-        email = user.getUserId();
-
-        if (email != null) {
-            AppHelper.setUser(email);
-            user.getSessionInBackground(authenticationHandler);
-            Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
-            if (page != null && page instanceof LoginFragment) {
-                ((LoginFragment) page).showLoginLoading();
-            }
-        }
     }
 
     public void launchProvisioningApp() {
@@ -119,14 +105,23 @@ public class MainActivity extends AppCompatActivity {
         public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice device) {
 
             Log.d(TAG, " -- Auth Success");
-            AppHelper.setCurrSession(cognitoUserSession);
-            ApiManager.userName = email;
-
             Log.d(TAG, "Username : " + cognitoUserSession.getUsername());
             Log.d(TAG, "IdToken : " + cognitoUserSession.getIdToken().getJWTToken());
             Log.d(TAG, "AccessToken : " + cognitoUserSession.getAccessToken().getJWTToken());
             Log.d(TAG, "RefreshToken : " + cognitoUserSession.getRefreshToken().getToken());
+
+            AppHelper.setCurrSession(cognitoUserSession);
+            SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString(AppConstants.KEY_EMAIL, email);
+            editor.putString(AppConstants.KEY_ID_TOKEN, cognitoUserSession.getIdToken().getJWTToken());
+            editor.putString(AppConstants.KEY_ACCESS_TOKEN, cognitoUserSession.getAccessToken().getJWTToken());
+            editor.putString(AppConstants.KEY_REFRESH_TOKEN, cognitoUserSession.getRefreshToken().getToken());
+            editor.putBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
+            editor.apply();
+
             AppHelper.newDevice(device);
+            ApiManager.getInstance(getApplicationContext()).setTokenAndUserId();
             Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
             if (page != null && page instanceof LoginFragment) {
                 ((LoginFragment) page).hideLoginLoading();
@@ -179,7 +174,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (this.password == null) {
 
-            // TODO
 //            etEmail.setText(username);
 //            password = etPassword.getText().toString();
 

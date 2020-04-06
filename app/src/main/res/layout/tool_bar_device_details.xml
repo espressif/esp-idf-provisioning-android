@@ -50,7 +50,7 @@
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="8dp"
                 android:clickable="true"
-                android:src="@drawable/ic_info" />
+                android:src="@drawable/ic_info_new" />
 
         </RelativeLayout>
 

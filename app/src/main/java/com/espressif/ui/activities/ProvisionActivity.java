@@ -68,6 +68,7 @@ public class ProvisionActivity extends AppCompatActivity {
     private String pop, baseUrl, transportVersion, securityVersion;
     private String deviceSecret, secretKey;
 
+    private ApiManager apiManager;
     private Transport transport;
     private Handler handler;
 
@@ -85,8 +86,9 @@ public class ProvisionActivity extends AppCompatActivity {
         transportVersion = intent.getStringExtra(Provision.CONFIG_TRANSPORT_KEY);
         securityVersion = intent.getStringExtra(Provision.CONFIG_SECURITY_KEY);
 
-        initViews();
         handler = new Handler();
+        apiManager = ApiManager.getInstance(getApplicationContext());
+        initViews();
 
         if (BuildConfig.FLAVOR_transport.equals("ble")) {
             transport = BLEProvisionLanding.bleTransport;
@@ -96,6 +98,7 @@ public class ProvisionActivity extends AppCompatActivity {
 
         Log.d(TAG, "Selected AP -" + ssidValue);
         Log.e(TAG, "POP : " + pop);
+        EventBus.getDefault().register(this);
         showLoading();
         doStep1();
     }
@@ -107,20 +110,16 @@ public class ProvisionActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        EventBus.getDefault().register(this);
-    }
+    protected void onDestroy() {
 
-    @Override
-    protected void onPause() {
-        super.onPause();
+        apiManager.cancelRequestStatusPollingTask();
         EventBus.getDefault().unregister(this);
+        super.onDestroy();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onEvent(UpdateEvent event) {
-        Log.e(TAG, "ON UPDATE EVENT RECEIVED : " + event.getEventType());
+        Log.d(TAG, "ON UPDATE EVENT RECEIVED : " + event.getEventType());
 
         switch (event.getEventType()) {
 
@@ -372,8 +371,7 @@ public class ProvisionActivity extends AppCompatActivity {
                         }
                     });
 
-                } else if (newStatus == WifiConstants.WifiStationState.Disconnected
-                        || newStatus == WifiConstants.WifiStationState.ConnectionFailed) {
+                } else if (newStatus == WifiConstants.WifiStationState.Disconnected) {
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -404,6 +402,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             tvErrAtStep2.setVisibility(View.VISIBLE);
                             tvErrAtStep2.setText(finalStatusText);
                             tvProvError.setVisibility(View.VISIBLE);
+                            hideLoading();
 
                             Toast.makeText(ProvisionActivity.this, "Provisioning Failed", Toast.LENGTH_LONG).show();
                         }
@@ -425,6 +424,7 @@ public class ProvisionActivity extends AppCompatActivity {
                         tvErrAtStep2.setVisibility(View.VISIBLE);
                         tvErrAtStep2.setText("Provisioning Failed");
                         tvProvError.setVisibility(View.VISIBLE);
+                        hideLoading();
 
                         Toast.makeText(ProvisionActivity.this, "Provisioning Failed", Toast.LENGTH_LONG).show();
                     }
@@ -539,7 +539,6 @@ public class ProvisionActivity extends AppCompatActivity {
 
     private void addDeviceToCloud(final ApiResponseListener responseListener) {
 
-        ApiManager apiManager = ApiManager.getInstance(getApplicationContext());
         apiManager.addDevice(deviceSecret, secretKey, new ApiResponseListener() {
 
             @Override
