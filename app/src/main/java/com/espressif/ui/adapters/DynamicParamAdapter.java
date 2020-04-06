@@ -68,7 +68,6 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
 
 //        Log.e(TAG, "onBindViewHolder for position : " + position);
         final Param param = params.get(position);
-        Log.e(TAG, "param.getName : " + param.getName() + " and param.getLabelValue : " + param.getLabelValue());
 
         if (AppConstants.UI_TYPE_SLIDER.equalsIgnoreCase(param.getUiType())) {
 
@@ -120,8 +119,6 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
 
     private void displaySlider(final MyViewHolder myViewHolder, final Param param, final int position) {
 
-        Log.d(TAG, "Deep : UI Type :" + param.getUiType() + " for position :" + position);
-
         myViewHolder.rvUiTypeSlider.setVisibility(View.VISIBLE);
         myViewHolder.rvUiTypeSwitch.setVisibility(View.GONE);
         myViewHolder.rvUiTypeLabel.setVisibility(View.GONE);
@@ -153,48 +150,56 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                 myViewHolder.intSlider.setProgress((int) sliderValue);
             }
 
-            Log.e(TAG, "=================== Param : " + param.getName() + " properties : " + param.getProperties().toString());
-
             if (param.getProperties().contains("write")) {
 
-                Log.e(TAG, "=================== Param : " + param.getName() + " CONTAINS WRITE");
+                if (((EspDeviceActivity) context).isNodeOnline()) {
 
-                myViewHolder.intSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
+                    myViewHolder.intSlider.setEnabled(true);
 
-                    @Override
-                    public void onSeeking(SeekParams seekParams) {
-                    }
+                    myViewHolder.intSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
 
-                    @Override
-                    public void onStartTrackingTouch(TickSeekBar seekBar) {
-                    }
+                        @Override
+                        public void onSeeking(SeekParams seekParams) {
+                        }
 
-                    @Override
-                    public void onStopTrackingTouch(TickSeekBar seekBar) {
+                        @Override
+                        public void onStartTrackingTouch(TickSeekBar seekBar) {
+                            ((EspDeviceActivity) context).stopUpdateValueTask();
+                        }
 
-                        int progress = seekBar.getProgress();
-                        int finalProgress = progress;
+                        @Override
+                        public void onStopTrackingTouch(TickSeekBar seekBar) {
 
-                        Log.e(TAG, "onStopTrackingTouch - " + finalProgress);
+                            int progress = seekBar.getProgress();
+                            int finalProgress = progress;
 
-                        JsonObject jsonParam = new JsonObject();
-                        JsonObject body = new JsonObject();
+                            Log.d(TAG, "onStopTrackingTouch - " + finalProgress);
 
-                        jsonParam.addProperty(param.getName(), finalProgress);
-                        body.add(deviceName, jsonParam);
+                            JsonObject jsonParam = new JsonObject();
+                            JsonObject body = new JsonObject();
 
-                        apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+                            jsonParam.addProperty(param.getName(), finalProgress);
+                            body.add(deviceName, jsonParam);
 
-                            @Override
-                            public void onSuccess(Bundle data) {
-                            }
+                            apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
 
-                            @Override
-                            public void onFailure(Exception exception) {
-                            }
-                        });
-                    }
-                });
+                                @Override
+                                public void onSuccess(Bundle data) {
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
+                                }
+
+                                @Override
+                                public void onFailure(Exception exception) {
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
+                                }
+                            });
+                        }
+                    });
+
+                } else {
+
+                    myViewHolder.intSlider.setEnabled(false);
+                }
 
             } else {
 
@@ -234,42 +239,53 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
 
             if (param.getProperties().contains("write")) {
 
-                myViewHolder.floatSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
+                if (((EspDeviceActivity) context).isNodeOnline()) {
 
-                    @Override
-                    public void onSeeking(SeekParams seekParams) {
-                    }
+                    myViewHolder.floatSlider.setEnabled(true);
 
-                    @Override
-                    public void onStartTrackingTouch(TickSeekBar seekBar) {
-                    }
+                    myViewHolder.floatSlider.setOnSeekChangeListener(new OnSeekChangeListener() {
 
-                    @Override
-                    public void onStopTrackingTouch(TickSeekBar seekBar) {
+                        @Override
+                        public void onSeeking(SeekParams seekParams) {
+                        }
 
-                        float progress = seekBar.getProgressFloat();
-                        float finalProgress = progress;
+                        @Override
+                        public void onStartTrackingTouch(TickSeekBar seekBar) {
+                            ((EspDeviceActivity) context).stopUpdateValueTask();
+                        }
 
-                        Log.e(TAG, "onStopTrackingTouch - " + finalProgress);
+                        @Override
+                        public void onStopTrackingTouch(TickSeekBar seekBar) {
 
-                        JsonObject jsonParam = new JsonObject();
-                        JsonObject body = new JsonObject();
+                            float progress = seekBar.getProgressFloat();
+                            float finalProgress = progress;
 
-                        jsonParam.addProperty(param.getName(), finalProgress);
-                        body.add(deviceName, jsonParam);
+                            Log.d(TAG, "onStopTrackingTouch - " + finalProgress);
 
-                        apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+                            JsonObject jsonParam = new JsonObject();
+                            JsonObject body = new JsonObject();
 
-                            @Override
-                            public void onSuccess(Bundle data) {
-                            }
+                            jsonParam.addProperty(param.getName(), finalProgress);
+                            body.add(deviceName, jsonParam);
 
-                            @Override
-                            public void onFailure(Exception exception) {
-                            }
-                        });
-                    }
-                });
+                            apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+
+                                @Override
+                                public void onSuccess(Bundle data) {
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
+                                }
+
+                                @Override
+                                public void onFailure(Exception exception) {
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
+                                }
+                            });
+                        }
+                    });
+
+                } else {
+                    myViewHolder.floatSlider.setEnabled(false);
+                }
 
             } else {
 
@@ -303,39 +319,52 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
         if (param.getProperties().contains("write")) {
 
             myViewHolder.toggleSwitch.setVisibility(View.VISIBLE);
+            myViewHolder.toggleSwitch.setOnCheckedChangeListener(null);
             myViewHolder.toggleSwitch.setChecked(param.getSwitchStatus());
 
-            myViewHolder.toggleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            if (((EspDeviceActivity) context).isNodeOnline()) {
 
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                myViewHolder.toggleSwitch.setEnabled(true);
 
-                    if (isChecked) {
+                myViewHolder.toggleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 
-                        myViewHolder.tvSwitchStatus.setText(R.string.text_on);
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
-                    } else {
-                        myViewHolder.tvSwitchStatus.setText(R.string.text_off);
+                        ((EspDeviceActivity) context).stopUpdateValueTask();
+
+                        if (isChecked) {
+
+                            myViewHolder.tvSwitchStatus.setText(R.string.text_on);
+
+                        } else {
+                            myViewHolder.tvSwitchStatus.setText(R.string.text_off);
+                        }
+
+                        JsonObject jsonParam = new JsonObject();
+                        JsonObject body = new JsonObject();
+
+                        jsonParam.addProperty(param.getName(), isChecked);
+                        body.add(deviceName, jsonParam);
+
+                        apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
+
+                            @Override
+                            public void onSuccess(Bundle data) {
+                                ((EspDeviceActivity) context).startUpdateValueTask();
+                            }
+
+                            @Override
+                            public void onFailure(Exception exception) {
+                                ((EspDeviceActivity) context).startUpdateValueTask();
+                            }
+                        });
                     }
+                });
 
-                    JsonObject jsonParam = new JsonObject();
-                    JsonObject body = new JsonObject();
-
-                    jsonParam.addProperty(param.getName(), isChecked);
-                    body.add(deviceName, jsonParam);
-
-                    apiManager.setDynamicParamValue(nodeId, body, new ApiResponseListener() {
-
-                        @Override
-                        public void onSuccess(Bundle data) {
-                        }
-
-                        @Override
-                        public void onFailure(Exception exception) {
-                        }
-                    });
-                }
-            });
+            } else {
+                myViewHolder.toggleSwitch.setEnabled(false);
+            }
 
         } else {
 
@@ -352,9 +381,10 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
         myViewHolder.tvLabelName.setText(param.getName());
         myViewHolder.tvLabelValue.setText(param.getLabelValue());
 
-        if (param.getProperties().contains("write")) {
+        if (param.getProperties().contains("write") && ((EspDeviceActivity) context).isNodeOnline()) {
 
             myViewHolder.btnEdit.setVisibility(View.VISIBLE);
+
             myViewHolder.btnEdit.setOnClickListener(new View.OnClickListener() {
 
                 @Override
@@ -409,6 +439,8 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
+                ((EspDeviceActivity) context).stopUpdateValueTask();
+
                 String dataType = param.getDataType();
                 final String value = etAttribute.getText().toString();
 
@@ -453,6 +485,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                                         myViewHolder.tvLabelValue.setText("false");
                                         params.get(position).setLabelValue("false");
                                     }
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
                                 }
 
                                 @Override
@@ -461,6 +494,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                                     myViewHolder.btnEdit.setVisibility(View.VISIBLE);
                                     myViewHolder.progressBar.setVisibility(View.GONE);
                                     myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                                    ((EspDeviceActivity) context).startUpdateValueTask();
                                 }
                             });
 
@@ -491,6 +525,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(value);
                             params.get(position).setLabelValue(value);
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
 
                         @Override
@@ -499,6 +534,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.btnEdit.setVisibility(View.VISIBLE);
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
                     });
 
@@ -518,6 +554,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(value);
                             params.get(position).setLabelValue(value);
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
 
                         @Override
@@ -526,6 +563,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.btnEdit.setVisibility(View.VISIBLE);
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
                     });
 
@@ -547,6 +585,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             if (params.get(position).getParamType() != null && params.get(position).getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
                                 ((EspDeviceActivity) context).setDeviceName(value);
                             }
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
 
                         @Override
@@ -555,6 +594,7 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
                             myViewHolder.btnEdit.setVisibility(View.VISIBLE);
                             myViewHolder.progressBar.setVisibility(View.GONE);
                             myViewHolder.tvLabelValue.setText(param.getLabelValue());
+                            ((EspDeviceActivity) context).startUpdateValueTask();
                         }
                     });
                 }

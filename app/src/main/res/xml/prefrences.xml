@@ -3,7 +3,7 @@
 
     <Preference
         android:key="change_password"
-        android:title="Change Password" />
+        android:title="@string/title_activity_change_password" />
 
     <Preference
         android:key="sign_out"

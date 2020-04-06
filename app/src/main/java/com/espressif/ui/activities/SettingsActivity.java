@@ -4,9 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
-import androidx.annotation.Nullable;
 import android.util.Log;
 import android.view.MenuItem;
+
+import androidx.annotation.Nullable;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.espressif.provision.R;

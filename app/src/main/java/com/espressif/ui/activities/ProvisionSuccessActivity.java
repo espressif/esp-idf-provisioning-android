@@ -16,15 +16,15 @@ package com.espressif.ui.activities;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Vibrator;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.espressif.AppConstants;
-import com.espressif.EspApplication;
 import com.espressif.provision.R;
 
 public class ProvisionSuccessActivity extends AppCompatActivity {

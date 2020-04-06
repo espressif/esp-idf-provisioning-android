@@ -85,20 +85,18 @@ public class UserProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                if (!ApiManager.isGitHubLogin) {
+                if (!ApiManager.isOAuthLogin) {
                     String username = AppHelper.getCurrUser();
                     Log.e("TAG", "User name : " + username);
                     CognitoUser user = AppHelper.getPool().getUser(username);
                     user.signOut();
-                } else {
-                    SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
-                    SharedPreferences.Editor editor = sharedPreferences.edit();
-                    editor.remove(AppConstants.KEY_ID_TOKEN);
-                    editor.remove(AppConstants.KEY_ACCESS_TOKEN);
-                    editor.remove(AppConstants.KEY_REFRESH_TOKEN);
-                    editor.putBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, false);
-                    editor.apply();
                 }
+
+                SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.clear();
+                editor.apply();
+
                 Intent loginActivity = new Intent(getApplicationContext(), MainActivity.class);
                 loginActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 startActivity(loginActivity);
@@ -123,11 +121,12 @@ public class UserProfileActivity extends AppCompatActivity {
 
         termsInfoList = new ArrayList<>();
 
-        if (!ApiManager.isGitHubLogin) {
+        if (!ApiManager.isOAuthLogin) {
             termsInfoList.add(getString(R.string.title_activity_change_password));
         }
-        termsInfoList.add("Privacy Policy");
-        termsInfoList.add("Terms and Conditions");
+        termsInfoList.add(getString(R.string.documentation));
+        termsInfoList.add(getString(R.string.privacy_policy));
+        termsInfoList.add(getString(R.string.terms_of_use));
         termsInfoAdapter = new UserProfileAdapter(this, termsInfoList, null, false);
         termsInfoView.setAdapter(termsInfoAdapter);
         termsInfoAdapter.setOnItemClickListener(onItemClickListener);
@@ -146,9 +145,19 @@ public class UserProfileActivity extends AppCompatActivity {
 
                 startActivity(new Intent(UserProfileActivity.this, ChangePasswordActivity.class));
 
-            } else if (str.equals("Privacy Policy")) {
+            } else if (str.equals(getString(R.string.documentation))) {
 
-                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse("https://rainmaker.espressif.com/docs/privacy-policy.html"));
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse(AppConstants.DOCUMENTATION_URL));
+                startActivity(openURL);
+
+            } else if (str.equals(getString(R.string.privacy_policy))) {
+
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse(AppConstants.PRIVACY_URL));
+                startActivity(openURL);
+
+            } else if (str.equals(getString(R.string.terms_of_use))) {
+
+                Intent openURL = new Intent(Intent.ACTION_VIEW, Uri.parse(AppConstants.TERMS_URL));
                 startActivity(openURL);
             }
         }

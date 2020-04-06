@@ -1,8 +1,6 @@
 package com.espressif.ui.fragments;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -23,7 +21,6 @@ import androidx.cardview.widget.CardView;
 import androidx.core.widget.ContentLoadingProgressBar;
 import androidx.fragment.app.Fragment;
 
-import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
 import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.cloudapi.ApiResponseListener;
@@ -45,6 +42,7 @@ public class LoginFragment extends Fragment {
     private CardView btnLogin, btnLoginWithGitHub;
     private TextView txtLoginBtn, txtLoginWithGitHubBtn;
     private ImageView arrowImageLogin, imageLoginWithGitHub;
+    private ImageView ivGithub, ivGoogle;
     private ContentLoadingProgressBar progressBarLogin, progressBarLoginGitHub;
     private TextView tvForgotPassword;
     private TextView linkDoc, linkPrivacy, linkTerms;
@@ -70,7 +68,6 @@ public class LoginFragment extends Fragment {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_login, container, false);
         init(root);
-        findCurrent();
         return root;
     }
 
@@ -95,7 +92,7 @@ public class LoginFragment extends Fragment {
             Log.e(TAG, "Code : " + code);
 
             ApiManager apiManager = ApiManager.getInstance(getActivity().getApplicationContext());
-            apiManager.loginGithub(code, new ApiResponseListener() {
+            apiManager.getOAuthToken(code, new ApiResponseListener() {
 
                 @Override
                 public void onSuccess(Bundle data) {
@@ -107,12 +104,9 @@ public class LoginFragment extends Fragment {
                 @Override
                 public void onFailure(Exception exception) {
                     hideGitHubLoginLoading();
-                    Toast.makeText(getActivity(), "Fail to login with GitHub", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getActivity(), "Fail to login", Toast.LENGTH_SHORT).show();
                 }
             });
-
-        } else {
-            Log.e(TAG, "Data is null");
         }
     }
 
@@ -134,6 +128,11 @@ public class LoginFragment extends Fragment {
         imageLoginWithGitHub.setImageResource(R.drawable.ic_github);
         LinearLayout ll = btnLoginWithGitHub.findViewById(R.id.layout_btn);
         ll.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
+
+        ivGithub = view.findViewById(R.id.iv_github);
+        ivGoogle = view.findViewById(R.id.iv_google);
+        ivGithub.setOnClickListener(githubLoginBtnClickListener);
+        ivGoogle.setOnClickListener(googleLoginBtnClickListener);
 
         etEmail = view.findViewById(R.id.et_email);
         layoutPassword = view.findViewById(R.id.layout_password);
@@ -161,36 +160,6 @@ public class LoginFragment extends Fragment {
                 return false;
             }
         });
-    }
-
-    private void findCurrent() {
-
-        SharedPreferences sharedPreferences = getActivity().getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
-        ApiManager.isGitHubLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_GITHUB_LOGIN, false);
-
-        if (ApiManager.isGitHubLogin) {
-
-            showGitHubLoginLoading();
-            ApiManager apiManager = ApiManager.getInstance(getActivity().getApplicationContext());
-
-            if (apiManager.isTokenExpired()) {
-
-                apiManager.getNewToken();
-            } else {
-                hideGitHubLoginLoading();
-                ((MainActivity) getActivity()).launchProvisioningApp();
-            }
-
-        } else {
-
-            CognitoUser user = AppHelper.getPool().getCurrentUser();
-            email = user.getUserId();
-
-            if (email != null) {
-                AppHelper.setUser(email);
-                etEmail.setText(user.getUserId());
-            }
-        }
     }
 
     private void signInUser() {
@@ -299,8 +268,20 @@ public class LoginFragment extends Fragment {
         @Override
         public void onClick(View v) {
 
-//            Uri uri = Uri.parse(AppConstants.GITHUB_PROD);
-            Uri uri = Uri.parse(AppConstants.GITHUB_STAGING);
+            String uriStr = AppConstants.GITHUB_URL + getString(R.string.client_id);
+            Uri uri = Uri.parse(uriStr);
+            Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
+            startActivity(openURL);
+        }
+    };
+
+    View.OnClickListener googleLoginBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            String uriStr = AppConstants.GOOGLE_URL + getString(R.string.client_id);
+            Uri uri = Uri.parse(uriStr);
             Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
             startActivity(openURL);
         }

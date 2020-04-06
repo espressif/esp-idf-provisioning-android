@@ -11,6 +11,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Vibrator;
 import android.text.TextUtils;
 import android.util.Log;
@@ -28,19 +29,25 @@ import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.espressif.AppConstants;
 import com.espressif.provision.BuildConfig;
 import com.espressif.provision.Provision;
 import com.espressif.provision.R;
+import com.espressif.provision.transport.ResponseListener;
+import com.espressif.provision.transport.SoftAPTransport;
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
 import com.wang.avi.AVLoadingIndicatorView;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -60,15 +67,18 @@ public class AddDeviceActivity extends AppCompatActivity {
     private BarcodeDetector barcodeDetector;
     private CameraSource cameraSource;
     private AVLoadingIndicatorView loader;
-    private String deviceName;
     private Intent intent;
     private Handler handler;
+    private String deviceName;
+    private boolean isScanned = false;
+    private int deviceConnectionReqCount = 0;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_device);
         handler = new Handler();
+        intent = new Intent();
         initViews();
     }
 
@@ -96,6 +106,13 @@ public class AddDeviceActivity extends AppCompatActivity {
         hideLoading();
         handler.removeCallbacks(fetchSSIDTask);
         super.onDestroy();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        setResult(RESULT_CANCELED, intent);
+        finish();
     }
 
     @Override
@@ -136,6 +153,7 @@ public class AddDeviceActivity extends AppCompatActivity {
             config.put(Provision.CONFIG_SECURITY_KEY, securityVersion);
             config.put(Provision.CONFIG_BASE_URL_KEY, BASE_URL);
 
+            finish();
             Provision.showProvisioningUI(AddDeviceActivity.this, config);
         }
     };
@@ -216,7 +234,7 @@ public class AddDeviceActivity extends AppCompatActivity {
 
                 final SparseArray<Barcode> barcodes = detections.getDetectedItems();
 
-                if (barcodes.size() != 0) {
+                if (barcodes.size() != 0 && !isScanned) {
 
                     Vibrator vib = (Vibrator) getSystemService(VIBRATOR_SERVICE);
                     vib.vibrate(50);
@@ -234,10 +252,9 @@ public class AddDeviceActivity extends AppCompatActivity {
                     Log.d(TAG, "QR Code Data : " + barcode.rawValue);
                     String scannedData = barcode.rawValue;
 
-                    intent = new Intent();
                     intent.putExtra(KEY_CAPTURED_BARCODE, barcode);
                     intent.putExtra(KEY_CAPTURED_RAW_BARCODE, barcode.rawValue);
-                    sendConnectionFailure();
+                    sendWiFiConnectionFailure();
 
                     try {
                         JSONObject jsonObject = new JSONObject(scannedData);
@@ -247,6 +264,16 @@ public class AddDeviceActivity extends AppCompatActivity {
                         String pop = jsonObject.optString("pop");
                         String transport = jsonObject.optString("transport");
                         String password = jsonObject.optString("password");
+                        isScanned = true;
+
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                cameraSource.release();
+                            }
+                        });
 
                         // FIXME Currently considering SoftAP as transport and connect device.
 
@@ -263,32 +290,38 @@ public class AddDeviceActivity extends AppCompatActivity {
                         config.SSID = String.format("\"%s\"", deviceName);
 
                         if (TextUtils.isEmpty(password)) {
-                            Log.i(TAG, "Connect device to open network");
+                            Log.i(TAG, "Connect to open network");
                             config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
                         } else {
-                            Log.i(TAG, "Connect device to secure network");
+                            Log.i(TAG, "Connect to secure network");
                             config.preSharedKey = String.format("\"%s\"", password);
                         }
 
+                        int netId = -1;
                         List<WifiConfiguration> apList = wifiManager.getConfiguredNetworks();
-                        Log.d(TAG, "List Size : " + apList.size());
+                        Log.e(TAG, "List Size : " + apList.size());
 
                         for (WifiConfiguration i : apList) {
 
                             if (i.SSID != null && i.SSID.equals("\"" + deviceName + "\"")) {
-                                Log.d(TAG, "i.networkId : " + i.networkId);
-                                wifiManager.removeNetwork(i.networkId);
+                                Log.e(TAG, "i.networkId : " + i.networkId);
+//                                wifiManager.removeNetwork(i.networkId);
+                                netId = i.networkId;
                             }
                         }
 
-                        int netId = wifiManager.addNetwork(config);
-                        Log.d(TAG, "Network Id : " + netId);
+                        if (netId == -1) {
+
+                            netId = wifiManager.addNetwork(config);
+                            Log.e(TAG, "Network Id : " + netId);
+                        }
 
                         if (netId != -1) {
 
-                            wifiManager.disconnect();
+                            Log.e(TAG, "Enable network : " + netId);
+//                            wifiManager.disconnect();
                             wifiManager.enableNetwork(netId, true);
-                            wifiManager.reconnect();
+//                            wifiManager.reconnect();
 
                         } else {
 
@@ -297,13 +330,16 @@ public class AddDeviceActivity extends AppCompatActivity {
                             for (WifiConfiguration i : list) {
 
                                 if (i.SSID != null && i.SSID.equals("\"" + deviceName + "\"")) {
-                                    Log.d(TAG, "i.networkId 2 : " + i.networkId);
-                                    wifiManager.disconnect();
-                                    wifiManager.enableNetwork(i.networkId, true);
-                                    wifiManager.reconnect();
+                                    Log.e(TAG, "i.networkId 2 : " + i.networkId);
+                                    wifiManager.removeNetwork(i.networkId);
                                     break;
                                 }
                             }
+
+                            netId = wifiManager.addNetwork(config);
+                            wifiManager.disconnect();
+                            wifiManager.enableNetwork(netId, true);
+                            wifiManager.reconnect();
                         }
 
                         intent.putExtra("deviceName", deviceName);
@@ -333,8 +369,17 @@ public class AddDeviceActivity extends AppCompatActivity {
         handler.postDelayed(fetchSSIDTask, 2000);
     }
 
-    private void sendConnectionFailure() {
-        handler.postDelayed(connectionFailedTask, 10000);
+    private void sendWiFiConnectionFailure() {
+        handler.postDelayed(wifiConnectionFailedTask, 10000);
+    }
+
+    private void connectWithDevice() {
+        handler.removeCallbacks(connectWithDeviceTask);
+        handler.postDelayed(connectWithDeviceTask, 100);
+    }
+
+    private void sendDeviceConnectionFailure() {
+        handler.postDelayed(deviceConnectionFailedTask, 100);
     }
 
     private String fetchWifiSSID() {
@@ -374,16 +419,17 @@ public class AddDeviceActivity extends AppCompatActivity {
 
             if (ssid != null && ssid.startsWith(deviceName)) {
 
-                Log.d(TAG, "Send Result ");
+                Log.d(TAG, "Send Result + " + RESULT_OK);
 
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(2500);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                handler.removeCallbacks(connectionFailedTask);
-                setResult(RESULT_OK, intent);
-                finish();
+                handler.removeCallbacks(wifiConnectionFailedTask);
+                connectWithDevice();
+//                setResult(RESULT_OK, intent);
+//                finish();
             } else {
 
                 handler.removeCallbacks(fetchSSIDTask);
@@ -392,13 +438,25 @@ public class AddDeviceActivity extends AppCompatActivity {
         }
     };
 
-    private Runnable connectionFailedTask = new Runnable() {
+    private Runnable wifiConnectionFailedTask = new Runnable() {
 
         @Override
         public void run() {
 
             handler.removeCallbacks(fetchSSIDTask);
             intent.putExtra("err_msg", "Error! Failed to connect with device.");
+            setResult(RESULT_CANCELED, intent);
+            finish();
+        }
+    };
+
+    private Runnable deviceConnectionFailedTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            handler.removeCallbacks(connectWithDeviceTask);
+            intent.putExtra("err_msg", "Error! Unable to communicate with device.");
             setResult(RESULT_CANCELED, intent);
             finish();
         }
@@ -412,4 +470,90 @@ public class AddDeviceActivity extends AppCompatActivity {
     private void hideLoading() {
         loader.hide();
     }
+
+    private Runnable connectWithDeviceTask = new Runnable() {
+
+        @Override
+        public void run() {
+
+            if (intent != null) {
+
+                deviceConnectionReqCount++;
+
+                Log.e(TAG, "Data is not null");
+                Log.e(TAG, "Start connecting with device ===================== " + System.currentTimeMillis());
+                final String deviceName = intent.getStringExtra("deviceName");
+                String password = intent.getStringExtra("password");
+                final String pop = intent.getStringExtra("pop");
+                String transportValue = intent.getStringExtra("transport");
+                String BASE_URL = getResources().getString(R.string.wifi_base_url);
+
+                Log.e(TAG, "deviceName : " + deviceName + " password : " + password + " pop : " + pop + " transportValue : " + transportValue);
+                ProvisionLanding.softAPTransport = new SoftAPTransport(BASE_URL);
+                String tempData = "ESP";
+
+                ProvisionLanding.softAPTransport.sendConfigData(AppConstants.HANDLER_PROTO_VER, tempData.getBytes(), new ResponseListener() {
+
+                    @Override
+                    public void onSuccess(byte[] returnData) {
+
+                        String data = new String(returnData, StandardCharsets.UTF_8);
+                        Log.d(TAG, "Value : " + data);
+
+                        try {
+                            JSONObject jsonObject = new JSONObject(data);
+                            JSONObject provInfo = jsonObject.getJSONObject("prov");
+
+                            String versionInfo = provInfo.getString("ver");
+                            Log.d(TAG, "Device Version : " + versionInfo);
+
+                            JSONArray capabilities = provInfo.getJSONArray("cap");
+                            ProvisionLanding.deviceCapabilities = new ArrayList<>();
+
+                            for (int i = 0; i < capabilities.length(); i++) {
+                                String cap = capabilities.getString(i);
+                                ProvisionLanding.deviceCapabilities.add(cap);
+                            }
+                            Log.d(TAG, "Capabilities : " + ProvisionLanding.deviceCapabilities);
+
+                            handler.removeCallbacks(connectWithDeviceTask);
+                            setResult(RESULT_OK, intent);
+                            finish();
+
+                        } catch (JSONException e) {
+
+                            e.printStackTrace();
+
+                            Log.d(TAG, "Capabilities JSON not available.");
+                            handler.removeCallbacks(connectWithDeviceTask);
+                            setResult(RESULT_OK, intent);
+                            finish();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception e) {
+
+                        e.printStackTrace();
+
+                        if (deviceConnectionReqCount == 3) {
+
+                            runOnUiThread(new Runnable() {
+
+                                @Override
+                                public void run() {
+                                    hideLoading();
+                                    handler.removeCallbacks(connectWithDeviceTask);
+                                    sendDeviceConnectionFailure();
+                                }
+                            });
+                        } else {
+                            handler.removeCallbacks(connectWithDeviceTask);
+                            handler.postDelayed(connectWithDeviceTask, 2000);
+                        }
+                    }
+                });
+            }
+        }
+    };
 }

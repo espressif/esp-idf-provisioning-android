@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ESP Demo</string>
+    <string name="app_name">ESP RainMaker</string>
     <string name="action_settings">Settings</string>
     <string name="title_activity_provision_landing">Connect to device</string>
     <string name="no_internet_note">To make sure you are really connected to the device, please make sure you accept the system dialog informing you that network has no internet access.</string>
@@ -61,8 +61,6 @@
     <string name="text_on">ON</string>
     <string name="text_off">OFF</string>
 
-    <string name="nav_drawer_open">Open navigation drawer</string>
-    <string name="nav_drawer_close">Close navigation drawer</string>
     <string name="Username">Username</string>
     <string name="Password">Password</string>
     <string name="Menu">Menu</string>
@@ -71,6 +69,9 @@
     <string name="no_devices">No devices added</string>
     <string name="add_device_txt">You can provision a device by scanning the QR code or you can do it manually my tapping on + icon on right-top of this screen.</string>
     <string name="signup_confirm_msg">Enter verification code.</string>
+    <string name="node_offline">Node Offline</string>
+    <string name="status_offline">Offline</string>
+    <string name="offline_at">Offline at</string>
 
     <!--Tab titles-->
     <string name="tab_login">Login</string>
@@ -137,16 +138,16 @@
     <string name="error_verification_code_empty">Verification code cannot be empty</string>
     <string name="error_ssid_empty">Network name cannot be empty</string>
     <string name="error_password_not_matched">Passwords not matched</string>
-    <string name="error_agree_terms_n_condition">Please agree to privacy policy and terms &amp; conditions.</string>
+    <string name="error_agree_terms_n_condition">Please agree to privacy policy and terms of Use.</string>
     <string name="error_provisioning">Reset your board to factory defaults and retry</string>
     <string name="error_authentication_failed">Wi-Fi Authentication failed.</string>
     <string name="error_network_not_found">Network not found.</string>
     <string name="error_unknown">Unknown Error.</string>
 
     <!--Link texts-->
-    <string name="link_documentation"><a href="http://www.rainmaker.espressif.com/">Documentation</a></string>
+    <string name="link_documentation"><a href="https://rainmaker.espressif.com/">Documentation</a></string>
     <string name="link_privacy"><a href="https://rainmaker.espressif.com/docs/privacy-policy.html">Privacy</a></string>
-    <string name="link_terms_condition"><a href="https://rainmaker.espressif.com/docs/privacy-policy.html">Terms &amp; Conditions</a></string>
+    <string name="link_terms_of_use"><a href="https://rainmaker.espressif.com/docs/terms-of-use.html">Terms of Use</a></string>
 
     <!--Dialog texts-->
     <string name="dialog_title_login_failed">Sign-in failed</string>
@@ -165,7 +166,7 @@
     <string name="node_config_version">Config Version</string>
 
     <!--Other Strings-->
-    <string name="read_terms_condition">I have read and agree to the Privacy Policy and Terms &amp; Conditions.</string>
+    <string name="read_terms_condition">I have read and agree to the Privacy Policy and Terms of Use.</string>
     <string name="login_with">Login with</string>
     <string name="use_email_id">or use your email id</string>
     <string name="forgot_password">Forgot password?</string>
@@ -176,6 +177,9 @@
     <string name="reset_password_instruction">Set your new password with the verification code that was sent to you.</string>
     <string name="connect_device_instruction">To provision your device, make sure it is turned ON. Connect your mobile phone to the Wi-Fi network with a name like PROV_XXXXXX</string>
     <string name="pop_instruction">Enter your proof of possession PIN for</string>
+    <string name="documentation">Documentation</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_of_use">Terms of Use</string>
 
     <string name="prov_step_1">Sending Wi-Fi credentials</string>
     <string name="prov_step_2">Confirming Wi-Fi connection</string>

@@ -13,6 +13,7 @@ public class EspNode implements Parcelable {
     private String fwVersion;
     private String nodeType;
     private boolean isOnline;
+    private long timeStampOfStatus; // timestamp of connectivity status
     private ArrayList<EspDevice> devices;
     private ArrayList<Param> attributes;
 
@@ -64,6 +65,14 @@ public class EspNode implements Parcelable {
         isOnline = online;
     }
 
+    public long getTimeStampOfStatus() {
+        return timeStampOfStatus;
+    }
+
+    public void setTimeStampOfStatus(long timeStampOfStatus) {
+        this.timeStampOfStatus = timeStampOfStatus;
+    }
+
     public ArrayList<EspDevice> getDevices() {
         return devices;
     }
@@ -88,6 +97,7 @@ public class EspNode implements Parcelable {
         fwVersion = in.readString();
         nodeType = in.readString();
         isOnline = in.readByte() != 0;
+        timeStampOfStatus = in.readLong();
         devices = in.createTypedArrayList(EspDevice.CREATOR);
         attributes = in.createTypedArrayList(Param.CREATOR);
     }
@@ -118,6 +128,7 @@ public class EspNode implements Parcelable {
         dest.writeString(fwVersion);
         dest.writeString(nodeType);
         dest.writeByte((byte) (isOnline ? 1 : 0));
+        dest.writeLong(timeStampOfStatus);
         dest.writeTypedList(devices);
         dest.writeTypedList(attributes);
     }
