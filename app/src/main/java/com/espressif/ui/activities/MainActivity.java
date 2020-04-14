@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
             editor.apply();
 
             AppHelper.newDevice(device);
-            ApiManager.getInstance(getApplicationContext()).setTokenAndUserId();
+            ApiManager.getInstance(getApplicationContext()).getTokenAndUserId();
             Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
             if (page != null && page instanceof LoginFragment) {
                 ((LoginFragment) page).hideLoginLoading();
@@ -141,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void getMFACode(MultiFactorAuthenticationContinuation multiFactorAuthenticationContinuation) {
             // Nothing to do here
+            Log.e(TAG, "getMFACode");
         }
 
         @Override
@@ -151,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
                 ((LoginFragment) page).hideLoginLoading();
             }
             showDialogMessage(getString(R.string.dialog_title_login_failed), AppHelper.formatException(e));
+            e.printStackTrace();
         }
 
         @Override

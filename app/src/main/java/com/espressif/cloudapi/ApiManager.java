@@ -38,7 +38,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -63,6 +62,7 @@ public class ApiManager {
     private EspApplication espApp;
     private Handler handler;
     private ApiInterface apiInterface;
+    private SharedPreferences sharedPreferences;
     private static ArrayList<String> nodeIds = new ArrayList<>();
 
     private static ApiManager apiManager;
@@ -80,6 +80,8 @@ public class ApiManager {
         handler = new Handler();
         espApp = (EspApplication) context.getApplicationContext();
         apiInterface = ApiClient.getClient(context).create(ApiInterface.class);
+        sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        getTokenAndUserId();
     }
 
     public void getOAuthToken(String code, final ApiResponseListener listener) {
@@ -104,7 +106,6 @@ public class ApiManager {
                             refreshToken = jsonObject.getString("refresh_token");
                             isOAuthLogin = true;
 
-                            SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
                             SharedPreferences.Editor editor = sharedPreferences.edit();
                             editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
                             editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
@@ -112,7 +113,7 @@ public class ApiManager {
                             editor.putBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, true);
                             editor.apply();
 
-                            setTokenAndUserId();
+                            getTokenAndUserId();
                             listener.onSuccess(null);
 
                         } else {
@@ -138,47 +139,49 @@ public class ApiManager {
         }
     }
 
-    public void setTokenAndUserId() {
+    public void getTokenAndUserId() {
 
-        SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         userName = sharedPreferences.getString(AppConstants.KEY_EMAIL, "");
         idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
         accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
         refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
         isOAuthLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
 
-        if (isOAuthLogin) {
+        if (!TextUtils.isEmpty(idToken)) {
 
-            JWT jwt = null;
-            try {
-                jwt = new JWT(idToken);
-            } catch (DecodeException e) {
-                e.printStackTrace();
+            if (isOAuthLogin) {
+
+                JWT jwt = null;
+                try {
+                    jwt = new JWT(idToken);
+                } catch (DecodeException e) {
+                    e.printStackTrace();
+                }
+
+                Claim claimUserName = jwt.getClaim("cognito:username");
+                userId = claimUserName.asString();
+                Claim claimEmail = jwt.getClaim("email");
+                String email = claimEmail.asString();
+                userName = email;
+
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString(AppConstants.KEY_EMAIL, email);
+                editor.apply();
+
+            } else {
+
+                JWT jwt = null;
+                try {
+                    jwt = new JWT(idToken);
+                } catch (DecodeException e) {
+                    e.printStackTrace();
+                }
+
+                Claim claimUserId = jwt.getClaim("custom:user_id");
+                userId = claimUserId.asString();
             }
-
-            Claim claimUserName = jwt.getClaim("cognito:username");
-            userId = claimUserName.asString();
-            Claim claimEmail = jwt.getClaim("email");
-            String email = claimEmail.asString();
-            userName = email;
-
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString(AppConstants.KEY_EMAIL, email);
-            editor.apply();
-
-        } else {
-
-            JWT jwt = null;
-            try {
-                jwt = new JWT(idToken);
-            } catch (DecodeException e) {
-                e.printStackTrace();
-            }
-
-            Claim claimUserId = jwt.getClaim("custom:user_id");
-            userId = claimUserId.asString();
+            Log.d(TAG, "=======================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
         }
-        Log.d(TAG, "=======================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
     }
 
     /**
@@ -1295,7 +1298,6 @@ public class ApiManager {
 
         Log.d(TAG, "Check isTokenExpired");
 
-        SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         idToken = sharedPreferences.getString(AppConstants.KEY_ID_TOKEN, "");
         accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
         refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
@@ -1327,13 +1329,23 @@ public class ApiManager {
     public void getNewToken() {
 
         if (isOAuthLogin) {
-            getNewTokenForOAuth();
+            getNewTokenForOAuth(new ApiResponseListener() {
+
+                @Override
+                public void onSuccess(Bundle data) {
+                }
+
+                @Override
+                public void onFailure(Exception exception) {
+                }
+            });
+
         } else {
             AppHelper.getPool().getUser(userName).getSessionInBackground(authenticationHandler);
         }
     }
 
-    private void getNewTokenForOAuth() {
+    public void getNewTokenForOAuth(final ApiResponseListener listener) {
 
         HashMap<String, String> body = new HashMap<>();
         Log.e(TAG, "USER NAME : " + userId);
@@ -1352,26 +1364,30 @@ public class ApiManager {
                     if (response.isSuccessful()) {
 
                         String jsonResponse = response.body().string();
+                        Log.d(TAG, "Response : " + jsonResponse);
                         JSONObject jsonObject = new JSONObject(jsonResponse);
                         idToken = jsonObject.getString("idtoken");
                         accessToken = jsonObject.getString("accesstoken");
-                        refreshToken = jsonObject.getString("refreshtoken");
                         isOAuthLogin = true;
 
-                        SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = sharedPreferences.edit();
                         editor.putString(AppConstants.KEY_ID_TOKEN, idToken);
                         editor.putString(AppConstants.KEY_ACCESS_TOKEN, accessToken);
-                        editor.putString(AppConstants.KEY_REFRESH_TOKEN, refreshToken);
                         editor.putBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, true);
                         editor.apply();
 
-                        setTokenAndUserId();
+                        getTokenAndUserId();
+                        listener.onSuccess(null);
+
+                    } else {
+                        listener.onFailure(new RuntimeException("Failed to get new token"));
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
+                    listener.onFailure(e);
                 } catch (JSONException e) {
                     e.printStackTrace();
+                    listener.onFailure(e);
                 }
             }
 
@@ -1410,7 +1426,6 @@ public class ApiManager {
             Log.d(TAG, "RefreshToken : " + cognitoUserSession.getRefreshToken().getToken());
 
             AppHelper.setCurrSession(cognitoUserSession);
-            SharedPreferences sharedPreferences = context.getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putString(AppConstants.KEY_ID_TOKEN, cognitoUserSession.getIdToken().getJWTToken());
             editor.putString(AppConstants.KEY_ACCESS_TOKEN, cognitoUserSession.getAccessToken().getJWTToken());
@@ -1419,7 +1434,7 @@ public class ApiManager {
             editor.apply();
 
             AppHelper.newDevice(newDevice);
-            setTokenAndUserId();
+            getTokenAndUserId();
         }
 
         @Override

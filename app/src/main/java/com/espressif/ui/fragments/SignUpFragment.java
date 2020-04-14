@@ -314,6 +314,8 @@ public class SignUpFragment extends Fragment {
         public void onSuccess(CognitoUser user, boolean signUpConfirmationState,
                               CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
 
+            Log.e(TAG, "Signup handler , signUpConfirmationState : " + signUpConfirmationState);
+
             // Check signUpConfirmationState to see if the user is already confirmed
             btnRegister.setEnabled(true);
             btnRegister.setAlpha(1f);
@@ -342,6 +344,7 @@ public class SignUpFragment extends Fragment {
             arrowImage.setVisibility(View.VISIBLE);
 
 //            closeWaitDialog();
+            exception.printStackTrace();
             showDialogMessage(getString(R.string.dialog_title_sign_up_failed), AppHelper.formatException(exception), false);
         }
     };
@@ -468,7 +471,7 @@ public class SignUpFragment extends Fragment {
             editor.apply();
 
             AppHelper.newDevice(device);
-            ApiManager.getInstance(getActivity().getApplicationContext()).setTokenAndUserId();
+            ApiManager.getInstance(getActivity().getApplicationContext()).getTokenAndUserId();
             ((MainActivity) getActivity()).launchProvisioningApp();
         }
 
@@ -482,6 +485,7 @@ public class SignUpFragment extends Fragment {
         @Override
         public void getMFACode(MultiFactorAuthenticationContinuation multiFactorAuthenticationContinuation) {
             // Nothing to do here
+            Log.e(TAG, "getMFACode");
         }
 
         @Override

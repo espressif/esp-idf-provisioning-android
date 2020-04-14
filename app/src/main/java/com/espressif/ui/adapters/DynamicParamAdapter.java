@@ -3,6 +3,7 @@ package com.espressif.ui.adapters;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.Log;
@@ -425,6 +426,10 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
             } else if (dataType.equalsIgnoreCase("string")) {
 
                 etAttribute.setInputType(InputType.TYPE_CLASS_TEXT);
+
+                if (param.getParamType() != null && param.getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+                    etAttribute.setFilters(new InputFilter[]{new InputFilter.LengthFilter(32)});
+                }
             }
         }
 
@@ -439,10 +444,18 @@ public class DynamicParamAdapter extends RecyclerView.Adapter<DynamicParamAdapte
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
-                ((EspDeviceActivity) context).stopUpdateValueTask();
-
                 String dataType = param.getDataType();
                 final String value = etAttribute.getText().toString();
+
+                if (params.get(position).getParamType() != null && params.get(position).getParamType().equals(AppConstants.PARAM_TYPE_NAME)) {
+
+                    if (TextUtils.isEmpty(value)) {
+                        Toast.makeText(context, context.getString(R.string.error_device_name_empty), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                }
+
+                ((EspDeviceActivity) context).stopUpdateValueTask();
 
                 JsonObject jsonParam = new JsonObject();
                 JsonObject body = new JsonObject();

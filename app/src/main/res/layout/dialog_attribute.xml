@@ -27,6 +27,7 @@
                 android:background="@color/color_background"
                 android:hint="@string/hint_value"
                 android:imeOptions="actionGo"
+                android:maxLines="1"
                 android:paddingStart="16dp"
                 android:paddingTop="18dp"
                 android:paddingBottom="18dp"

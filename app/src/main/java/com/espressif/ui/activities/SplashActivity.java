@@ -19,6 +19,7 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.Mult
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
 import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
+import com.espressif.cloudapi.ApiResponseListener;
 import com.espressif.provision.R;
 import com.espressif.ui.user_module.AppHelper;
 
@@ -29,7 +30,11 @@ public class SplashActivity extends AppCompatActivity {
     private static final String TAG = SplashActivity.class.getSimpleName();
 
     private String email;
+    private String accessToken;
+    private boolean isOAuthLogin;
+
     private Handler handler;
+    private ApiManager apiManager;
     private SharedPreferences sharedPreferences;
 
     @Override
@@ -38,17 +43,13 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
         handler = new Handler();
+        apiManager = ApiManager.getInstance(getApplicationContext());
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
-        AppHelper.init(getApplicationContext());
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
         email = sharedPreferences.getString(AppConstants.KEY_EMAIL, "");
-        String accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
-        boolean isOAuthLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
+        accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
+        isOAuthLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
+        AppHelper.init(getApplicationContext());
+
         Log.e(TAG, "Email : " + email);
         Log.e(TAG, "accessToken : " + accessToken);
 
@@ -58,15 +59,25 @@ public class SplashActivity extends AppCompatActivity {
 
         } else {
 
-            ApiManager apiManager = ApiManager.getInstance(getApplicationContext());
             boolean isTokenExpired = apiManager.isTokenExpired();
 
             if (isTokenExpired) {
 
                 if (isOAuthLogin) {
 
-                    ApiManager.getInstance(getApplicationContext()).setTokenAndUserId();
-                    apiManager.getNewToken();
+                    apiManager.getTokenAndUserId();
+                    apiManager.getNewTokenForOAuth(new ApiResponseListener() {
+
+                        @Override
+                        public void onSuccess(Bundle data) {
+                            handler.postDelayed(launchProvisioningAppTask, 1500);
+                        }
+
+                        @Override
+                        public void onFailure(Exception exception) {
+                            handler.postDelayed(launchLoginScreenTask, 500);
+                        }
+                    });
 
                 } else {
 
@@ -76,7 +87,7 @@ public class SplashActivity extends AppCompatActivity {
 
             } else {
 
-                ApiManager.getInstance(getApplicationContext()).setTokenAndUserId();
+                apiManager.getTokenAndUserId();
                 handler.postDelayed(launchProvisioningAppTask, 1500);
             }
         }
@@ -135,7 +146,7 @@ public class SplashActivity extends AppCompatActivity {
             editor.apply();
 
             AppHelper.newDevice(device);
-            ApiManager.getInstance(getApplicationContext()).setTokenAndUserId();
+            apiManager.getTokenAndUserId();
             launchProvisioningApp();
         }
 

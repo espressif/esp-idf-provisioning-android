@@ -62,6 +62,7 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+
 import java.util.Map;
 
 public class EspMainActivity extends AppCompatActivity {
@@ -167,6 +168,7 @@ public class EspMainActivity extends AppCompatActivity {
             }, 1500);
 
         } else if (isFirstTimeSetupDone && !isScanQrCode) {
+            ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
             getNodes();
         }
         isScanQrCode = false;
@@ -177,12 +179,6 @@ public class EspMainActivity extends AppCompatActivity {
         super.onPause();
         EventBus.getDefault().unregister(this);
     }
-
-//    @Override
-//    protected void onStop() {
-//        apiManager.cancelGetNodeStatusTask();
-//        super.onStop();
-//    }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onEvent(UpdateEvent event) {
@@ -268,6 +264,7 @@ public class EspMainActivity extends AppCompatActivity {
                 if (resultCode != RESULT_OK) {
 
                     isScanQrCode = false;
+                    ((EspApplication) getApplicationContext()).disableOnlyWifiNetwork();
 
                     if (data != null) {
                         String errMsg = data.getStringExtra("err_msg");
