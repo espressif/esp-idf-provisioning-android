@@ -34,6 +34,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private TextView tvTitle, tvBack, tvCancel;
     private TextView tvAppVersion;
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -41,6 +42,7 @@ public class UserProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_user_profile);
         overridePendingTransition(R.anim.enter_anim, R.anim.exit_anim);
 
+        sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         initViews();
     }
 
@@ -92,7 +94,6 @@ public class UserProfileActivity extends AppCompatActivity {
                     user.signOut();
                 }
 
-                SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 editor.clear();
                 editor.apply();
@@ -115,7 +116,7 @@ public class UserProfileActivity extends AppCompatActivity {
         ArrayList<String> userInfoList = new ArrayList<>();
         userInfoList.add(getString(R.string.hint_email));
         ArrayList<String> userInfoValues = new ArrayList<>();
-        userInfoValues.add(ApiManager.userName);
+        userInfoValues.add(sharedPreferences.getString(AppConstants.KEY_EMAIL, ""));
         UserProfileAdapter userInfoAdapter = new UserProfileAdapter(this, userInfoList, userInfoValues, true);
         userInfoView.setAdapter(userInfoAdapter);
 

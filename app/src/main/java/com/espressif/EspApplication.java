@@ -34,46 +34,27 @@ public class EspApplication extends Application {
 
     public void enableOnlyWifiNetwork(final Activity activity) {
 
-        if (Build.VERSION.SDK_INT >= 21) {
+        connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkRequest.Builder request = new NetworkRequest.Builder();
+        request.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
 
-            connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        networkCallback = new ConnectivityManager.NetworkCallback() {
 
-            NetworkRequest.Builder request = new NetworkRequest.Builder();
-            request.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+            @Override
+            public void onAvailable(Network network) {
 
-            networkCallback = new ConnectivityManager.NetworkCallback() {
+                if (Build.VERSION.RELEASE.equalsIgnoreCase("6.0")) {
 
-                @Override
-                public void onAvailable(Network network) {
-
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-
-                        ConnectivityManager.setProcessDefaultNetwork(network);
-
-                    } else {
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
-//                            Log.e(TAG, "bindProcessToNetwork : " + connectivityManager.bindProcessToNetwork(network));
-//                            connectivityManager.bindProcessToNetwork(network);
-
-                            if (Build.VERSION.RELEASE.equalsIgnoreCase("6.0")) {
-
-                                if (!Settings.System.canWrite(getApplicationContext())) {
-                                    Intent goToSettings = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
-                                    goToSettings.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
-                                    getApplicationContext().startActivity(goToSettings);
-                                }
-                            }
-//                            connectivityManager.bindProcessToNetwork(null);
-                            connectivityManager.bindProcessToNetwork(network);
-                        }
+                    if (!Settings.System.canWrite(getApplicationContext())) {
+                        Intent goToSettings = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                        goToSettings.setData(Uri.parse("package:" + getApplicationContext().getPackageName()));
+                        getApplicationContext().startActivity(goToSettings);
                     }
                 }
-            };
-
-            connectivityManager.registerNetworkCallback(request.build(), networkCallback);
-        }
+                connectivityManager.bindProcessToNetwork(network);
+            }
+        };
+        connectivityManager.registerNetworkCallback(request.build(), networkCallback);
     }
 
     public void disableOnlyWifiNetwork() {
@@ -81,14 +62,13 @@ public class EspApplication extends Application {
         Log.d(TAG, "disableOnlyWifiNetwork()");
 
         if (connectivityManager != null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-                ConnectivityManager.setProcessDefaultNetwork(null);
-            } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    connectivityManager.bindProcessToNetwork(null);
-                }
+
+            try {
+                connectivityManager.bindProcessToNetwork(null);
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            } catch (Exception e) {
+                Log.e(TAG, "Connectivity Manager is already unregistered");
             }
-            connectivityManager.unregisterNetworkCallback(networkCallback);
         }
     }
 }

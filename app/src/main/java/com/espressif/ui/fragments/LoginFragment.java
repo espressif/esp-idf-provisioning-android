@@ -13,7 +13,6 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,11 +38,10 @@ public class LoginFragment extends Fragment {
     private EditText etEmail;
     private TextInputEditText etPassword;
     private TextInputLayout layoutPassword;
-    private CardView btnLogin, btnLoginWithGitHub;
+    private CardView btnLogin, btnLoginWithGitHub, btnLoginWithGoogle;
     private TextView txtLoginBtn, txtLoginWithGitHubBtn;
-    private ImageView arrowImageLogin, imageLoginWithGitHub;
-    private ImageView ivGithub, ivGoogle;
-    private ContentLoadingProgressBar progressBarLogin, progressBarLoginGitHub;
+    private ImageView arrowImageLogin;
+    private ContentLoadingProgressBar progressBarLogin, progressBarLoginGitHub, progressBarLoginGoogle;
     private TextView tvForgotPassword;
     private TextView linkDoc, linkPrivacy, linkTerms;
 
@@ -85,7 +83,6 @@ public class LoginFragment extends Fragment {
 
         if (activityIntent.getData() != null && activityIntent.getData().toString().contains(AppConstants.REDIRECT_URI)) {
 
-            showGitHubLoginLoading();
             Log.e(TAG, "Data : " + activityIntent.getData().toString());
             String code = activityIntent.getData().toString().replace(AppConstants.REDIRECT_URI, "");
             code = code.replace("?code=", "");
@@ -97,13 +94,16 @@ public class LoginFragment extends Fragment {
                 @Override
                 public void onSuccess(Bundle data) {
 
-                    hideGitHubLoginLoading();
+                    Log.e(TAG, "Received success in OAuth");
+//                    hideGitHubLoginLoading();
+//                    hideGoogleLoginLoading();
                     ((MainActivity) getActivity()).launchProvisioningApp();
                 }
 
                 @Override
                 public void onFailure(Exception exception) {
-                    hideGitHubLoginLoading();
+//                    hideGitHubLoginLoading();
+//                    hideGoogleLoginLoading();
                     Toast.makeText(getActivity(), "Fail to login", Toast.LENGTH_SHORT).show();
                 }
             });
@@ -114,25 +114,23 @@ public class LoginFragment extends Fragment {
 
         btnLogin = view.findViewById(R.id.btn_login);
         btnLoginWithGitHub = view.findViewById(R.id.btn_login_with_github);
+        btnLoginWithGoogle = view.findViewById(R.id.btn_login_with_google);
 
         txtLoginBtn = btnLogin.findViewById(R.id.text_btn);
         arrowImageLogin = btnLogin.findViewById(R.id.iv_arrow);
         progressBarLogin = btnLogin.findViewById(R.id.progress_indicator);
 
         txtLoginWithGitHubBtn = btnLoginWithGitHub.findViewById(R.id.text_btn);
-        imageLoginWithGitHub = btnLoginWithGitHub.findViewById(R.id.iv_arrow);
         progressBarLoginGitHub = btnLoginWithGitHub.findViewById(R.id.progress_indicator);
+        progressBarLoginGoogle = btnLoginWithGoogle.findViewById(R.id.progress_indicator);
 
         txtLoginBtn.setText(R.string.btn_login);
-        txtLoginWithGitHubBtn.setVisibility(View.GONE);
-        imageLoginWithGitHub.setImageResource(R.drawable.ic_github);
-        LinearLayout ll = btnLoginWithGitHub.findViewById(R.id.layout_btn);
-        ll.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
+//        txtLoginWithGitHubBtn.setVisibility(View.GONE);
+//        LinearLayout ll = btnLoginWithGitHub.findViewById(R.id.layout_btn_github);
+//        ll.setBackgroundColor(getResources().getColor(R.color.colorPrimaryDark));
 
-        ivGithub = view.findViewById(R.id.iv_github);
-        ivGoogle = view.findViewById(R.id.iv_google);
-        ivGithub.setOnClickListener(githubLoginBtnClickListener);
-        ivGoogle.setOnClickListener(googleLoginBtnClickListener);
+        btnLoginWithGitHub.setOnClickListener(githubLoginBtnClickListener);
+        btnLoginWithGoogle.setOnClickListener(googleLoginBtnClickListener);
 
         etEmail = view.findViewById(R.id.et_email);
         layoutPassword = view.findViewById(R.id.layout_password);
@@ -255,6 +253,20 @@ public class LoginFragment extends Fragment {
         progressBarLoginGitHub.setVisibility(View.GONE);
     }
 
+    public void showGoogleLoginLoading() {
+
+        btnLoginWithGoogle.setEnabled(false);
+        btnLoginWithGoogle.setAlpha(0.5f);
+        progressBarLoginGoogle.setVisibility(View.VISIBLE);
+    }
+
+    public void hideGoogleLoginLoading() {
+
+        btnLoginWithGoogle.setEnabled(true);
+        btnLoginWithGoogle.setAlpha(1f);
+        progressBarLoginGoogle.setVisibility(View.GONE);
+    }
+
     View.OnClickListener loginBtnClickListener = new View.OnClickListener() {
 
         @Override
@@ -268,6 +280,7 @@ public class LoginFragment extends Fragment {
         @Override
         public void onClick(View v) {
 
+//            showGitHubLoginLoading();
             String uriStr = AppConstants.GITHUB_URL + getString(R.string.client_id);
             Uri uri = Uri.parse(uriStr);
             Intent openURL = new Intent(Intent.ACTION_VIEW, uri);
@@ -280,6 +293,7 @@ public class LoginFragment extends Fragment {
         @Override
         public void onClick(View v) {
 
+//            showGoogleLoginLoading();
             String uriStr = AppConstants.GOOGLE_URL + getString(R.string.client_id);
             Uri uri = Uri.parse(uriStr);
             Intent openURL = new Intent(Intent.ACTION_VIEW, uri);

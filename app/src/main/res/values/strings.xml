@@ -92,7 +92,7 @@
     <!--Button text-->
     <string name="btn_register">Register</string>
     <string name="btn_registering">Registering&#8230;</string>
-    <string name="btn_login">Login</string>
+    <string name="btn_login">Sign in</string>
     <string name="btn_signing_in">Signing in&#8230;</string>
     <string name="btn_confirm">Confirm</string>
     <string name="btn_confirming">Confirming&#8230;</string>
@@ -104,7 +104,8 @@
     <string name="btn_resetting_password">Resetting Password&#8230;</string>
     <string name="btn_remove">Remove</string>
     <string name="btn_removing">Removing&#8230;</string>
-    <string name="btn_github">GitHub</string>
+    <string name="btn_github">Sign in using GitHub</string>
+    <string name="btn_google">Sign in using Google</string>
     <string name="btn_ok">OK</string>
     <string name="btn_back">Back</string>
     <string name="btn_cancel">Cancel</string>
@@ -143,6 +144,7 @@
     <string name="error_authentication_failed">Wi-Fi Authentication failed.</string>
     <string name="error_network_not_found">Network not found.</string>
     <string name="error_unknown">Unknown Error.</string>
+    <string name="error_device_name_empty">Device name canot be empty</string>
 
     <!--Link texts-->
     <string name="link_documentation"><a href="https://rainmaker.espressif.com/">Documentation</a></string>
