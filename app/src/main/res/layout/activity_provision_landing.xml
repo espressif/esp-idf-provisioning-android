@@ -15,13 +15,13 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="32dp">
+            android:padding="@dimen/margin_32">
 
             <ImageView
                 android:id="@+id/iv_provisioning"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="150dp"
+                android:layout_marginTop="@dimen/margin_120"
                 android:src="@drawable/ic_connect_device"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -33,7 +33,7 @@
                 android:id="@+id/tv_connect_device"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="@dimen/margin_24"
                 android:text="@string/connect_your_device"
                 android:textColor="@color/colorPrimaryDark"
                 android:textSize="18sp"
@@ -60,7 +60,7 @@
                 layout="@layout/button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
+                android:layout_marginTop="@dimen/margin_32"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_connect_device_instruction" />

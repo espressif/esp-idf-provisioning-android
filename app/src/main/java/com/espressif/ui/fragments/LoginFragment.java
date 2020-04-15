@@ -97,7 +97,7 @@ public class LoginFragment extends Fragment {
                     Log.e(TAG, "Received success in OAuth");
 //                    hideGitHubLoginLoading();
 //                    hideGoogleLoginLoading();
-                    ((MainActivity) getActivity()).launchProvisioningApp();
+                    ((MainActivity) getActivity()).launchHomeScreen();
                 }
 
                 @Override

@@ -472,7 +472,7 @@ public class SignUpFragment extends Fragment {
 
             AppHelper.newDevice(device);
             ApiManager.getInstance(getActivity().getApplicationContext()).getTokenAndUserId();
-            ((MainActivity) getActivity()).launchProvisioningApp();
+            ((MainActivity) getActivity()).launchHomeScreen();
         }
 
         @Override

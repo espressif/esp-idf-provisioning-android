@@ -24,5 +24,6 @@
     <color name="color_text_secondary">#8181a8</color>
     <color name="color_remove">#ffeee6</color>
     <color name="color_dark_gray">#555555</color>
+    <color name="color_light_gray">#BBBBBB</color>
 
 </resources>

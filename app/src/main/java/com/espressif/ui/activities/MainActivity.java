@@ -16,18 +16,22 @@ import androidx.fragment.app.Fragment;
 import androidx.viewpager.widget.ViewPager;
 
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserCodeDeliveryDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.VerificationHandler;
+import com.amazonaws.services.cognitoidentityprovider.model.UserNotConfirmedException;
 import com.espressif.AppConstants;
 import com.espressif.cloudapi.ApiManager;
 import com.espressif.provision.R;
 import com.espressif.ui.adapters.TabsPagerAdapter;
 import com.espressif.ui.fragments.LoginFragment;
 import com.espressif.ui.user_module.AppHelper;
+import com.espressif.ui.user_module.SignUpConfirmActivity;
 import com.google.android.material.tabs.TabLayout;
 
 import java.util.Locale;
@@ -63,20 +67,30 @@ public class MainActivity extends AppCompatActivity {
 
         Log.e(TAG, "onActivityResult, requestCode : " + requestCode + " , resultCode : " + resultCode);
 
-        if (requestCode == 11 && resultCode == RESULT_OK) {
+        if (requestCode == 11) {
 
-            Log.e(TAG, "Result received from Sign up confirm");
-            viewPager.setCurrentItem(0);
+            if (resultCode == RESULT_OK) {
+                Log.e(TAG, "Result received from Sign up confirm");
+                viewPager.setCurrentItem(0);
 
-            Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
+                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
 
-            if (page != null && page instanceof LoginFragment) {
+                if (page != null && page instanceof LoginFragment) {
 
-                if (data != null) {
-                    email = data.getStringExtra("email");
-                    password = data.getStringExtra("password");
-                    ((LoginFragment) page).updateUi(email, password);
-                } else {
+                    if (data != null) {
+                        email = data.getStringExtra("email");
+                        password = data.getStringExtra("password");
+                        ((LoginFragment) page).updateUi(email, password);
+                    } else {
+                        ((LoginFragment) page).hideLoginLoading();
+                    }
+                }
+            } else {
+
+                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
+
+                if (page != null && page instanceof LoginFragment) {
+
                     ((LoginFragment) page).hideLoginLoading();
                 }
             }
@@ -84,12 +98,23 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    public void launchProvisioningApp() {
+    public void launchHomeScreen() {
 
         Intent espMainActivity = new Intent(getApplicationContext(), EspMainActivity.class);
         espMainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(espMainActivity);
         finish();
+    }
+
+    private void launchSignUpConfirmActivity(CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
+
+        Intent intent = new Intent(this, SignUpConfirmActivity.class);
+        intent.putExtra("name", email);
+        intent.putExtra("password", password);
+        intent.putExtra("destination", cognitoUserCodeDeliveryDetails.getDestination());
+        intent.putExtra("deliveryMed", cognitoUserCodeDeliveryDetails.getDeliveryMedium());
+        intent.putExtra("attribute", cognitoUserCodeDeliveryDetails.getAttributeName());
+        startActivityForResult(intent, 11);
     }
 
     public void signInUser(String email, String password) {
@@ -126,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
             if (page != null && page instanceof LoginFragment) {
                 ((LoginFragment) page).hideLoginLoading();
             }
-            launchProvisioningApp();
+            launchHomeScreen();
         }
 
         @Override
@@ -147,12 +172,19 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onFailure(Exception e) {
 
-            Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
-            if (page != null && page instanceof LoginFragment) {
-                ((LoginFragment) page).hideLoginLoading();
-            }
-            showDialogMessage(getString(R.string.dialog_title_login_failed), AppHelper.formatException(e));
             e.printStackTrace();
+
+            if (e instanceof UserNotConfirmedException) {
+
+                AppHelper.getPool().getUser(email).resendConfirmationCodeInBackground(resendConfCodeHandler);
+
+            } else {
+                Fragment page = getSupportFragmentManager().findFragmentByTag("android:switcher:" + R.id.view_pager + ":" + viewPager.getCurrentItem());
+                if (page != null && page instanceof LoginFragment) {
+                    ((LoginFragment) page).hideLoginLoading();
+                }
+                showDialogMessage(getString(R.string.dialog_title_login_failed), AppHelper.formatException(e));
+            }
         }
 
         @Override
@@ -164,6 +196,20 @@ public class MainActivity extends AppCompatActivity {
              * user and pass the user's responses to the continuation.
              */
             Log.e(TAG, "authenticationChallenge : " + continuation.getChallengeName());
+        }
+    };
+
+    VerificationHandler resendConfCodeHandler = new VerificationHandler() {
+
+        @Override
+        public void onSuccess(CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
+            launchSignUpConfirmActivity(cognitoUserCodeDeliveryDetails);
+        }
+
+        @Override
+        public void onFailure(Exception exception) {
+
+            showDialogMessage(getString(R.string.dialog_title_conf_code_req_fail), AppHelper.formatException(exception));
         }
     };
 

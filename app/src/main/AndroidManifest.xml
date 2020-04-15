@@ -142,7 +142,7 @@
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name="com.espressif.ui.activities.AddDeviceActivity"
-            android:label="@string/title_activity_change_password"
+            android:label="@string/title_activity_add_device"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
 

@@ -15,22 +15,42 @@
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:paddingBottom="32dp">
+            android:paddingStart="@dimen/margin_32"
+            android:paddingEnd="@dimen/margin_32"
+            android:paddingBottom="@dimen/margin_32">
+
+            <include
+                android:id="@+id/btn_login_with_github"
+                layout="@layout/btn_github"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_16"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <include
+                android:id="@+id/btn_login_with_google"
+                layout="@layout/btn_google"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/margin_16"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/btn_login_with_github" />
 
             <EditText
                 android:id="@+id/et_email"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/margin_16"
                 android:background="@color/color_background"
                 android:hint="@string/hint_email"
                 android:imeOptions="actionNext"
                 android:inputType="textEmailAddress"
-                android:paddingStart="16dp"
-                android:paddingTop="18dp"
-                android:paddingBottom="18dp"
+                android:paddingStart="@dimen/margin_16"
+                android:paddingTop="@dimen/margin_18"
+                android:paddingBottom="@dimen/margin_18"
                 android:textColor="@color/color_text"
                 android:textSize="16sp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -41,7 +61,7 @@
                 android:id="@+id/tv_use_email_id"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/margin_16"
                 android:lineSpacingExtra="8sp"
                 android:text="@string/use_email_id"
                 android:textColor="@color/color_text_secondary"
@@ -54,8 +74,8 @@
                 android:id="@+id/tv_forgot_password"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginTop="@dimen/margin_24"
+                android:layout_marginBottom="@dimen/margin_24"
                 android:text="@string/forgot_password"
                 android:textColor="@color/color_purple"
                 android:textSize="14sp"
@@ -67,7 +87,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="@dimen/margin_24"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -130,10 +150,10 @@
                     android:hint="@string/hint_password"
                     android:imeOptions="actionGo"
                     android:inputType="textPassword"
-                    android:paddingStart="16dp"
-                    android:paddingTop="18dp"
-                    android:paddingEnd="16dp"
-                    android:paddingBottom="18dp"
+                    android:paddingStart="@dimen/margin_16"
+                    android:paddingTop="@dimen/margin_18"
+                    android:paddingEnd="@dimen/margin_16"
+                    android:paddingBottom="@dimen/margin_18"
                     android:textColor="@color/color_text"
                     android:textSize="16sp" />
 
@@ -144,30 +164,10 @@
                 layout="@layout/button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/margin_16"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/layout_password" />
-
-            <include
-                android:id="@+id/btn_login_with_google"
-                layout="@layout/button_google"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/btn_login_with_github" />
-
-            <include
-                android:id="@+id/btn_login_with_github"
-                layout="@layout/button_github"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

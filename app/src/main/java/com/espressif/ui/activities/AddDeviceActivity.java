@@ -19,7 +19,6 @@ import android.util.SparseArray;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -59,9 +58,9 @@ public class AddDeviceActivity extends AppCompatActivity {
     public static String KEY_CAPTURED_BARCODE = "key_captured_barcode";
     public static String KEY_CAPTURED_RAW_BARCODE = "key_captured_raw_barcode";
 
+    private TextView tvTitle, tvBack, tvCancel;
     private CardView btnAddManually;
     private TextView txtAddManuallyBtn;
-    private ImageView arrowImage;
 
     private SurfaceView surfaceView;
     private BarcodeDetector barcodeDetector;
@@ -158,14 +157,31 @@ public class AddDeviceActivity extends AppCompatActivity {
         }
     };
 
+    private View.OnClickListener cancelBtnClickListener = new View.OnClickListener() {
+
+        @Override
+        public void onClick(View v) {
+
+            setResult(RESULT_CANCELED, intent);
+            finish();
+        }
+    };
+
     private void initViews() {
+
+        tvTitle = findViewById(R.id.main_toolbar_title);
+        tvBack = findViewById(R.id.btn_back);
+        tvCancel = findViewById(R.id.btn_cancel);
+
+        tvTitle.setText(R.string.title_activity_add_device);
+        tvBack.setVisibility(View.GONE);
+        tvCancel.setVisibility(View.VISIBLE);
+        tvCancel.setOnClickListener(cancelBtnClickListener);
 
         surfaceView = findViewById(R.id.surfaceView);
         btnAddManually = findViewById(R.id.btn_add_device_manually);
         txtAddManuallyBtn = findViewById(R.id.text_btn);
         loader = findViewById(R.id.loader);
-        arrowImage = findViewById(R.id.iv_arrow);
-        arrowImage.setVisibility(View.GONE);
 
         txtAddManuallyBtn.setText(R.string.btn_no_qr_code);
         btnAddManually.setOnClickListener(btnAddDeviceClickListener);
