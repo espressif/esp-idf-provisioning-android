@@ -1,6 +1,8 @@
 package com.espressif.ui.fragments;
 
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -158,6 +160,19 @@ public class LoginFragment extends Fragment {
                 return false;
             }
         });
+
+        TextView tvAppVersion = view.findViewById(R.id.tv_app_version);
+
+        String version = "";
+        try {
+            PackageInfo pInfo = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0);
+            version = pInfo.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        String appVersion = "App Version - v" + version;
+        tvAppVersion.setText(appVersion);
     }
 
     private void signInUser() {

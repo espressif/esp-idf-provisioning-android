@@ -8,5 +8,6 @@
     <dimen name="margin_16">7dp</dimen>
     <dimen name="margin_18">8dp</dimen>
     <dimen name="margin_120">50dp</dimen>
+    <dimen name="margin_8">3dp</dimen>
 
 </resources>
