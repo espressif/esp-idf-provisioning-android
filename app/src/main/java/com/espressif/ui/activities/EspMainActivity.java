@@ -271,8 +271,6 @@ public class EspMainActivity extends AppCompatActivity {
 
                         if (!TextUtils.isEmpty(errMsg)) {
                             Toast.makeText(this, errMsg, Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(this, "Error in  scanning", Toast.LENGTH_SHORT).show();
                         }
                     }
                     return;

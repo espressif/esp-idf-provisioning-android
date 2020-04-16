@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:cardCornerRadius="10dp">
+    app:cardCornerRadius="10dp"
+    app:cardElevation="1dp"
+    app:strokeColor="@color/color_light_gray"
+    app:strokeWidth="1dp">
 
     <RelativeLayout
-        android:id="@+id/layout_btn_github"
+        android:id="@+id/layout_btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/white"
@@ -20,7 +23,7 @@
             android:layout_alignParentStart="true"
             android:layout_marginStart="20dp"
             android:layout_marginEnd="20dp"
-            android:src="@drawable/ic_github" />
+            android:src="@drawable/ic_google" />
 
         <TextView
             android:id="@+id/text_btn"
@@ -28,7 +31,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:lineSpacingExtra="8sp"
-            android:text="@string/btn_github"
+            android:text="@string/btn_google"
             android:textColor="@android:color/black"
             android:textSize="18sp" />
 
@@ -43,4 +46,4 @@
 
     </RelativeLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

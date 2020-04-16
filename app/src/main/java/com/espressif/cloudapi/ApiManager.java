@@ -146,20 +146,22 @@ public class ApiManager {
         accessToken = sharedPreferences.getString(AppConstants.KEY_ACCESS_TOKEN, "");
         refreshToken = sharedPreferences.getString(AppConstants.KEY_REFRESH_TOKEN, "");
         isOAuthLogin = sharedPreferences.getBoolean(AppConstants.KEY_IS_OAUTH_LOGIN, false);
+        Log.d(TAG, "ID Token : " + idToken);
 
         if (!TextUtils.isEmpty(idToken)) {
 
+            JWT jwt = null;
+            try {
+                jwt = new JWT(idToken);
+            } catch (DecodeException e) {
+                e.printStackTrace();
+            }
+
+            Claim claimUserId = jwt.getClaim("custom:user_id");
+            userId = claimUserId.asString();
+
             if (isOAuthLogin) {
 
-                JWT jwt = null;
-                try {
-                    jwt = new JWT(idToken);
-                } catch (DecodeException e) {
-                    e.printStackTrace();
-                }
-
-                Claim claimUserName = jwt.getClaim("cognito:username");
-                userId = claimUserName.asString();
                 Claim claimEmail = jwt.getClaim("email");
                 String email = claimEmail.asString();
                 userName = email;
@@ -167,18 +169,6 @@ public class ApiManager {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 editor.putString(AppConstants.KEY_EMAIL, email);
                 editor.apply();
-
-            } else {
-
-                JWT jwt = null;
-                try {
-                    jwt = new JWT(idToken);
-                } catch (DecodeException e) {
-                    e.printStackTrace();
-                }
-
-                Claim claimUserId = jwt.getClaim("custom:user_id");
-                userId = claimUserId.asString();
             }
             Log.d(TAG, "=======================>>>>>>>>>>>>>>>>>>> GOT USER ID : " + userId);
         }
@@ -1394,6 +1384,7 @@ public class ApiManager {
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
                 t.printStackTrace();
+                listener.onFailure(new Exception(t));
             }
         });
     }

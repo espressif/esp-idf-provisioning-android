@@ -44,6 +44,13 @@ public class SignUpConfirmActivity extends AppCompatActivity {
         init();
     }
 
+    @Override
+    public void onBackPressed() {
+
+        setResult(RESULT_CANCELED, getIntent());
+        super.onBackPressed();
+    }
+
     private void init() {
 
         tvTitle = findViewById(R.id.main_toolbar_title);
@@ -136,6 +143,7 @@ public class SignUpConfirmActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
 
+            setResult(RESULT_CANCELED, getIntent());
             finish();
         }
     };

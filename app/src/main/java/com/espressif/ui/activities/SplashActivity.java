@@ -70,7 +70,7 @@ public class SplashActivity extends AppCompatActivity {
 
                         @Override
                         public void onSuccess(Bundle data) {
-                            handler.postDelayed(launchProvisioningAppTask, 1500);
+                            handler.postDelayed(launchHomeScreenTask, 1500);
                         }
 
                         @Override
@@ -87,13 +87,14 @@ public class SplashActivity extends AppCompatActivity {
 
             } else {
 
+                AppHelper.setUser(email);
                 apiManager.getTokenAndUserId();
-                handler.postDelayed(launchProvisioningAppTask, 1500);
+                handler.postDelayed(launchHomeScreenTask, 1500);
             }
         }
     }
 
-    public void launchProvisioningApp() {
+    public void launchHomeScreen() {
 
         Intent espMainActivity = new Intent(getApplicationContext(), EspMainActivity.class);
         espMainActivity.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -117,11 +118,11 @@ public class SplashActivity extends AppCompatActivity {
         }
     };
 
-    private Runnable launchProvisioningAppTask = new Runnable() {
+    private Runnable launchHomeScreenTask = new Runnable() {
 
         @Override
         public void run() {
-            launchProvisioningApp();
+            launchHomeScreen();
         }
     };
 
@@ -147,7 +148,7 @@ public class SplashActivity extends AppCompatActivity {
 
             AppHelper.newDevice(device);
             apiManager.getTokenAndUserId();
-            launchProvisioningApp();
+            launchHomeScreen();
         }
 
         @Override

@@ -4,10 +4,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <include layout="@layout/tool_bar_main_purple" />
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@+id/btn_add_device_manually"
+        android:layout_above="@+id/ll_instruction_text"
         android:layout_alignParentTop="true">
 
         <SurfaceView
@@ -29,15 +31,40 @@
 
     </RelativeLayout>
 
+    <LinearLayout
+        android:id="@+id/ll_instruction_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="@dimen/margin_32"
+        android:orientation="vertical"
+        android:layout_above="@+id/btn_add_device_manually">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/looking_for_qr_code"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin_16"
+            android:text="@string/position_camera_for_qr_code"
+            android:textColor="@color/color_dark_gray"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+
     <include
         android:id="@+id/btn_add_device_manually"
-        layout="@layout/button"
+        layout="@layout/btn_add_device"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="150dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="32dp" />
+        android:layout_marginStart="@dimen/margin_32"
+        android:layout_marginEnd="@dimen/margin_32"
+        android:layout_marginBottom="@dimen/margin_32" />
 
 </RelativeLayout>

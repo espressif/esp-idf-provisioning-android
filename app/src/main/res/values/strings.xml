@@ -74,7 +74,7 @@
     <string name="offline_at">Offline at</string>
 
     <!--Tab titles-->
-    <string name="tab_login">Login</string>
+    <string name="tab_login">SIGN IN</string>
     <string name="tab_sign_up">SignUp</string>
 
     <!--Hint texts-->
@@ -123,6 +123,7 @@
     <string name="title_activity_reset_password">Reset Password</string>
     <string name="title_activity_change_password">Change Password</string>
     <string name="title_activity_connect_device">Connect to Device</string>
+    <string name="title_activity_add_device">Add Device</string>
     <string name="title_activity_pop">Proof of Possession</string>
     <string name="title_activity_provision">Provision</string>
     <string name="title_activity_provisioning">Provisioning</string>
@@ -182,6 +183,8 @@
     <string name="documentation">Documentation</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_of_use">Terms of Use</string>
+    <string name="looking_for_qr_code">Looking for QR Code</string>
+    <string name="position_camera_for_qr_code">Please position the camera to point at the QR Code.</string>
 
     <string name="prov_step_1">Sending Wi-Fi credentials</string>
     <string name="prov_step_2">Confirming Wi-Fi connection</string>
