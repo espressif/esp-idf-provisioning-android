@@ -545,6 +545,7 @@ public class AddDeviceActivity extends AppCompatActivity {
         finish();
         Intent wifiProvisioningIntent = new Intent(getApplicationContext(), ProvisionLanding.class);
         wifiProvisioningIntent.putExtra(AppConstants.KEY_SECURITY_TYPE, securityType);
+        wifiProvisioningIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         if (espDevice != null) {
             wifiProvisioningIntent.putExtra(AppConstants.KEY_DEVICE_NAME, espDevice.getDeviceName());
