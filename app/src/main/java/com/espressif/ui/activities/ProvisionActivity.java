@@ -14,13 +14,18 @@
 
 package com.espressif.ui.activities;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.core.widget.ContentLoadingProgressBar;
@@ -30,6 +35,7 @@ import com.espressif.wifi_provisioning.R;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.listeners.ProvisionListener;
+import com.google.android.material.textfield.TextInputLayout;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -62,8 +68,47 @@ public class ProvisionActivity extends AppCompatActivity {
         initViews();
 
         Log.d(TAG, "Selected AP -" + ssidValue);
-        showLoading();
-        doProvisioning();
+        if( ssidValue != null ) {
+            showLoading();
+            doProvisioning();
+        }
+        else
+        {
+            final AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.AlertDialogTheme);
+            LayoutInflater inflater = this.getLayoutInflater();
+            final View dialogView = inflater.inflate(R.layout.dialog_wifi_network, null);
+            builder.setView(dialogView);
+
+            final EditText etSsid = dialogView.findViewById(R.id.et_ssid);
+            final EditText etPassword = dialogView.findViewById(R.id.et_password);
+
+            builder.setTitle(R.string.dialog_title_network_info);
+            builder.setPositiveButton(R.string.btn_provision, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                    passphraseValue = etPassword.getText().toString();
+                    ssidValue = etSsid.getText().toString();
+
+                    if (TextUtils.isEmpty(ssidValue)) {
+                        etSsid.setError(getString(R.string.error_ssid_empty));
+                    }
+                    else {
+                        dialog.dismiss();
+                        showLoading();
+                        doProvisioning();
+                    }
+                }
+            });
+            builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        }
     }
 
     @Override
