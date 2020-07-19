@@ -8,35 +8,54 @@ This is licensed under Apache 2.0. The complete license for the same can be foun
 ## Setup
 
 To build this app, you will need a development machine, with Android Studio installed.
+As we are building a mobile application that will provision network credentials as well AVS credentials, app will need the following details
 
-### Get Alexa credentials
+1. Keystore certificate information 
+2. API key from LWA
 
-As we are building a mobile application that will provision network credentials as well AVS credentials, we will need the following details
+**NOTE**
+- These are mandatory requirements and provisioning of Alexa on ESP32 will **not** work unless these 2 values have been configured in this Android project.
+- Change `applicationId` in `app/build.gradle` file to develop and release your own Android app,  
 
-- Product ID
-- API key from LWA
-
-**NOTE** - these are mandatory requirements and provisioning of Alexa on ESP32 will **not** work unless these 2 values have been configured in this Android project.
-
-#### Product ID
-In the `build.gradle` file (for the app module), add product ID under the buildTypes configuration. Please find instructions on how to generate a Product ID from Alexa's developer console [here](https://github.com/alexa/avs-device-sdk/wiki/Create-Security-Profile).
+#### Keystore certificate information  
+Generate certificate for app using given steps in [this link](https://developer.android.com/studio/publish/app-signing#generate-key).  
+Fill information of keystore certificate in `app/build.gradle` file in `signingConfigs` block.
+```
+signingConfigs {
+	config {
+		keyAlias 'nameofcert'
+		storeFile file('path to cert')
+		storePassword 'password'
+		keyPassword 'password'
+	}
+}
+```
+Please find instructions on how to generate a Product ID from Alexa's developer console [here](https://github.com/alexa/avs-device-sdk/wiki/Create-Security-Profile).
 
 #### API key from Login With Amazon (LWA)
-As we are creating an Alexa product, we need to register as a developer with Amazon and use their `Login With Amazon` service for signing up users (even during testing). The complmete documentation for understanding LWA can be found [here](https://developer.amazon.com/docs/login-with-amazon/documentation-overview.html).
+As we are creating an Alexa product, we need to register as a developer with Amazon and use their `Login With Amazon` service for signing up users (even during testing). The complete documentation for understanding LWA can be found [here](https://developer.amazon.com/docs/login-with-amazon/documentation-overview.html).
 
-The above link tells you how to -
+The above link tells you how to - 
+1. Download and use the LWA SDK for Android
+2. Configure settings in your developer account.
 
-1. download and use the LWA SDK for Android 
-2. configure settings in your developer account.
+Now you will have to follow the steps listed on [this](https://developer.amazon.com/docs/login-with-amazon/android-docs.html#getting-started) to do setup of LWA for Android.
 
-We have already setup step 1 from above i.e. the LWA SDK for Android is a part of this respository. Now you will have to follow the steps listed on [this](https://developer.amazon.com/docs/login-with-amazon/install-sdk-android.html) page to configure settings. As you can see on this page, there are a total of 7 steps - of which you will have to do only Step 3. We highly recommend that you go through the other steps to understand some of the things that have already been done for you as part of this open source project.
+We have already setup step 1 from above i.e. the LWA SDK for Android is a part of this respository. As you can see on this page, there are a total of 7 steps - of which you will have to do only Step 3. We highly recommend that you go through the other steps to understand some of the things that have already been done for you as part of this open source project.  
 
-After you have completed everything that's required as part of [Step 3](https://developer.amazon.com/docs/login-with-amazon/register-android.html), you should have in your possession an API key. Please input this value in `api_key.txt`.
+Here are the steps to perform "Step-3 (Register for Login with Amazon)" and generate API Key.
+
+- Go to [Alexa console](https://developer.amazon.com/alexa/console/avs/home).
+- Go to Product details -> Security profile
+- Select Android / Kindle Tab.
+- Enter API key name, package name (applicationId), MD5 and SHA256 signature of the above generated keystore certificate which will be used to sign your app.
+- Click "GENERATE KEY".
+
+Please input this value in `app/src/main/assets/api_key.txt` file of android app source code.
 
 ## Configuring Build
 
 There are multiple build options. It is a combination of 2 options along with one mandatory `Avs` field -  security and release type.
-
 
 - Security
   - 0 (no security)
