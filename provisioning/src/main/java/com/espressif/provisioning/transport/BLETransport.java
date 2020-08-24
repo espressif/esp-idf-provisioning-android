@@ -71,7 +71,7 @@ public class BLETransport implements Transport {
      */
     public BLETransport(Context context) {
         this.context = context;
-        this.transportToken = new Semaphore(1);
+        this.transportToken = new Semaphore(0);
         this.dispatcherThreadPool = Executors.newSingleThreadExecutor();
     }
 
@@ -85,8 +85,6 @@ public class BLETransport implements Transport {
     @Override
     public void sendConfigData(String path, byte[] data, ResponseListener listener) {
 
-        currentResponseListener = listener;
-
         if (uuidMap.containsKey(path)) {
 
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(path)));
@@ -98,11 +96,13 @@ public class BLETransport implements Transport {
             if (characteristic != null) {
                 try {
                     this.transportToken.acquire();
+                    currentResponseListener = listener;
                     characteristic.setValue(data);
                     bluetoothGatt.writeCharacteristic(characteristic);
                 } catch (Exception e) {
                     e.printStackTrace();
                     listener.onFailure(e);
+                    currentResponseListener = null;
                     this.transportToken.release();
                 }
             } else {
