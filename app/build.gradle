@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId "com.espressif.wifi_provisioning"
-        minSdkVersion 23
+        minSdkVersion 21
         targetSdkVersion 29
         versionCode 9
         versionName "2.0.6 - ${getGitHash()}"
