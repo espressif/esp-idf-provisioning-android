@@ -27,7 +27,7 @@ This repository contains the source code for the companion Android app for this 
   
 ## Requirements  
   
-- Supports Android 7.0 (API level 24) and above.  
+- Supports Android 6.0 (API level 23) and above.  
 
 ##  How to include  
   
