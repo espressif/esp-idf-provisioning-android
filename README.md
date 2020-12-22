@@ -42,7 +42,7 @@ This repository contains the source code for the companion Android app for this 
  ```
 And add a dependency code to your  app module's  `build.gradle`  file. 
 ```  
- implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.0.1'
+ implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.0.7'
 ```
 
 ## Using Provisioning Library    
