@@ -233,7 +233,7 @@ public class BLETransport implements Transport {
         @Override
         public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
 
-            Log.d(TAG, "DescriptorRead, : Status " + status + " Data : " + new String(descriptor.getValue(), StandardCharsets.UTF_8));
+            Log.d(TAG, "DescriptorRead: Status " + status + " Data : " + new String(descriptor.getValue(), StandardCharsets.UTF_8));
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.e(TAG, "Failed to read descriptor");
@@ -243,9 +243,16 @@ public class BLETransport implements Transport {
 
             byte[] data = descriptor.getValue();
 
-            String value = new String(data, StandardCharsets.UTF_8);
-            uuidMap.put(value, descriptor.getCharacteristic().getUuid().toString());
-            Log.d(TAG, "Value : " + value + " for UUID : " + descriptor.getCharacteristic().getUuid().toString());
+            String descriptorValue = new String(data, StandardCharsets.UTF_8);
+            String characteristicUuid = descriptor.getCharacteristic().getUuid().toString();
+            String existing = uuidMap.get(descriptorValue);
+
+            if (existing == null) {
+                Log.d(TAG, "Setting uuidMap value'" + characteristicUuid + "' for key '" + descriptorValue + "'");
+                uuidMap.put(descriptorValue, characteristicUuid);
+            } else {
+                Log.e(TAG, "Already have uuidMap entry '" + existing + "' for '" + descriptorValue + "'! Won't set '" + characteristicUuid + ".");
+            }
 
             if (isReadingDescriptors) {
 
@@ -360,38 +367,7 @@ public class BLETransport implements Transport {
     };
 
     private void readNextDescriptor() {
-
-        boolean found = false;
-
-        for (int i = 0; i < charUuidList.size(); i++) {
-
-            String uuid = charUuidList.get(i);
-
-            if (!uuidMap.containsValue(uuid)) {
-
-                // Read descriptor
-                BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuid));
-                if (characteristic == null) {
-                    Log.e(TAG, "Tx characteristic not found!");
-                    disconnect();
-                    EventBus.getDefault().post(new DeviceConnectionEvent(ESPConstants.EVENT_DEVICE_CONNECTION_FAILED));
-                    return;
-                }
-
-                for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
-
-                    Log.d(TAG, "Descriptor : " + descriptor.getUuid().toString());
-                    Log.d(TAG, "Des read : " + bluetoothGatt.readDescriptor(descriptor));
-                }
-                found = true;
-                break;
-            }
-        }
-
-        if (found) {
-            isReadingDescriptors = true;
-        } else {
-
+        if (charUuidList.isEmpty()) {
             isReadingDescriptors = false;
 
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(ESPConstants.HANDLER_PROTO_VER)));
@@ -400,6 +376,23 @@ public class BLETransport implements Transport {
                 characteristic.setValue("ESP");
                 bluetoothGatt.writeCharacteristic(characteristic);
             }
+        } else {
+            String uuid = charUuidList.remove(0);
+            BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuid));
+
+            if (characteristic == null) {
+                Log.e(TAG, "Tx characteristic not found!");
+                disconnect();
+                EventBus.getDefault().post(new DeviceConnectionEvent(ESPConstants.EVENT_DEVICE_CONNECTION_FAILED));
+                return;
+            }
+
+            for (BluetoothGattDescriptor descriptor : characteristic.getDescriptors()) {
+                Boolean didRead = bluetoothGatt.readDescriptor(descriptor);
+                Log.d(TAG, "Reading descriptor: " + descriptor.getUuid().toString() + ", succeeded: " + didRead);
+            }
+
+            isReadingDescriptors = true;
         }
     }
 }
