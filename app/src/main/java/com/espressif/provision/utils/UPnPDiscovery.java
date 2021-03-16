@@ -100,7 +100,8 @@ public class UPnPDiscovery extends AsyncTask {
                 String query = mCustomQuery;
                 socket = new DatagramSocket(null);
                 socket.setReuseAddress(true);
-                socket.bind(new InetSocketAddress(port));
+                socket.setSoTimeout(5000);
+                socket.bind(new InetSocketAddress(0));
 
                 DatagramPacket datagramPacketRequest = new DatagramPacket(query.getBytes(), query.length(), group, port);
                 socket.send(datagramPacketRequest);
