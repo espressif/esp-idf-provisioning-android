@@ -61,6 +61,7 @@ import espressif.Constants;
 import espressif.WifiConfig;
 import espressif.WifiConstants;
 import espressif.WifiScan;
+import uva.Endpoint;
 
 import static java.lang.Thread.sleep;
 
@@ -87,6 +88,7 @@ public class ESPDevice {
 
     private String proofOfPossession = "";
     private String versionInfo;
+    private String deviceAccessToken = "";
     private int totalCount;
     private int startIndex;
     private ArrayList<WiFiAccessPoint> wifiApList;
@@ -479,6 +481,93 @@ public class ESPDevice {
         } else {
             startNetworkScan();
         }
+    }
+
+    /**
+     * Send Enterprise Wi-Fi credentials to device for provisioning.
+     *
+     * @param username Username of the Wi-Fi which is to be configure in device.
+     * @param password Password of the Wi-Fi which is to be configure in device.
+     * @param listener Listener to get success and failure.
+     */
+    public void setEnterpriseCredentials(final String username, final String password, final ResponseListener listener) {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject
+                    .put("device_token", deviceAccessToken)
+                    .put("username", username)
+                    .put("password", password);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        sendJSONObjectToCustomEndPoint("set-wpa2-ent-creds", jsonObject, listener);
+    }
+
+    /**
+     * Send Enterprise Wi-Fi certificate to device for provisioning.
+     *
+     * @param certificate Certificate of the Wi-Fi which is to be configure in device.
+     * @param listener    Listener to get success and failure.
+     */
+    public void setEnterpriseCertificate(final String certificate, final ResponseListener listener) {
+        setEnterpriseCertificate(certificate, 0, listener);
+    }
+
+    /**
+     * Send Enterprise Wi-Fi certificate to device for provisioning.
+     *
+     * @param certificate Certificate of the Wi-Fi which is to be configure in device.
+     * @param sequence    sequence of the certificate.
+     * @param listener    Listener to get success and failure.
+     */
+    private void setEnterpriseCertificate(final String certificate, final int sequence, final ResponseListener listener) {
+        int beginIndex = sequence * 256;
+        int endIndex = (sequence + 1) * 256;
+        final boolean isLast;
+        if (endIndex >= certificate.length()) {
+            endIndex = certificate.length();
+            isLast = true;
+        } else {
+            isLast = false;
+        }
+        String certificatePart = certificate.substring(beginIndex, endIndex);
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject
+                    .put("device_token", deviceAccessToken)
+                    .put("seq", sequence)
+                    .put("last", isLast)
+                    .put("chunk", certificatePart);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        sendJSONObjectToCustomEndPoint("set-wpa2-ent-ca", jsonObject, new ResponseListener() {
+            @Override
+            public void onSuccess(byte[] returnData) {
+                if (isLast) {
+                    listener.onSuccess(returnData);
+                } else {
+                    setEnterpriseCertificate(certificate, sequence + 1, listener);
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
+    }
+
+    /**
+     * Send JSONObject to custom endpoint of the device.
+     *
+     * @param path       Endpoint.
+     * @param jsonObject JSONObject to be send.
+     * @param listener   Listener to get success and failure.
+     */
+    private void sendJSONObjectToCustomEndPoint(final String path, final JSONObject jsonObject, final ResponseListener listener) {
+        Endpoint.JSONObject payload = Endpoint.JSONObject.newBuilder().setStringValue(jsonObject.toString()).build();
+        sendDataToCustomEndPoint(path, payload.toByteArray(), listener);
     }
 
     /**

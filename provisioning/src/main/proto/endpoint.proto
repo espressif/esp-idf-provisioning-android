@@ -1,0 +1,6 @@
+syntax = "proto3";
+package uva;
+
+message JSONObject {
+  string StringValue = 1;
+}
