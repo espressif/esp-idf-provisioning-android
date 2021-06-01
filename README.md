@@ -1,8 +1,13 @@
 # Provisioning Library  
-  
-Provisioning library provides mechanism to send network credentials and/or custom data to an ESP32 or ESP32-S2 or ESP8266 devices.  
+
+Provisioning library provides a mechanism to send network credentials and/or custom data to ESP32 (or its variants like S2, S3, C3, etc.) or ESP8266 devices.
+
 This repository contains the source code for the companion Android app for this provisioning mechanism.
-  
+To get this app please clone this repository using the below command:
+```
+ git clone https://github.com/espressif/esp-idf-provisioning-android.git
+```
+
 - [Features](#features)  
 - [Requirements](#requirements)  
 - [How to include](#how-to-include)  
@@ -42,10 +47,10 @@ This repository contains the source code for the companion Android app for this 
  ```
 And add a dependency code to your  app module's  `build.gradle`  file. 
 ```  
- implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.0.8'
+ implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.0.9'
 ```
 
-## Using Provisioning Library    
+## Using Provisioning Library
  ## Introduction    
  Provisioning library provides a simpler mechanism to communicate with an ESP-32, ESP32-S2 and ESP8266 devices. It gives an efficient search and scan model to listen and return devices which are in provisioning mode. It embeds security protocol and allow for safe transmission of data by doing end to end encryption. It supports BLE and SoftAP as mode of transmission which are configurable at runtime. Its primarily use is to provide home network credentials to a device and ensure device connectivity status is returned to the application.    
     
