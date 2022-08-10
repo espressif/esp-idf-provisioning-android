@@ -33,6 +33,8 @@ import com.espressif.provisioning.listeners.BleScanListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class is used for BLE scan functionality.
@@ -49,7 +51,8 @@ public class BleScanner {
     private BluetoothLeScanner bluetoothLeScanner;
 
     private boolean isScanning = false;
-    private String prefix = "";
+
+    private Pattern deviceNameRegex = null;
 
     public BleScanner(Context context, BleScanListener bleScannerListener) {
 
@@ -60,16 +63,18 @@ public class BleScanner {
         bluetoothAdapter = bluetoothManager.getAdapter();
     }
 
-    public BleScanner(Context context, String prefix, BleScanListener bleScannerListener) {
-
+    public BleScanner(Context context, String deviceNameRegexString, BleScanListener bleScannerListener) {
         this(context, bleScannerListener);
-        this.prefix = prefix;
+
+        if (!TextUtils.isEmpty(deviceNameRegexString)) {
+            this.deviceNameRegex = Pattern.compile(deviceNameRegexString);
+        }
     }
 
     /**
      * This method is used to start BLE scan.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN})
+    @RequiresPermission(allOf = { Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN })
     public void startScan() {
 
         if (!bluetoothAdapter.isEnabled()) {
@@ -92,7 +97,7 @@ public class BleScanner {
     /**
      * This method is used to start BLE scan.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH})
+    @RequiresPermission(allOf = { Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH })
     public void stopScan() {
 
         Log.d(TAG, "Stop BLE device scan");
@@ -122,7 +127,7 @@ public class BleScanner {
     private Runnable stopScanTask = new Runnable() {
 
         @Override
-        @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH})
+        @RequiresPermission(allOf = { Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH })
         public void run() {
             stopScan();
         }
@@ -143,10 +148,13 @@ public class BleScanner {
                 // Found BLE device
                 Log.d(TAG, "========== Device Found : " + deviceName);
 
-                if (TextUtils.isEmpty(prefix)) {
+                if (deviceNameRegex == null) {
                     bleScanListener.onPeripheralFound(result.getDevice(), result);
-                } else if (deviceName.startsWith(prefix)) {
-                    bleScanListener.onPeripheralFound(result.getDevice(), result);
+                } else {
+                    Matcher matcher = deviceNameRegex.matcher(deviceName);
+                    if (matcher.find()) {
+                        bleScanListener.onPeripheralFound(result.getDevice(), result);
+                    }
                 }
             }
         }
