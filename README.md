@@ -29,6 +29,7 @@ To get this app please clone this repository using the below command:
 - [x] Provision device.  
 - [x] Scan for available Wi-Fi networks.  
 - [x] Support for exchanging custom data.
+- [x] Support for security version 2.
   
 ## Requirements  
   
@@ -47,7 +48,7 @@ To get this app please clone this repository using the below command:
  ```
 And add a dependency code to your  app module's  `build.gradle`  file. 
 ```  
- implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.0.14'
+ implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.1.0'
 ```
 
 ## Using Provisioning Library
@@ -75,7 +76,7 @@ Payload information :
 | name      	| Name of the device.                	| PROV_XXXXXX                             	| Yes                                                                 	|
 | pop       	| Proof of possession.               	| POP value of the device like abcd1234   	| Optional. Considered empty string if not available in QR code data. 	|
 | transport 	| Wi-Fi provisioning transport type. 	| It can be softap or ble.                	| Yes                                                                 	|
-| security  	| Security for device communication. 	| It can be 0 or 1 int value.             	| Optional. Considered Sec1 if not available in QR code data.         	|
+| security  	| Security for device communication. 	| It can be 0, 1 or 2 int value.            | Optional. Considered Sec2 if not available in QR code data.         	|
 | password  	| Password of SoftAP device.         	| Password to connect with SoftAP device. 	| Optional                                                            	|
 
 In provisioning library, there are two options for QR code scanning API. 
@@ -151,6 +152,20 @@ ESPProvisionManager.getInstance(context).createESPDevice(TransportType transport
 	 espDevice.connectWiFiDevice()
 	 ```
 For both transport app can listen device connected / disconnected events by registering for events.
+
+
+After device connection, app needs to get Proof of Possession from user, if device has pop capability.
+App needs to set proof of possession for the device.
+
+```java
+espDevice.setProofOfPossession(pop)
+```
+
+For security version 2, app needs to provide username as shown below :
+
+```java
+espDevice.setUserName(username)
+```
 
 	
 ## Provisioning  
