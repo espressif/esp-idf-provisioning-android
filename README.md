@@ -33,7 +33,7 @@ To get this app please clone this repository using the below command:
   
 ## Requirements  
   
-- Supports Android 6.0 (API level 23) and above.  
+- Supports Android 8.0 (API level 26) and above.  
 
 ##  How to include  
   
@@ -48,7 +48,7 @@ To get this app please clone this repository using the below command:
  ```
 And add a dependency code to your  app module's  `build.gradle`  file. 
 ```  
- implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.1.4'
+ implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.2.0'
 ```
 
 ## Using Provisioning Library
