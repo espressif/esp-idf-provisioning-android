@@ -48,7 +48,7 @@ To get this app please clone this repository using the below command:
  ```
 And add a dependency code to your  app module's  `build.gradle`  file. 
 ```  
- implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.2.0'
+ implementation 'com.github.espressif:esp-idf-provisioning-android:lib-2.2.1'
 ```
 
 ## Using Provisioning Library
