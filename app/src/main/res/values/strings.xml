@@ -105,6 +105,7 @@
     <string name="error_read_preferred_creds_request_denied">You have denied request for reading thread credentials</string>
     <string name="error_no_thread_network">No Active Thread Border Router</string>
     <string name="error_dataset_invalid">Invalid Dataset</string>
+    <string name="error_nearby_devices_permission">Nearby devices permission is not granted. This is required to scan and connect to BLE devices.</string>
 
     <string name="prefix">Prefix :</string>
     <string name="hint_prefix">Enter Prefix</string>
@@ -137,5 +138,13 @@
     <string name="summary_secured">Secured</string>
     <string name="summary_unsecured">Unsecured</string>
     <string name="summary_username">(Applicable for security version 2)</string>
+
+    <!--Dialog texts-->
+    <string name="dialog_title_camera_permission">Camera Permission Needed</string>
+    <string name="dialog_msg_camera_permission_use">This app requires access to your camera to scan QR code.</string>
+    <string name="dialog_title_location_permission">Location Permission Needed</string>
+    <string name="dialog_msg_location_permission_use">It is required to connect nearby Bluetooth devices.</string>
+    <string name="dialog_title_nearby_devices_permission">Nearby Devices Permission</string>
+    <string name="dialog_msg_nearby_devices_permission_use">Nearby Devices permission is required for scanning and connecting to BLE devices. Please grant it in Settings.</string>
 
 </resources>
