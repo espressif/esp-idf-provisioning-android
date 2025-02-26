@@ -22,12 +22,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -41,6 +43,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.budiyev.android.codescanner.CodeScanner;
 import com.budiyev.android.codescanner.CodeScannerView;
@@ -87,6 +90,8 @@ public class AddDeviceActivity extends AppCompatActivity {
 
     private boolean isQrCodeDataReceived = false;
     private Intent intent;
+    private boolean buttonClicked = false;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -102,21 +107,19 @@ public class AddDeviceActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        updatePermissionErrorText();
 
-        if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (areAllPermissionsGranted()) {
+            layoutQrCode.setVisibility(View.VISIBLE);
+            layoutPermissionErr.setVisibility(View.GONE);
+            btnGetPermission.setVisibility(View.GONE);
 
-//            if (cameraPreview != null) {
-//                try {
-//                    cameraPreview.start();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
+            openCamera();
 
-            if (codeScanner != null && !isQrCodeDataReceived) {
-                codeScanner.startPreview();
-            }
+        } else {
+            layoutQrCode.setVisibility(View.GONE);
+            layoutPermissionErr.setVisibility(View.VISIBLE);
+            btnGetPermission.setVisibility(View.VISIBLE);
         }
 
         // This condition is to get event of cancel button of "try again" popup. Because Android 10 is not giving event on cancel button click if network is not found.
@@ -169,46 +172,80 @@ public class AddDeviceActivity extends AppCompatActivity {
         super.onBackPressed();
     }
 
+    private boolean areAllPermissionsGranted() {
+        boolean cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        boolean locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            boolean bluetoothScanPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+            boolean bluetoothConnectPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+            return cameraPermission && locationPermission && bluetoothScanPermission && bluetoothConnectPermission;
+        } else {
+            return cameraPermission && locationPermission;
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        updatePermissionErrorText();
         Log.e(TAG, "onRequestPermissionsResult , requestCode : " + requestCode);
 
-        if (requestCode == REQUEST_CAMERA_PERMISSION && grantResults.length > 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                findViewById(R.id.scanner_view).setVisibility(View.GONE);
-                layoutQrCode.setVisibility(View.GONE);
-                layoutPermissionErr.setVisibility(View.VISIBLE);
+        if (areAllPermissionsGranted()) {
+            layoutQrCode.setVisibility(View.VISIBLE);
+            layoutPermissionErr.setVisibility(View.GONE);
+            btnGetPermission.setVisibility(View.GONE);
+            openCamera();
+        } else {
+            findViewById(R.id.scanner_view).setVisibility(View.GONE);
+            layoutQrCode.setVisibility(View.GONE);
+            layoutPermissionErr.setVisibility(View.VISIBLE);
+            btnGetPermission.setVisibility(View.VISIBLE);
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                 tvPermissionErr.setText(R.string.error_camera_permission);
                 ivPermissionErr.setImageResource(R.drawable.ic_no_camera_permission);
-            } else {
-                layoutQrCode.setVisibility(View.VISIBLE);
-                layoutPermissionErr.setVisibility(View.GONE);
-                openCamera();
-            }
-        } else if (requestCode == REQUEST_ACCESS_FINE_LOCATION && grantResults.length > 0) {
-
-            boolean permissionGranted = true;
-            for (int grantResult : grantResults) {
-                if (grantResult == PackageManager.PERMISSION_DENIED) {
-                    Log.e(TAG, "User has denied permission");
-                    permissionGranted = false;
-                }
-            }
-
-            if (!permissionGranted) {
-                findViewById(R.id.scanner_view).setVisibility(View.GONE);
-                layoutQrCode.setVisibility(View.GONE);
-                layoutPermissionErr.setVisibility(View.VISIBLE);
+            } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 tvPermissionErr.setText(R.string.error_location_permission);
                 ivPermissionErr.setImageResource(R.drawable.ic_no_location_permission);
+                showLocationPermissionAlertDialog();
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                    (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                            || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)) {
+                tvPermissionErr.setText(R.string.error_nearby_devices_permission);
+                ivPermissionErr.setImageResource(R.drawable.ic_no_bluetooth_permission);
+                showLocationPermissionAlertDialog();
             } else {
-                findViewById(R.id.scanner_view).setVisibility(View.VISIBLE);
-                layoutQrCode.setVisibility(View.VISIBLE);
-                layoutPermissionErr.setVisibility(View.GONE);
-                scanQrCode();
+                tvPermissionErr.setText("");
+                ivPermissionErr.setImageDrawable(null);
             }
         }
+    }
+
+
+    private void updatePermissionErrorText() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            tvPermissionErr.setText(R.string.error_camera_permission);
+            ivPermissionErr.setImageResource(R.drawable.ic_no_camera_permission);
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            tvPermissionErr.setText(R.string.error_location_permission);
+            ivPermissionErr.setImageResource(R.drawable.ic_no_location_permission);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                        || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED)) {
+            tvPermissionErr.setText(R.string.error_nearby_devices_permission);
+            ivPermissionErr.setImageResource(R.drawable.ic_no_bluetooth_permission);
+        } else {
+            tvPermissionErr.setText("");
+            ivPermissionErr.setImageDrawable(null);
+        }
+    }
+
+    private void navigateToAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        startActivity(intent);
     }
 
     @Override
@@ -310,32 +347,167 @@ public class AddDeviceActivity extends AppCompatActivity {
 
         @Override
         public void onClick(View v) {
-            if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            buttonClicked = true;
 
-                ActivityCompat.requestPermissions(AddDeviceActivity.this, new
-                        String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+            if (ContextCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+
+                if (ActivityCompat.shouldShowRequestPermissionRationale(AddDeviceActivity.this, Manifest.permission.CAMERA)) {
+                    showCameraPermissionExplanation();
+                } else {
+                    requestCameraPermission();
+                }
 
             } else {
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
-                    if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                            || ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
-                            || ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-
-                        ActivityCompat.requestPermissions(AddDeviceActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.BLUETOOTH_SCAN,
-                                Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_ACCESS_FINE_LOCATION);
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        showLocationAndBluetoothPermissionExplanation(false);
+                    } else {
+                        requestLocationAndBluetoothPermission();
                     }
-                } else {
-                    if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                        ActivityCompat.requestPermissions(AddDeviceActivity.this, new
-                                String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_ACCESS_FINE_LOCATION);
+                }
+
+                else {
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
+                        if (ContextCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                                || ContextCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+
+                            if (ActivityCompat.shouldShowRequestPermissionRationale(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_SCAN)
+                                    || ActivityCompat.shouldShowRequestPermissionRationale(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_CONNECT)) {
+
+                                showLocationAndBluetoothPermissionExplanation(true);
+
+                            } else {
+                                requestLocationAndBluetoothPermission();
+                            }
+                        }
                     }
                 }
             }
         }
     };
+
+    private void showCameraPermissionExplanation() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+
+        builder.setTitle(R.string.dialog_title_camera_permission);
+        builder.setMessage(R.string.dialog_msg_camera_permission_use);
+        builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                requestCameraPermission();
+                dialog.dismiss();
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.dismiss();
+                finish();
+            }
+        });
+
+        builder.show();
+    }
+
+    private void showLocationAndBluetoothPermissionExplanation(boolean includeBtPermission) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+
+        if (includeBtPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                builder.setTitle(R.string.dialog_title_location_permission);
+                builder.setMessage(R.string.dialog_msg_location_permission_use);
+            } else {
+                builder.setTitle(R.string.dialog_title_nearby_devices_permission);
+                builder.setMessage(R.string.dialog_msg_nearby_devices_permission_use);
+            }
+        } else {
+            builder.setTitle(R.string.dialog_title_location_permission);
+            builder.setMessage(R.string.dialog_msg_location_permission_use);
+        }
+
+        builder.setPositiveButton(R.string.btn_ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                requestLocationAndBluetoothPermission();
+                dialog.dismiss();
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                finish();
+            }
+        });
+
+        builder.show();
+    }
+
+    private void requestCameraPermission() {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+    }
+
+    private void requestLocationAndBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.requestPermissions(this, new
+                    String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_ACCESS_FINE_LOCATION);
+        } else {
+            ActivityCompat.requestPermissions(this, new
+                    String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_ACCESS_FINE_LOCATION);
+        }
+    }
+
+    private void showLocationPermissionAlertDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+
+        int messageResId;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                messageResId = R.string.error_location_permission;
+            } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                messageResId = R.string.error_nearby_devices_permission;
+            } else {
+                messageResId = R.string.error_location_permission;
+            }
+        } else {
+            messageResId = R.string.error_location_permission;
+        }
+
+        builder.setMessage(messageResId);
+
+        builder.setPositiveButton(R.string.action_settings, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                navigateToAppSettings();
+            }
+        });
+
+        builder.setNegativeButton(R.string.btn_cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog alertDialog = builder.create();
+        if (!isFinishing()) {
+            alertDialog.show();
+        }
+    }
 
     private void initViews() {
 
@@ -387,20 +559,50 @@ public class AddDeviceActivity extends AppCompatActivity {
     private void scanQrCode() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
-                    && ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                    && ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                 provisionManager.scanQRCode(codeScanner, qrCodeScanListener);
             } else {
-                ActivityCompat.requestPermissions(AddDeviceActivity.this, new
-                        String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT}, REQUEST_ACCESS_FINE_LOCATION);
+                checkLocationAndBluetoothPermission();
             }
         } else {
-            if (ActivityCompat.checkSelfPermission(AddDeviceActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 provisionManager.scanQRCode(codeScanner, qrCodeScanListener);
             } else {
-                ActivityCompat.requestPermissions(AddDeviceActivity.this, new
-                        String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_ACCESS_FINE_LOCATION);
+                checkLocationAndBluetoothPermission();
+            }
+        }
+    }
+
+    private void checkLocationAndBluetoothPermission() {
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                showLocationAndBluetoothPermissionExplanation(false);
+            } else {
+                requestLocationAndBluetoothPermission();
+            }
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED
+                        || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.BLUETOOTH_SCAN)
+                            || ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.BLUETOOTH_CONNECT)) {
+
+                        showLocationAndBluetoothPermissionExplanation(true);
+
+                    } else {
+                        requestLocationAndBluetoothPermission();
+                    }
+                } else {
+                    scanQrCode();
+                }
+            } else {
+                scanQrCode();
             }
         }
     }
