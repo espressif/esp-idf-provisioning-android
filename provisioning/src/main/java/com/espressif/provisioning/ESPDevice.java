@@ -79,6 +79,7 @@ public class ESPDevice {
     private Session session;
     private Security security;
     private Transport transport;
+    private int secPatchVersion;
 
     private WiFiScanListener wifiScanListener;
     private ProvisionListener provisionListener;
@@ -336,6 +337,15 @@ public class ESPDevice {
      */
     public void setProofOfPossession(String pop) {
         this.proofOfPossession = pop;
+    }
+
+    /**
+     * This method used to set security patch version, received from device.
+     *
+     * @param patchVersion Security patch version to be set.
+     */
+    public void setSecPatchVersion(int patchVersion) {
+        this.secPatchVersion = patchVersion;
     }
 
     /**
@@ -662,6 +672,7 @@ public class ESPDevice {
             Log.d(TAG, "Device Version : " + deviceVersion);
             Log.d(TAG, "sec_ver value : " + provInfo.optInt("sec_ver"));
             Log.d(TAG, "Has sec_ver key : " + provInfo.has("sec_ver"));
+            Log.d(TAG, "Has sec_patch_ver key : " + provInfo.has("sec_patch_ver"));
 
             if (provInfo.has("sec_ver")) {
 
@@ -678,6 +689,10 @@ public class ESPDevice {
                     case 2:
                     default:
                         securityType = ESPConstants.SecurityType.SECURITY_2;
+                        if (provInfo.has("sec_patch_ver")) {
+                            secPatchVersion = provInfo.optInt("sec_patch_ver");
+                            Log.d(TAG, "Security Patch Version : " + secPatchVersion);
+                        }
                         break;
                 }
             } else {
@@ -702,7 +717,11 @@ public class ESPDevice {
                     security = new Security1(proofOfPossession);
                     break;
                 case SECURITY_2:
-                    security = new Security2(userName, proofOfPossession);
+                    if (secPatchVersion == 1) {
+                        security = new Security2(userName, proofOfPossession, secPatchVersion);
+                    } else {
+                        security = new Security2(userName, proofOfPossession);
+                    }
                     break;
             }
 
