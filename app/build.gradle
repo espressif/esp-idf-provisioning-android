@@ -43,7 +43,7 @@ android {
             resValue "string", "wifi_base_url", "192.168.4.1:80"
             resValue "string", "wifi_device_name_prefix", "PROV_"
             resValue "string", "ble_device_name_prefix", "PROV_"
-            buildConfigField "boolean", "isQrCodeSupported", "true"
+            buildConfigField "boolean", "isQrCodeSupported", "false"
             buildConfigField "boolean", "isSettingsAllowed", "true"
             buildConfigField "boolean", "isFilteringByPrefixAllowed", "true"
         }
@@ -73,4 +73,10 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
