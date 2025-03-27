@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="¿Cómo usarás MEDIWATCH?"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Selecciona tu rol en la aplicación"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <Button
+        android:id="@+id/btn_patient"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Soy Paciente"
+        android:layout_marginVertical="8dp"
+        android:padding="12dp" />
+
+    <Button
+        android:id="@+id/btn_family"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Soy Familiar"
+        android:layout_marginVertical="8dp"
+        android:padding="12dp" />
+
+</LinearLayout>

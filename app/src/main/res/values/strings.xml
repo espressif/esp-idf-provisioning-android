@@ -147,4 +147,6 @@
     <string name="dialog_title_nearby_devices_permission">Nearby Devices Permission</string>
     <string name="dialog_msg_nearby_devices_permission_use">Nearby Devices permission is required for scanning and connecting to BLE devices. Please grant it in Settings.</string>
 
+    <string name="default_web_client_id">282046934759-o536iru1hh5pf2hj6cqk8m0he8nhq2ed.apps.googleusercontent.com</string>
+    <string name="title_activity_esp_main">Provision ESP32</string>
 </resources>

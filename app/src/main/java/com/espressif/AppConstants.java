@@ -49,4 +49,11 @@ public class AppConstants {
     public static final String CAPABILITY_WIFI_SCAN = "wifi_scan";
     public static final String CAPABILITY_THREAD_SCAN = "thread_scan";
     public static final String CAPABILITY_THREAD_PROV = "thread_prov";
+
+    public static final String PREF_NAME_USER = "UserPreferences";
+    public static final String KEY_USER_TYPE = "userType";
+    public static final String KEY_IS_LOGGED_IN = "isLoggedIn";
+    public static final String KEY_HAS_COMPLETED_PROVISIONING = "hasCompletedProvisioning";
+    public static final String USER_TYPE_PATIENT = "patient";
+    public static final String USER_TYPE_FAMILY = "family";
 }
