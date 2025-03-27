@@ -52,8 +52,8 @@ import com.espressif.provisioning.listeners.BleScanListener;
 import com.espressif.ui.adapters.BleDeviceListAdapter;
 import com.espressif.ui.models.BleDevice;
 import com.espressif.ui.utils.Utils;
-import com.espressif.wifi_provisioning.BuildConfig;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.BuildConfig;
+import com.espressif.mediwatch.R;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;

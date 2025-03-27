@@ -25,7 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.espressif.AppConstants;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 import org.greenrobot.eventbus.EventBus;
 import org.json.JSONException;

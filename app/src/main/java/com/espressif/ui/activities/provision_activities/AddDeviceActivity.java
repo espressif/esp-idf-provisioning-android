@@ -53,7 +53,7 @@ import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPDevice;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.listeners.QRCodeScanListener;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 import com.google.android.material.card.MaterialCardView;
 import com.wang.avi.AVLoadingIndicatorView;
 

@@ -23,7 +23,7 @@ import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import com.espressif.ui.models.BleDevice;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 import java.util.ArrayList;
 

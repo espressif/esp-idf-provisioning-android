@@ -30,7 +30,7 @@ import androidx.preference.PreferenceManager;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.espressif.AppConstants;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 public class SettingsActivity extends AppCompatActivity {
 

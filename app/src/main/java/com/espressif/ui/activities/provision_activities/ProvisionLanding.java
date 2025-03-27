@@ -35,7 +35,7 @@ import com.espressif.AppConstants;
 import com.espressif.provisioning.DeviceConnectionEvent;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.ui.utils.Utils;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;

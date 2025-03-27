@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat;
 
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.WiFiAccessPoint;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 import java.util.ArrayList;
 

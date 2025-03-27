@@ -30,7 +30,7 @@ import androidx.core.widget.ContentLoadingProgressBar;
 
 import com.espressif.AppConstants;
 import com.espressif.provisioning.DeviceConnectionEvent;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.listeners.ProvisionListener;

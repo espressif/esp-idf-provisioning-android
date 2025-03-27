@@ -39,7 +39,7 @@ import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.WiFiAccessPoint;
 import com.espressif.provisioning.listeners.WiFiScanListener;
 import com.espressif.ui.utils.Utils;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 import com.google.android.gms.threadnetwork.ThreadNetwork;
 import com.google.android.gms.threadnetwork.ThreadNetworkCredentials;
 

@@ -42,7 +42,7 @@ import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.WiFiAccessPoint;
 import com.espressif.provisioning.listeners.WiFiScanListener;
 import com.espressif.ui.adapters.WiFiListAdapter;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 import com.google.android.material.textfield.TextInputLayout;
 
 import org.greenrobot.eventbus.EventBus;

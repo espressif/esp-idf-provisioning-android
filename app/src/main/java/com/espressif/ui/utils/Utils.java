@@ -20,7 +20,7 @@ import android.content.DialogInterface;
 import androidx.appcompat.app.AlertDialog;
 
 import com.espressif.provisioning.ESPProvisionManager;
-import com.espressif.wifi_provisioning.R;
+import com.espressif.mediwatch.R;
 
 public class Utils {
 
