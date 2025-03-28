@@ -1,7 +1,8 @@
 plugins {
     id 'com.android.application'
-    id 'com.google.gms.google-services'
 }
+
+apply plugin: 'com.google.gms.google-services'
 
 def getGitHash = { ->
     def stdout = new ByteArrayOutputStream()

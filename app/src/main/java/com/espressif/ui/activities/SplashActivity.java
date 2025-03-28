@@ -78,16 +78,39 @@ public class SplashActivity extends AppCompatActivity {
         // Inicializar SharedPreferences
         preferences = getSharedPreferences(AppConstants.PREF_NAME_USER, MODE_PRIVATE);
         
+        // Inicializar Firebase explícitamente
+        try {
+            // Verificar si Firebase ya está inicializado
+            List<FirebaseApp> firebaseApps = FirebaseApp.getApps(this);
+            if (firebaseApps.isEmpty()) {
+                // Si no hay apps de Firebase inicializadas, inicializar
+                FirebaseApp.initializeApp(this);
+                Log.d(TAG, "Firebase inicializado explícitamente");
+            } else {
+                Log.d(TAG, "Firebase ya estaba inicializado. Apps: " + firebaseApps.size());
+            }
+            
+            // Obtener instancias después de la inicialización
+            firebaseAuth = FirebaseAuth.getInstance();
+            mDatabase = FirebaseDatabase.getInstance().getReference();
+            
+            if (firebaseAuth != null) {
+                Log.d(TAG, "FirebaseAuth inicializado correctamente");
+            } else {
+                Log.e(TAG, "FirebaseAuth es null después de la inicialización");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al inicializar Firebase: " + e.getMessage(), e);
+            // Continuar de todos modos, utilizaremos el flujo alternativo
+            firebaseAuth = null;
+        }
+        
         // Configurar Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
-        
-        // Inicializar Firebase
-        firebaseAuth = FirebaseAuth.getInstance();
-        mDatabase = FirebaseDatabase.getInstance().getReference();
         
         // Registrar el ActivityResultLauncher
         googleSignInLauncher = registerForActivityResult(
@@ -232,6 +255,19 @@ public class SplashActivity extends AppCompatActivity {
             }
             
             Log.d(TAG, "Google Sign In successful, account: " + account.getEmail());
+
+            // Intentar inicializar Firebase nuevamente si es necesario
+            if (firebaseAuth == null) {
+                try {
+                    FirebaseApp.initializeApp(this);
+                    firebaseAuth = FirebaseAuth.getInstance();
+                    mDatabase = FirebaseDatabase.getInstance().getReference();
+                    Log.d(TAG, "Reintento de inicialización de Firebase: " + 
+                          (firebaseAuth != null ? "exitoso" : "fallido"));
+                } catch (Exception e) {
+                    Log.e(TAG, "Error en reintento de inicialización de Firebase", e);
+                }
+            }
 
             // Verificar si Firebase Auth está disponible
             if (firebaseAuth == null) {
