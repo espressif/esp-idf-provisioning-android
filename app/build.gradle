@@ -1,5 +1,7 @@
-apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
 
 def getGitHash = { ->
     def stdout = new ByteArrayOutputStream()
@@ -69,7 +71,7 @@ dependencies {
 
     implementation 'com.google.android.gms:play-services-threadnetwork:16.0.1'
 
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    implementation 'com.google.android.gms:play-services-auth:20.1.0'
     implementation 'androidx.credentials:credentials:1.0.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.0.0'
     implementation platform('com.google.firebase:firebase-bom:33.11.0')

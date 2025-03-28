@@ -28,7 +28,6 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 
-// Añadir estos imports
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -39,6 +38,10 @@ import com.google.firebase.database.ServerValue;
 import com.google.firebase.FirebaseApp;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.IdpResponse;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -53,16 +56,12 @@ public class SplashActivity extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
     private ActivityResultLauncher<Intent> googleSignInLauncher;
 
-    // Añadir este campo
     private FirebaseAuth firebaseAuth;
-    private DatabaseReference mDatabase; // Añadir esta línea
+    private DatabaseReference mDatabase; 
 
-    // Añadir esta variable de clase para rastrear el diálogo activo
     private AlertDialog activeDialog;
 
-    private static final int RC_SIGN_IN = 123; // Código de solicitud para FirebaseUI
-
-    // Modificar el método onCreate
+    private static final int RC_SIGN_IN = 123;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -79,14 +78,14 @@ public class SplashActivity extends AppCompatActivity {
         // Inicializar SharedPreferences
         preferences = getSharedPreferences(AppConstants.PREF_NAME_USER, MODE_PRIVATE);
         
-        // Configurar Google Sign-In - sin try-catch aquí
+        // Configurar Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
         
-        // Inicializar Firebase - sin try-catch aquí
+        // Inicializar Firebase
         firebaseAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
         
@@ -145,15 +144,9 @@ public class SplashActivity extends AppCompatActivity {
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_user_type, null);
         builder.setView(dialogView);
-        
-        // Configurar la cancelación personalizada
         builder.setCancelable(false);
         
         activeDialog = builder.create();
-        
-        // Resto del código para configurar el diálogo...
-        AlertDialog dialog = builder.create();
-        dialog.setCancelable(false); // No permite cerrar al tocar fuera
 
         Button btnPatient = dialogView.findViewById(R.id.btn_patient);
         Button btnFamily = dialogView.findViewById(R.id.btn_family);
@@ -161,7 +154,7 @@ public class SplashActivity extends AppCompatActivity {
         btnPatient.setOnClickListener(v -> {
             // Guardar preferencia
             saveUserType(AppConstants.USER_TYPE_PATIENT);
-            dialog.dismiss();
+            activeDialog.dismiss();
             // Mostrar diálogo de inicio de sesión con Google
             showGoogleSignInDialog();
         });
@@ -169,7 +162,7 @@ public class SplashActivity extends AppCompatActivity {
         btnFamily.setOnClickListener(v -> {
             // Guardar preferencia
             saveUserType(AppConstants.USER_TYPE_FAMILY);
-            dialog.dismiss();
+            activeDialog.dismiss();
             // Para familiares, ir directamente a provisioning
             startEspMainActivity();
         });
@@ -200,27 +193,22 @@ public class SplashActivity extends AppCompatActivity {
         LayoutInflater inflater = getLayoutInflater();
         View dialogView = inflater.inflate(R.layout.dialog_google_sign_in, null);
         builder.setView(dialogView);
-        
         builder.setCancelable(false);
         
         activeDialog = builder.create();
-        
-        // Resto del código para configurar el diálogo...
-        AlertDialog dialog = builder.create();
-        dialog.setCancelable(false); // No permite cerrar al tocar fuera
 
         Button btnGoogleSignIn = dialogView.findViewById(R.id.btn_google_sign_in);
         Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
 
         btnGoogleSignIn.setOnClickListener(v -> {
-            dialog.dismiss();
+            activeDialog.dismiss();
             // Iniciar proceso de Google Sign-In
             Intent signInIntent = googleSignInClient.getSignInIntent();
             googleSignInLauncher.launch(signInIntent);
         });
 
         btnCancel.setOnClickListener(v -> {
-            dialog.dismiss();
+            activeDialog.dismiss();
             // Si cancela, volvemos al diálogo de selección de tipo
             showUserTypeDialog();
         });
@@ -234,82 +222,48 @@ public class SplashActivity extends AppCompatActivity {
     /**
      * Maneja el resultado del inicio de sesión con Google
      */
-    @SuppressWarnings("deprecation") // Suprimir advertencia por API obsoleta
     private void handleGoogleSignInResult(Task<GoogleSignInAccount> completedTask) {
         try {
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
-            Log.d(TAG, "Google Sign In successful, account: " + account.getEmail());
+            if (account == null) {
+                Log.e(TAG, "Google Sign In account is null");
+                showUserTypeDialog();
+                return;
+            }
             
-            // Autenticar con Firebase
+            Log.d(TAG, "Google Sign In successful, account: " + account.getEmail());
+
+            // Verificar si Firebase Auth está disponible
+            if (firebaseAuth == null) {
+                Log.e(TAG, "FirebaseAuth is null, skipping Firebase authentication");
+                directSignInWithoutFirebase(account);
+                return;
+            }
+
+            // Use Firebase Authentication
             AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
             firebaseAuth.signInWithCredential(credential)
-                    .addOnCompleteListener(this, task -> {
-                        if (task.isSuccessful()) {
-                            // Autenticación con Firebase exitosa
-                            FirebaseUser user = firebaseAuth.getCurrentUser();
-                            if (user != null) {
-                                createUserInDatabase(user);
-                            } else {
-                                Log.e(TAG, "Usuario Firebase es null después de autenticación exitosa");
-                                startEspMainActivity();
-                            }
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = firebaseAuth.getCurrentUser();
+                        if (user != null) {
+                            saveUserToDatabase(user);
                         } else {
-                            Log.e(TAG, "Error en autenticación con Firebase", task.getException());
-                            // A pesar del error, continuar
-                            startEspMainActivity();
+                            Log.e(TAG, "Firebase user is null after successful authentication");
+                            directSignInWithoutFirebase(account);
                         }
-                    });
-            
+                    } else {
+                        Log.e(TAG, "Firebase authentication failed", task.getException());
+                        directSignInWithoutFirebase(account);
+                    }
+                });
+
         } catch (ApiException e) {
             Log.e(TAG, "Google Sign In failed: " + e.getStatusCode(), e);
-            showUserTypeDialog(); // Volver a mostrar el diálogo
-        }
-    }
-
-    // Añadir este método para guardar el usuario en la base de datos
-    private void createUserInDatabase(FirebaseUser user) {
-        if (user != null) {
-            try {
-                String userId = user.getUid();
-                
-                // Crear un objeto con los datos del usuario que quieres guardar
-                Map<String, Object> userData = new HashMap<>();
-                userData.put("email", user.getEmail());
-                userData.put("name", user.getDisplayName());
-                userData.put("userType", preferences.getString(AppConstants.KEY_USER_TYPE, "unknown"));
-                userData.put("lastLogin", ServerValue.TIMESTAMP);
-                
-                // Guardar en la base de datos
-                mDatabase.child("users").child(userId).setValue(userData)
-                        .addOnCompleteListener(task -> {
-                            if (task.isSuccessful()) {
-                                Log.d(TAG, "Usuario guardado en la base de datos");
-                                
-                                // Guardar estado de inicio de sesión
-                                SharedPreferences.Editor editor = preferences.edit();
-                                editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, true);
-                                editor.apply();
-                                
-                                // Inicio de sesión exitoso
-                                String displayName = user.getDisplayName() != null ? user.getDisplayName() : "Usuario";
-                                Toast.makeText(this, "Bienvenido " + displayName, Toast.LENGTH_SHORT).show();
-                                
-                                // Ir a pantalla de provisioning
-                                startEspMainActivity();
-                            } else {
-                                Log.w(TAG, "Error al guardar usuario en la base de datos", task.getException());
-                                // A pesar del error, continuar con el flujo
-                                startEspMainActivity();
-                            }
-                        });
-            } catch (Exception e) {
-                Log.e(TAG, "Error en createUserInDatabase: " + e.getMessage(), e);
-                // A pesar del error, continuar con el flujo
-                startEspMainActivity();
-            }
-        } else {
-            // Si user es null, simplemente continuar
-            startEspMainActivity();
+            showUserTypeDialog();
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error in Google Sign In", e);
+            directSignInWithoutFirebase(null);
         }
     }
 
@@ -323,112 +277,61 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Maneja el resultado del inicio de sesión con Google de forma segura
-     */
-    private void handleGoogleSignInResultSafely(Task<GoogleSignInAccount> completedTask) {
-        try {
-            GoogleSignInAccount account = completedTask.getResult(ApiException.class);
-            Log.d(TAG, "Google Sign In successful, account: " + (account != null ? account.getEmail() : "null"));
-            
-            // Bypass Firebase temporalmente para evitar errores
-            directSignIn(account);
-            
-        } catch (ApiException e) {
-            // Error en inicio de sesión con Google
-            Log.w(TAG, "Google Sign In failed, code: " + e.getStatusCode() + ", message: " + e.getMessage(), e);
-            Toast.makeText(this, "Error al iniciar sesión con Google. Usando modo alternativo.", Toast.LENGTH_SHORT).show();
-            bypassGoogleSignIn(); // Usar método alternativo
-        } catch (Exception e) {
-            Log.e(TAG, "Unexpected error in Google Sign In: " + e.getMessage(), e);
-            bypassGoogleSignIn(); // Usar método alternativo
-        }
-    }
-
-    /**
-     * Realiza un inicio de sesión directo intentando usar Firebase si es posible
-     */
-    private void directSignIn(GoogleSignInAccount account) {
-        try {
-            // Verificar si Firebase Auth está inicializado
-            if (firebaseAuth == null) {
-                Log.e(TAG, "FirebaseAuth es null, no se puede autenticar con Firebase");
-                completeSignIn(account != null ? account.getDisplayName() : null);
-                return;
-            }
-            
-            // Intentar autenticar con Firebase si tenemos un token
-            if (account != null && account.getIdToken() != null) {
-                Log.d(TAG, "Intentando autenticar con Firebase usando ID token");
-                
-                AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
-                firebaseAuth.signInWithCredential(credential)
-                        .addOnCompleteListener(this, task -> {
-                            // El resto permanece igual...
-                            if (task.isSuccessful()) {
-                                // Autenticación exitosa
-                                FirebaseUser user = firebaseAuth.getCurrentUser();
-                                Log.d(TAG, "Autenticación con Firebase exitosa: " + 
-                                      (user != null ? user.getEmail() : "null"));
-                                
-                                // Guardar en base de datos
-                                if (user != null) {
-                                    saveUserToDatabase(user);
-                                } else {
-                                    // Si no hay usuario aun con éxito, usar bypass
-                                    completeSignIn(account.getDisplayName());
-                                }
-                            } else {
-                                // Error de autenticación, registrar y continuar con bypass
-                                Exception exception = task.getException();
-                                Log.e(TAG, "Error en autenticación con Firebase: " + 
-                                      (exception != null ? exception.getMessage() : "desconocido"), 
-                                      exception);
-                                
-                                // Usar el bypass
-                                completeSignIn(account.getDisplayName());
-                            }
-                        });
-            } else {
-                // No tenemos token o cuenta, usar bypass
-                Log.d(TAG, "No hay ID token disponible, usando bypass");
-                completeSignIn(account != null ? account.getDisplayName() : null);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error en directSignIn: " + e.getMessage(), e);
-            completeSignIn(account != null ? account.getDisplayName() : null);
-        }
-    }
-
-    /**
-     * Guarda el usuario en la base de datos de Firebase
+     * Guarda la información del usuario en la base de datos
      */
     private void saveUserToDatabase(FirebaseUser user) {
         try {
             String userId = user.getUid();
             
-            // Crear un objeto con los datos del usuario
+            // Crear mapa con datos del usuario
             Map<String, Object> userData = new HashMap<>();
             userData.put("email", user.getEmail());
             userData.put("name", user.getDisplayName());
             userData.put("userType", preferences.getString(AppConstants.KEY_USER_TYPE, "unknown"));
             userData.put("lastLogin", ServerValue.TIMESTAMP);
             
-            // Guardar en la base de datos
+            // Guardar datos en Firebase
             mDatabase.child("users").child(userId).setValue(userData)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            Log.d(TAG, "Usuario guardado correctamente en la base de datos");
-                        } else {
-                            Log.e(TAG, "Error al guardar usuario en base de datos", task.getException());
-                        }
-                        
-                        // Completar el inicio de sesión independientemente del resultado
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "User data saved successfully");
                         completeSignIn(user.getDisplayName());
-                    });
+                    } else {
+                        Log.e(TAG, "Failed to save user data", task.getException());
+                        // Continuar de todos modos
+                        completeSignIn(user.getDisplayName());
+                    }
+                });
         } catch (Exception e) {
-            Log.e(TAG, "Error en saveUserToDatabase: " + e.getMessage(), e);
+            Log.e(TAG, "Error saving user to database", e);
+            // Continuar de todos modos
             completeSignIn(user.getDisplayName());
         }
+    }
+
+    /**
+     * Método alternativo para iniciar sesión sin Firebase
+     */
+    private void directSignInWithoutFirebase(GoogleSignInAccount account) {
+        String displayName = (account != null) ? account.getDisplayName() : "Usuario";
+        String email = (account != null) ? account.getEmail() : "";
+        
+        // Guardar información básica en SharedPreferences
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, true);
+        if (email != null && !email.isEmpty()) {
+            editor.putString("user_email", email);
+        }
+        if (displayName != null && !displayName.isEmpty()) {
+            editor.putString("user_name", displayName);
+        }
+        editor.apply();
+        
+        Log.d(TAG, "Direct sign-in without Firebase completed");
+        Toast.makeText(this, "Bienvenido " + displayName, Toast.LENGTH_SHORT).show();
+        
+        // Continuar con el flujo normal
+        startEspMainActivity();
     }
 
     /**
@@ -451,30 +354,8 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Método para saltarse completamente el inicio de sesión en caso de error
+     * Cierra cualquier diálogo activo
      */
-    private void bypassGoogleSignIn() {
-        try {
-            // Guardar estado de inicio de sesión de todos modos
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, true);
-            editor.apply();
-            
-            Log.d(TAG, "Usando bypass para inicio de sesión");
-            Toast.makeText(this, "Inicio de sesión alternativo aplicado", Toast.LENGTH_SHORT).show();
-            
-            // Ir a la actividad principal
-            startEspMainActivity();
-        } catch (Exception e) {
-            Log.e(TAG, "Error incluso en bypass: " + e.getMessage(), e);
-            // Último recurso: ir directamente a la actividad principal
-            Intent intent = new Intent(this, EspMainActivity.class);
-            startActivity(intent);
-            finish();
-        }
-    }
-
-    // Añadir este método para cerrar el diálogo activo
     private void closeActiveDialog() {
         if (activeDialog != null && activeDialog.isShowing()) {
             try {
@@ -485,7 +366,9 @@ public class SplashActivity extends AppCompatActivity {
         }
     }
 
-    // Añadir este método
+    /**
+     * Inicia la autenticación usando FirebaseUI
+     */
     private void startFirebaseUIAuth() {
         // Cerrar cualquier diálogo activo
         closeActiveDialog();
@@ -505,7 +388,9 @@ public class SplashActivity extends AppCompatActivity {
         startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
-    // Añadir o modificar onActivityResult para manejar el resultado
+    /**
+     * Maneja el resultado de FirebaseUI
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -539,31 +424,32 @@ public class SplashActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Verifica la disponibilidad de Google Play Services
+     */
     private boolean checkGooglePlayServices() {
-    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-    int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
-    if (resultCode != ConnectionResult.SUCCESS) {
-        if (apiAvailability.isUserResolvableError(resultCode)) {
-            apiAvailability.getErrorDialog(this, resultCode, 1)
-                    .show();
-        } else {
-            Log.e(TAG, "Este dispositivo no es compatible con Google Play Services");
-            Toast.makeText(this, "Este dispositivo no es compatible con Google Play Services", 
-                          Toast.LENGTH_LONG).show();
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        int resultCode = apiAvailability.isGooglePlayServicesAvailable(this);
+        if (resultCode != ConnectionResult.SUCCESS) {
+            if (apiAvailability.isUserResolvableError(resultCode)) {
+                apiAvailability.getErrorDialog(this, resultCode, 1)
+                        .show();
+            } else {
+                Log.e(TAG, "Este dispositivo no es compatible con Google Play Services");
+                Toast.makeText(this, "Este dispositivo no es compatible con Google Play Services", 
+                            Toast.LENGTH_LONG).show();
+            }
+            return false;
         }
-        return false;
+        return true;
     }
-    return true;
-}
 
-    // Sobreescribir onPause para cerrar diálogos
     @Override
     protected void onPause() {
         super.onPause();
         closeActiveDialog();
     }
 
-    // Sobreescribir onDestroy para cerrar diálogos
     @Override
     protected void onDestroy() {
         closeActiveDialog();
