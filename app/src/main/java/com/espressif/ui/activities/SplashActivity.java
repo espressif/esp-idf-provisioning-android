@@ -28,25 +28,11 @@ import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
 
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.GoogleAuthProvider;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
-import com.google.firebase.FirebaseApp;
-import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.auth.IdpResponse;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.MutableData;
-import com.google.firebase.database.Transaction;
+import com.espressif.data.model.User;
+import com.espressif.data.repository.UserRepository;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class SplashActivity extends AppCompatActivity {
 
@@ -56,12 +42,11 @@ public class SplashActivity extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
     private ActivityResultLauncher<Intent> googleSignInLauncher;
 
-    private FirebaseAuth firebaseAuth;
-    private DatabaseReference mDatabase; 
-
     private AlertDialog activeDialog;
 
     private static final int RC_SIGN_IN = 123;
+
+    private UserRepository userRepository;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -75,35 +60,11 @@ public class SplashActivity extends AppCompatActivity {
             return;
         }
         
+        // Inicializar repositorio
+        userRepository = UserRepository.getInstance(this);
+        
         // Inicializar SharedPreferences
         preferences = getSharedPreferences(AppConstants.PREF_NAME_USER, MODE_PRIVATE);
-        
-        // Inicializar Firebase explícitamente
-        try {
-            // Verificar si Firebase ya está inicializado
-            List<FirebaseApp> firebaseApps = FirebaseApp.getApps(this);
-            if (firebaseApps.isEmpty()) {
-                // Si no hay apps de Firebase inicializadas, inicializar
-                FirebaseApp.initializeApp(this);
-                Log.d(TAG, "Firebase inicializado explícitamente");
-            } else {
-                Log.d(TAG, "Firebase ya estaba inicializado. Apps: " + firebaseApps.size());
-            }
-            
-            // Obtener instancias después de la inicialización
-            firebaseAuth = FirebaseAuth.getInstance();
-            mDatabase = FirebaseDatabase.getInstance().getReference();
-            
-            if (firebaseAuth != null) {
-                Log.d(TAG, "FirebaseAuth inicializado correctamente");
-            } else {
-                Log.e(TAG, "FirebaseAuth es null después de la inicialización");
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Error al inicializar Firebase: " + e.getMessage(), e);
-            // Continuar de todos modos, utilizaremos el flujo alternativo
-            firebaseAuth = null;
-        }
         
         // Configurar Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -133,9 +94,9 @@ public class SplashActivity extends AppCompatActivity {
      * Verifica el estado del usuario y dirige al flujo correspondiente
      */
     private void checkUserStatus() {
-        String userType = preferences.getString(AppConstants.KEY_USER_TYPE, null);
-        boolean isLoggedIn = preferences.getBoolean(AppConstants.KEY_IS_LOGGED_IN, false);
-        boolean hasCompletedProvisioning = preferences.getBoolean(AppConstants.KEY_HAS_COMPLETED_PROVISIONING, false);
+        String userType = userRepository.getUserType();
+        boolean isLoggedIn = userRepository.isUserLoggedIn();
+        boolean hasCompletedProvisioning = userRepository.hasCompletedProvisioning();
 
         if (userType == null) {
             // Primera vez - mostrar diálogo de selección
@@ -197,12 +158,10 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Guarda el tipo de usuario en SharedPreferences
+     * Guarda el tipo de usuario
      */
     private void saveUserType(String userType) {
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putString(AppConstants.KEY_USER_TYPE, userType);
-        editor.apply();
+        userRepository.saveUserType(userType);
     }
 
     /**
@@ -256,50 +215,29 @@ public class SplashActivity extends AppCompatActivity {
             
             Log.d(TAG, "Google Sign In successful, account: " + account.getEmail());
 
-            // Intentar inicializar Firebase nuevamente si es necesario
-            if (firebaseAuth == null) {
-                try {
-                    FirebaseApp.initializeApp(this);
-                    firebaseAuth = FirebaseAuth.getInstance();
-                    mDatabase = FirebaseDatabase.getInstance().getReference();
-                    Log.d(TAG, "Reintento de inicialización de Firebase: " + 
-                          (firebaseAuth != null ? "exitoso" : "fallido"));
-                } catch (Exception e) {
-                    Log.e(TAG, "Error en reintento de inicialización de Firebase", e);
+            // Usar el repositorio para iniciar sesión
+            userRepository.signInWithGoogle(account, new UserRepository.AuthCallback() {
+                @Override
+                public void onSuccess(User user) {
+                    Log.d(TAG, "Inicio de sesión exitoso para: " + user.getName());
+                    Toast.makeText(SplashActivity.this, "Bienvenido " + user.getName(), Toast.LENGTH_SHORT).show();
+                    startEspMainActivity();
                 }
-            }
 
-            // Verificar si Firebase Auth está disponible
-            if (firebaseAuth == null) {
-                Log.e(TAG, "FirebaseAuth is null, skipping Firebase authentication");
-                directSignInWithoutFirebase(account);
-                return;
-            }
-
-            // Use Firebase Authentication
-            AuthCredential credential = GoogleAuthProvider.getCredential(account.getIdToken(), null);
-            firebaseAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = firebaseAuth.getCurrentUser();
-                        if (user != null) {
-                            saveUserToDatabase(user);
-                        } else {
-                            Log.e(TAG, "Firebase user is null after successful authentication");
-                            directSignInWithoutFirebase(account);
-                        }
-                    } else {
-                        Log.e(TAG, "Firebase authentication failed", task.getException());
-                        directSignInWithoutFirebase(account);
-                    }
-                });
+                @Override
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "Error en inicio de sesión: " + errorMessage);
+                    Toast.makeText(SplashActivity.this, "Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+                    showUserTypeDialog();
+                }
+            });
 
         } catch (ApiException e) {
             Log.e(TAG, "Google Sign In failed: " + e.getStatusCode(), e);
             showUserTypeDialog();
         } catch (Exception e) {
             Log.e(TAG, "Unexpected error in Google Sign In", e);
-            directSignInWithoutFirebase(null);
+            showUserTypeDialog();
         }
     }
 
@@ -313,83 +251,6 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     /**
-     * Guarda la información del usuario en la base de datos
-     */
-    private void saveUserToDatabase(FirebaseUser user) {
-        try {
-            String userId = user.getUid();
-            
-            // Crear mapa con datos del usuario
-            Map<String, Object> userData = new HashMap<>();
-            userData.put("email", user.getEmail());
-            userData.put("name", user.getDisplayName());
-            userData.put("userType", preferences.getString(AppConstants.KEY_USER_TYPE, "unknown"));
-            userData.put("lastLogin", ServerValue.TIMESTAMP);
-            
-            // Guardar datos en Firebase
-            mDatabase.child("users").child(userId).setValue(userData)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Log.d(TAG, "User data saved successfully");
-                        completeSignIn(user.getDisplayName());
-                    } else {
-                        Log.e(TAG, "Failed to save user data", task.getException());
-                        // Continuar de todos modos
-                        completeSignIn(user.getDisplayName());
-                    }
-                });
-        } catch (Exception e) {
-            Log.e(TAG, "Error saving user to database", e);
-            // Continuar de todos modos
-            completeSignIn(user.getDisplayName());
-        }
-    }
-
-    /**
-     * Método alternativo para iniciar sesión sin Firebase
-     */
-    private void directSignInWithoutFirebase(GoogleSignInAccount account) {
-        String displayName = (account != null) ? account.getDisplayName() : "Usuario";
-        String email = (account != null) ? account.getEmail() : "";
-        
-        // Guardar información básica en SharedPreferences
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, true);
-        if (email != null && !email.isEmpty()) {
-            editor.putString("user_email", email);
-        }
-        if (displayName != null && !displayName.isEmpty()) {
-            editor.putString("user_name", displayName);
-        }
-        editor.apply();
-        
-        Log.d(TAG, "Direct sign-in without Firebase completed");
-        Toast.makeText(this, "Bienvenido " + displayName, Toast.LENGTH_SHORT).show();
-        
-        // Continuar con el flujo normal
-        startEspMainActivity();
-    }
-
-    /**
-     * Completa el proceso de inicio de sesión
-     */
-    private void completeSignIn(String displayName) {
-        // Guardar estado de inicio de sesión
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, true);
-        editor.apply();
-        
-        // Nombre a mostrar
-        String name = displayName != null ? displayName : "Usuario";
-        
-        Log.d(TAG, "Sesión completada para: " + name);
-        Toast.makeText(this, "Bienvenido " + name, Toast.LENGTH_SHORT).show();
-        
-        // Ir a la actividad principal
-        startEspMainActivity();
-    }
-
-    /**
      * Cierra cualquier diálogo activo
      */
     private void closeActiveDialog() {
@@ -398,64 +259,6 @@ public class SplashActivity extends AppCompatActivity {
                 activeDialog.dismiss();
             } catch (Exception e) {
                 Log.e(TAG, "Error al cerrar diálogo: " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Inicia la autenticación usando FirebaseUI
-     */
-    private void startFirebaseUIAuth() {
-        // Cerrar cualquier diálogo activo
-        closeActiveDialog();
-        
-        // Configurar proveedores
-        List<AuthUI.IdpConfig> providers = Arrays.asList(
-                new AuthUI.IdpConfig.GoogleBuilder().build());
-
-        // Crear y lanzar el intent de inicio de sesión
-        Intent signInIntent = AuthUI.getInstance()
-                .createSignInIntentBuilder()
-                .setAvailableProviders(providers)
-                .setLogo(R.mipmap.ic_launcher) // Logo de la app
-                .setTheme(R.style.AppTheme) // Tema de la app
-                .build();
-        
-        startActivityForResult(signInIntent, RC_SIGN_IN);
-    }
-
-    /**
-     * Maneja el resultado de FirebaseUI
-     */
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == RC_SIGN_IN) {
-            IdpResponse response = IdpResponse.fromResultIntent(data);
-
-            if (resultCode == RESULT_OK) {
-                // Usuario autenticado correctamente
-                FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                if (user != null) {
-                    // Guardar en la base de datos
-                    saveUserToDatabase(user);
-                } else {
-                    // Raro pero podría ocurrir
-                    Log.e(TAG, "Usuario autenticado pero FirebaseUser es null");
-                    completeSignIn(null);
-                }
-            } else {
-                // Error o cancelación del inicio de sesión
-                if (response == null) {
-                    Log.d(TAG, "Inicio de sesión cancelado por el usuario");
-                    Toast.makeText(this, "Inicio de sesión cancelado", Toast.LENGTH_SHORT).show();
-                    showUserTypeDialog(); // Volver a mostrar diálogo
-                } else {
-                    Log.e(TAG, "Error en inicio de sesión: " + response.getError());
-                    Toast.makeText(this, "Error al iniciar sesión", Toast.LENGTH_SHORT).show();
-                    showUserTypeDialog(); // Volver a mostrar diálogo
-                }
             }
         }
     }
