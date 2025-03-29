@@ -39,12 +39,16 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
+import androidx.fragment.app.FragmentManager;
 
 import com.espressif.AppConstants;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.mediwatch.BuildConfig;
 import com.espressif.mediwatch.R;
+import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
+import com.espressif.ui.activities.mqtt_activities.ProgressDialogFragment;
+import com.google.android.material.button.MaterialButton;
 
 public class EspMainActivity extends AppCompatActivity {
 
@@ -55,10 +59,13 @@ public class EspMainActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 2;
 
     private ESPProvisionManager provisionManager;
-    private CardView btnAddDevice;
+    private MaterialButton btnAddDevice;
     private ImageView ivEsp;
     private SharedPreferences sharedPreferences;
     private String deviceType;
+    private MaterialButton btnFindDevice;
+    private DeviceConnectionChecker deviceChecker;
+    private ProgressDialogFragment progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -145,9 +152,14 @@ public class EspMainActivity extends AppCompatActivity {
     private void initViews() {
 
         ivEsp = findViewById(R.id.iv_esp);
+
+        // Inicializar el botón de provisioning (asegúrate de usar el ID correcto)
         btnAddDevice = findViewById(R.id.btn_provision_device);
-        btnAddDevice.findViewById(R.id.iv_arrow).setVisibility(View.GONE);
         btnAddDevice.setOnClickListener(addDeviceBtnClickListener);
+
+        // Inicializar el botón de búsqueda de dispositivos
+        btnFindDevice = findViewById(R.id.btn_find_device);
+        btnFindDevice.setOnClickListener(findDeviceBtnClickListener);
 
         TextView tvAppVersion = findViewById(R.id.tv_app_version);
 
@@ -175,6 +187,13 @@ public class EspMainActivity extends AppCompatActivity {
                 }
             }
             addDeviceClick();
+        }
+    };
+
+    View.OnClickListener findDeviceBtnClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            searchForDevice();
         }
     };
 
@@ -338,5 +357,130 @@ public class EspMainActivity extends AppCompatActivity {
         Intent intent = new Intent(EspMainActivity.this, ProvisionLanding.class);
         intent.putExtra(AppConstants.KEY_SECURITY_TYPE, securityType);
         startActivity(intent);
+    }
+
+    private void searchForDevice() {
+        // Mostrar diálogo de progreso
+        showProgressDialog(getString(R.string.device_search_title),
+                getString(R.string.device_search_message));
+
+        // Inicializar el DeviceConnectionChecker
+        deviceChecker = new DeviceConnectionChecker(this);
+
+        // Comprobar conexión del dispositivo
+        deviceChecker.checkConnection(new DeviceConnectionChecker.ConnectionCheckListener() {
+            @Override
+            public void onConnectionCheckResult(boolean isConnected) {
+                runOnUiThread(() -> {
+                    // Cerrar diálogo de progreso
+                    dismissProgressDialog();
+
+                    if (isConnected) {
+                        // Mostrar mensaje de éxito
+                        Toast.makeText(EspMainActivity.this,
+                                getString(R.string.device_found),
+                                Toast.LENGTH_SHORT).show();
+
+                        // Guardar estado de provisioning
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putBoolean(AppConstants.KEY_IS_PROVISIONED, true);
+                        editor.apply();
+
+                        // Ir a la pantalla principal (o donde quieras ir después de encontrar un dispositivo)
+                        // Aquí puedes iniciar tu actividad principal de monitoreo
+                        // Por ejemplo:
+                        // Intent intent = new Intent(EspMainActivity.this, MonitorActivity.class);
+                        // startActivity(intent);
+                        // finish();
+
+                        // Por ahora, solo mostraremos un mensaje
+                        showSuccessDialog();
+                    } else {
+                        // Mostrar mensaje de error
+                        showErrorDialog(getString(R.string.no_device_found),
+                                "No se detectó ningún dispositivo ESP32 en la red. " +
+                                        "Asegúrate de que el dispositivo esté encendido y conectado a WiFi.");
+                    }
+
+                    // Liberar recursos
+                    if (deviceChecker != null) {
+                        deviceChecker.release();
+                        deviceChecker = null;
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                runOnUiThread(() -> {
+                    // Cerrar diálogo de progreso
+                    dismissProgressDialog();
+
+                    // Mostrar mensaje de error
+                    showErrorDialog(getString(R.string.device_search_error), errorMessage);
+
+                    // Liberar recursos
+                    if (deviceChecker != null) {
+                        deviceChecker.release();
+                        deviceChecker = null;
+                    }
+                });
+            }
+        });
+    }
+
+    private void showProgressDialog(String title, String message) {
+        FragmentManager fm = getSupportFragmentManager();
+
+        // Cerrar diálogo existente si hay alguno
+        if (progressDialog != null && progressDialog.isAdded()) {
+            progressDialog.dismiss();
+        }
+
+        // Crear y mostrar nuevo diálogo
+        progressDialog = ProgressDialogFragment.newInstance(title, message);
+        progressDialog.setOnCancelListener(dialog -> {
+            // Cancelar búsqueda si el usuario cierra el diálogo
+            if (deviceChecker != null) {
+                deviceChecker.release();
+                deviceChecker = null;
+            }
+        });
+        progressDialog.show(fm, "progress_dialog");
+    }
+
+    private void dismissProgressDialog() {
+        if (progressDialog != null && progressDialog.isAdded()) {
+            progressDialog.dismiss();
+            progressDialog = null;
+        }
+    }
+
+    private void showErrorDialog(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.btn_ok, null)
+                .show();
+    }
+
+    private void showSuccessDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.device_found))
+                .setMessage("¡Se ha encontrado un dispositivo ESP32 en la red! " +
+                        "Ya puedes comenzar a monitorearlo.")
+                .setPositiveButton(R.string.btn_ok, null)
+                .show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Asegurarse de liberar los recursos MQTT
+        if (deviceChecker != null) {
+            deviceChecker.release();
+            deviceChecker = null;
+        }
     }
 }

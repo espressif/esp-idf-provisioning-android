@@ -56,4 +56,13 @@ public class AppConstants {
     public static final String KEY_HAS_COMPLETED_PROVISIONING = "hasCompletedProvisioning";
     public static final String USER_TYPE_PATIENT = "patient";
     public static final String USER_TYPE_FAMILY = "family";
+
+    // MQTT constants
+    public static final String MQTT_BROKER_URL = "tcp://broker.emqx.io:1883"; // Actualiza esta URL a tu broker real
+    public static final String MQTT_TOPIC_DEVICE_COMMANDS = "/device/commands";
+    public static final String MQTT_TOPIC_DEVICE_STATUS = "/device/status";
+    public static final String MQTT_TOPIC_DEVICE_TELEMETRY = "/device/telemetry";
+    public static final String MQTT_TOPIC_DEVICE_RESPONSE = "/device/response";
+    public static final int MQTT_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos de timeout
+    public static final String KEY_IS_PROVISIONED = "is_provisioned";
 }

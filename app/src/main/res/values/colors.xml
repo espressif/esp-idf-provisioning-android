@@ -9,4 +9,8 @@
     <color name="color_orange">#ff5207</color>
     <color name="color_dark_gray">#555555</color>
 
+    <!-- Colores -->
+    <color name="colorBackground">#FFFFFF</color>
+    <color name="colorText">#1a1a1a</color>
+    <color name="colorTextSecondary">#757575</color>
 </resources>

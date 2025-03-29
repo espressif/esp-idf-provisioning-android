@@ -147,4 +147,19 @@
     <string name="dialog_msg_location_permission_use">It is required to connect nearby Bluetooth devices.</string>
     <string name="dialog_title_nearby_devices_permission">Nearby Devices Permission</string>
     <string name="dialog_msg_nearby_devices_permission_use">Nearby Devices permission is required for scanning and connecting to BLE devices. Please grant it in Settings.</string>
+
+    <!--Encontrar dispositivo-->
+    <string name="find_device">Buscar dispositivo existente</string>
+    <string name="finding_device">Buscando dispositivos...</string>
+    <string name="device_found">¡Dispositivo encontrado!</string>
+    <string name="no_device_found">No se encontraron dispositivos</string>
+    <string name="device_connection_error">Error de conexión</string>
+    <string name="connect_to_found_device">Conectar</string>
+    <string name="searching_mqtt">Buscando dispositivos en la red...</string>
+    <string name="mqtt_connection_success">Conexión MQTT establecida</string>
+    <string name="mqtt_connection_error">Error en conexión MQTT</string>
+    <string name="device_search_error">Error al buscar dispositivo</string>
+    <string name="device_search_title">Buscando dispositivo</string>
+    <string name="device_search_message">Buscando dispositivos ESP32 en la red...</string>
+
 </resources>
