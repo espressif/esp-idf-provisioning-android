@@ -10,9 +10,9 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.espressif.AppConstants;
-import com.espressif.ui.activities.mqtt_activities.CustomMqttMessage;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,6 +23,9 @@ public class DeviceConnectionChecker {
     private final MqttHandler mqttHandler;
     private final Handler handler;
     private final String clientId;
+    private Runnable timeoutRunnable;
+    private ConnectionCheckListener currentListener;
+    private final AtomicBoolean isChecking = new AtomicBoolean(false);
     
     // Interfaz para notificar el resultado de la verificación
     public interface ConnectionCheckListener {
@@ -32,11 +35,8 @@ public class DeviceConnectionChecker {
     
     public DeviceConnectionChecker(Context context) {
         this.handler = new Handler(Looper.getMainLooper());
-        
-        // Crear ID de cliente único para este checker
         this.clientId = UUID.randomUUID().toString().substring(0, 8);
         
-        // Configurar el MQTT Handler con un callback específico
         this.mqttHandler = new MqttHandler(context, new MqttCallback() {
             @Override
             public void connectionLost(Throwable cause) {
@@ -45,43 +45,72 @@ public class DeviceConnectionChecker {
 
             @Override
             public void messageArrived(String topic, MqttMessage mqttMessage) {
-                if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_STATUS)) {
-                    try {
-                        // Convertir el mensaje MQTT a nuestro propio formato usando el nuevo método estático
-                        String payload = new String(mqttMessage.getPayload());
-                        CustomMqttMessage message = CustomMqttMessage.fromJson(payload);
+                String payload = new String(mqttMessage.getPayload());
+                
+                // Verificar si es nuestro propio mensaje PING
+                if (payload.contains("\"type\":\"ping\"") && payload.contains("\"clientId\":\"" + clientId + "\"")) {
+                    return; // Ignorar nuestros propios mensajes ping
+                }
+                
+                // Verificar si es un PONG para nosotros usando String.contains (método rápido)
+                if (payload.contains("\"type\":\"pong\"") && payload.contains("\"clientId\":\"" + clientId + "\"")) {
+                    // Determinar si está online
+                    boolean isOnline = payload.contains("\"status\":\"online\"") || !payload.contains("\"status\":\"offline\"");
+                    
+                    // Notificar al listener
+                    notifyListenerAndCleanup(isOnline);
+                    return;
+                }
+                
+                // Intentar con la clase CustomMqttMessage
+                try {
+                    CustomMqttMessage message = CustomMqttMessage.fromJson(payload);
+                    
+                    // Solo procesamos si es un mensaje PONG
+                    if (message.isPong()) {
+                        String msgClientId = message.getClientId();
                         
-                        // Verificar si este mensaje es para nosotros (basado en el clientId)
-                        if (message.isPong() && clientId.equals(message.getClientId())) {
-                            // Si recibimos un pong con nuestro clientId, cancelar el timeout y notificar éxito
-                            boolean isOnline = message.isOnline();
-                            Log.d(TAG, "Received PONG response. Device is " + 
-                                  (isOnline ? "online" : "offline"));
-                            
-                            // Pasar el resultado al listener actual
-                            if (currentListener != null) {
-                                currentListener.onConnectionCheckResult(isOnline);
-                                currentListener = null; // Evitar llamadas duplicadas
-                            }
-                            
-                            // Cancelar el timeout
-                            handler.removeCallbacksAndMessages(null);
+                        // Verificar si el mensaje es para esta instancia
+                        if (clientId.equals(msgClientId)) {
+                            notifyListenerAndCleanup(message.isOnline());
                         }
-                    } catch (JSONException e) {
-                        Log.e(TAG, "Error parsing received message", e);
                     }
+                } catch (JSONException e) {
+                    Log.e(TAG, "Error al procesar mensaje", e);
                 }
             }
 
             @Override
             public void deliveryComplete(IMqttDeliveryToken token) {
-                // No necesitamos manejar esto
+                // No necesitamos implementar esto
             }
         });
     }
     
-    private ConnectionCheckListener currentListener;
-    private final AtomicBoolean isChecking = new AtomicBoolean(false);
+    /**
+     * Notifica al listener y limpia recursos
+     */
+    private void notifyListenerAndCleanup(boolean isConnected) {
+        ConnectionCheckListener listenerToNotify = currentListener;
+        
+        if (listenerToNotify != null) {
+            // Limpiar variables
+            currentListener = null;
+            
+            // Cancelar el timeout
+            if (timeoutRunnable != null) {
+                handler.removeCallbacks(timeoutRunnable);
+                timeoutRunnable = null;
+            }
+            
+            isChecking.set(false);
+            
+            // Notificar en el hilo principal
+            handler.post(() -> {
+                listenerToNotify.onConnectionCheckResult(isConnected);
+            });
+        }
+    }
     
     /**
      * Verificar si el dispositivo ESP32 está conectado
@@ -102,34 +131,46 @@ public class DeviceConnectionChecker {
                 mqttHandler.connect();
             }
             
-            // Suscribirse al tema de estado
+            // Suscribirse a múltiples tópicos
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
             mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
+            mqttHandler.subscribe("/device/#", 1);
             
-            // Enviar mensaje ping
+            // Crear mensaje ping con CustomMqttMessage
             CustomMqttMessage pingMessage = CustomMqttMessage.createPing(null, true);
-            
-            // Añadir el clientId al mensaje ping para identificar nuestra solicitud
             pingMessage.addPayload("clientId", clientId);
             
-            // Publicar el mensaje en el tópico de estado
-            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_STATUS, pingMessage.toString());
+            // Añadir el clientId también al nivel raíz para compatibilidad
+            JSONObject jsonObj = new JSONObject(pingMessage.toString());
+            jsonObj.put("clientId", clientId);
             
-            Log.d(TAG, "Ping sent to device, waiting for response with clientId " + clientId);
+            // Publicar el mensaje de ping
+            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, jsonObj.toString());
             
             // Configurar timeout
-            handler.postDelayed(() -> {
-                if (currentListener != null) {
-                    Log.d(TAG, "Connection check timeout");
-                    currentListener.onConnectionCheckResult(false);
-                    currentListener = null;
+            this.timeoutRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    ConnectionCheckListener listenerToNotify = currentListener;
+                    if (listenerToNotify != null) {
+                        // Limpiar referencias
+                        currentListener = null;
+                        timeoutRunnable = null;
+                        isChecking.set(false);
+                        
+                        // Notificar timeout
+                        listenerToNotify.onConnectionCheckResult(false);
+                    }
                 }
-                isChecking.set(false);
-            }, AppConstants.MQTT_CONNECTION_TIMEOUT_MS);
+            };
+            
+            // Programar el timeout
+            handler.postDelayed(timeoutRunnable, AppConstants.MQTT_CONNECTION_TIMEOUT_MS);
             
         } catch (MqttException | JSONException e) {
-            Log.e(TAG, "Error during connection check", e);
+            Log.e(TAG, "Error en la verificación de conexión", e);
             if (currentListener != null) {
-                currentListener.onError("Error: " + e.getMessage());
+                listener.onError("Error: " + e.getMessage());
                 currentListener = null;
             }
             isChecking.set(false);
@@ -140,6 +181,10 @@ public class DeviceConnectionChecker {
      * Liberar recursos
      */
     public void release() {
+        if (timeoutRunnable != null) {
+            handler.removeCallbacks(timeoutRunnable);
+            timeoutRunnable = null;
+        }
         handler.removeCallbacksAndMessages(null);
         mqttHandler.disconnect();
     }
