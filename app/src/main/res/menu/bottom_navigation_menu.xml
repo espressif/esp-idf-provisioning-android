@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_home"
+        android:icon="@drawable/ic_home"
+        android:title="@string/title_home" />
+
+    <item
+        android:id="@+id/navigation_dispenser"
+        android:icon="@drawable/ic_dispenser"
+        android:title="@string/title_dispenser" />
+
+    <item
+        android:id="@+id/navigation_smartwatch"
+        android:icon="@drawable/ic_watch"
+        android:title="@string/title_smartwatch" />
+
+    <item
+        android:id="@+id/navigation_settings"
+        android:icon="@drawable/ic_settings"
+        android:title="@string/title_settings" />
+</menu>

@@ -46,6 +46,7 @@ import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.mediwatch.BuildConfig;
 import com.espressif.mediwatch.R;
+import com.espressif.ui.activities.MainActivity; // ← AÑADE ESTA IMPORTACIÓN
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.activities.mqtt_activities.ProgressDialogFragment;
 import com.google.android.material.button.MaterialButton;
@@ -386,15 +387,10 @@ public class EspMainActivity extends AppCompatActivity {
                         editor.putBoolean(AppConstants.KEY_IS_PROVISIONED, true);
                         editor.apply();
 
-                        // Ir a la pantalla principal (o donde quieras ir después de encontrar un dispositivo)
-                        // Aquí puedes iniciar tu actividad principal de monitoreo
-                        // Por ejemplo:
-                        // Intent intent = new Intent(EspMainActivity.this, MonitorActivity.class);
-                        // startActivity(intent);
-                        // finish();
-
-                        // Por ahora, solo mostraremos un mensaje
-                        showSuccessDialog();
+                        // Ir a la pantalla principal
+                        Intent intent = new Intent(EspMainActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        finish(); // Cerrar esta actividad para no volver a ella con el botón atrás
                     } else {
                         // Mostrar mensaje de error
                         showErrorDialog(getString(R.string.no_device_found),
@@ -469,8 +465,22 @@ public class EspMainActivity extends AppCompatActivity {
                 .setTitle(getString(R.string.device_found))
                 .setMessage("¡Se ha encontrado un dispositivo ESP32 en la red! " +
                         "Ya puedes comenzar a monitorearlo.")
-                .setPositiveButton(R.string.btn_ok, null)
+                .setPositiveButton(R.string.btn_ok, (dialog, which) -> {
+                    // Navegar a MainActivity cuando el usuario presione OK
+                    navigateToMainActivity();
+                })
                 .show();
+    }
+
+    /**
+     * Navega a la pantalla principal de la aplicación
+     */
+    private void navigateToMainActivity() {
+        Intent intent = new Intent(EspMainActivity.this, MainActivity.class);
+        // Agregar banderas para limpiar la pila de actividades anteriores
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish(); // Finalizar esta actividad para que no quede en segundo plano
     }
 
     @Override

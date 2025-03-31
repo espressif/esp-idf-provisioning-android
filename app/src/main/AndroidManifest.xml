@@ -103,6 +103,10 @@
             android:label="@string/title_activity_pop"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name="com.espressif.ui.activities.MainActivity"
+            android:exported="false"
+            android:label="@string/title_activity_main" />
         <service android:name="org.eclipse.paho.android.service.MqttService" />
         
     </application>

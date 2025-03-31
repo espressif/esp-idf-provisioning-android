@@ -86,8 +86,13 @@ public class CustomMqttMessage {
     }
 
     public String getClientId() throws JSONException {
+        // Primero buscar en el payload
         if (json.has("payload") && json.getJSONObject("payload").has("clientId")) {
             return json.getJSONObject("payload").getString("clientId");
+        }
+        // Si no está en el payload, buscar en la raíz
+        else if (json.has("clientId")) {
+            return json.getString("clientId");
         }
         return null;
     }
