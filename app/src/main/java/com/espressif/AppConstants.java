@@ -57,6 +57,12 @@ public class AppConstants {
     public static final String USER_TYPE_PATIENT = "patient";
     public static final String USER_TYPE_FAMILY = "family";
 
+    // Claves para SharedPreferences
+    public static final String KEY_PATIENT_ID = "patient_id";
+    public static final String KEY_CONNECTED_PATIENT_ID = "connected_patient_id";
+    public static final String KEY_CONNECTED_PATIENT_EMAIL = "connected_patient_email";
+    public static final String KEY_CONNECTED_PATIENT_NAME = "connected_patient_name";
+
     // MQTT constants
     public static final String MQTT_BROKER_URL = "tcp://broker.emqx.io:1883"; // Actualiza esta URL a tu broker real
     public static final String MQTT_TOPIC_DEVICE_COMMANDS = "/device/commands";

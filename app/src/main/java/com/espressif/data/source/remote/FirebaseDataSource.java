@@ -3,14 +3,19 @@ package com.espressif.data.source.remote;
 import android.content.Context;
 import android.util.Log;
 
-import com.google.firebase.FirebaseApp;
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Map;
 
@@ -24,7 +29,7 @@ public class FirebaseDataSource {
     private boolean isInitialized = false;
 
     private FirebaseDataSource() {
-        // Constructor privado para Singleton
+        // Constructor privado para patrón singleton
     }
 
     public static synchronized FirebaseDataSource getInstance() {
@@ -35,30 +40,17 @@ public class FirebaseDataSource {
     }
 
     /**
-     * Inicializa Firebase en la aplicación
+     * Inicializa Firebase
      */
-    public boolean initialize(Context context) {
+    public void initialize(Context context) {
         try {
-            // Verificar si Firebase ya está inicializado
-            if (FirebaseApp.getApps(context).isEmpty()) {
-                FirebaseApp.initializeApp(context);
-                Log.d(TAG, "Firebase inicializado explícitamente");
-            } else {
-                Log.d(TAG, "Firebase ya estaba inicializado");
-            }
-
-            // Obtener instancias
+            FirebaseAuth.getInstance();
             firebaseAuth = FirebaseAuth.getInstance();
             databaseReference = FirebaseDatabase.getInstance().getReference();
-
-            isInitialized = (firebaseAuth != null);
-            Log.d(TAG, "Estado de inicialización de Firebase: " + (isInitialized ? "Exitoso" : "Fallido"));
-            
-            return isInitialized;
+            isInitialized = true;
         } catch (Exception e) {
-            Log.e(TAG, "Error al inicializar Firebase: " + e.getMessage(), e);
+            Log.e(TAG, "Error al inicializar Firebase: " + e.getMessage());
             isInitialized = false;
-            return false;
         }
     }
 
@@ -70,106 +62,86 @@ public class FirebaseDataSource {
     }
 
     /**
-     * Autentica al usuario con Google
+     * Iniciar sesión con Google
      */
     public void signInWithGoogle(String idToken, AuthCallback callback) {
-        if (!isInitialized) {
-            callback.onError("Firebase no está inicializado");
-            return;
-        }
-
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         firebaseAuth.signInWithCredential(credential)
-            .addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    FirebaseUser user = firebaseAuth.getCurrentUser();
-                    if (user != null) {
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = firebaseAuth.getCurrentUser();
                         callback.onSuccess(user);
                     } else {
-                        callback.onError("Usuario autenticado pero FirebaseUser es null");
+                        callback.onError(task.getException() != null ? 
+                                       task.getException().getMessage() : "Error desconocido");
                     }
-                } else {
-                    callback.onError("Error en la autenticación: " + 
-                        (task.getException() != null ? task.getException().getMessage() : "Desconocido"));
-                }
-            });
+                });
     }
 
     /**
-     * Guarda datos del usuario en la base de datos
+     * Guarda datos del usuario
      */
     public void saveUserData(String userId, Map<String, Object> userData, DatabaseCallback callback) {
-        if (!isInitialized) {
-            callback.onError("Firebase no está inicializado");
-            return;
-        }
-
-        databaseReference.child("users").child(userId).setValue(userData)
-            .addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    callback.onSuccess();
-                } else {
-                    callback.onError("Error al guardar datos: " + 
-                        (task.getException() != null ? task.getException().getMessage() : "Desconocido"));
-                }
-            });
+        databaseReference.child("users").child(userId).updateChildren(userData)
+                .addOnSuccessListener(aVoid -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(e.getMessage()));
     }
 
     /**
-     * Obtiene el usuario actualmente autenticado
+     * Obtiene datos del usuario
      */
-    public FirebaseUser getCurrentUser() {
-        return isInitialized ? firebaseAuth.getCurrentUser() : null;
+    public void getUserData(String userId, DataCallback callback) {
+        databaseReference.child("users").child(userId).addListenerForSingleValueEvent(
+                new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        callback.onSuccess(dataSnapshot);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        callback.onError(databaseError.getMessage());
+                    }
+                });
     }
 
     /**
-     * Cierra la sesión del usuario
+     * Cierra la sesión actual
      */
     public void signOut() {
-        if (isInitialized) {
+        if (firebaseAuth != null) {
             firebaseAuth.signOut();
         }
     }
 
     /**
-     * Obtiene la referencia a la base de datos
+     * Obtiene el usuario actual
      */
-    public DatabaseReference getDatabaseReference() {
-        return databaseReference;
+    public FirebaseUser getCurrentUser() {
+        return firebaseAuth != null ? firebaseAuth.getCurrentUser() : null;
     }
 
     /**
-     * Obtiene la referencia a la autenticación
-     */
-    public FirebaseAuth getFirebaseAuth() {
-        return firebaseAuth;
-    }
-
-    /**
-     * Actualiza el timestamp de último login
-     */
-    public void updateLastLogin(String userId, DatabaseCallback callback) {
-        Map<String, Object> updates = Map.of("lastLogin", ServerValue.TIMESTAMP);
-        databaseReference.child("users").child(userId).updateChildren(updates)
-            .addOnCompleteListener(task -> {
-                if (task.isSuccessful()) {
-                    callback.onSuccess();
-                } else {
-                    callback.onError("Error al actualizar último login");
-                }
-            });
-    }
-
-    /**
-     * Interfaces de callback
+     * Interfaz para callbacks de autenticación
      */
     public interface AuthCallback {
         void onSuccess(FirebaseUser user);
         void onError(String errorMessage);
     }
 
+    /**
+     * Interfaz para callbacks de base de datos
+     */
     public interface DatabaseCallback {
         void onSuccess();
+        void onError(String errorMessage);
+    }
+
+    /**
+     * Interfaz para callbacks de consulta de datos
+     */
+    public interface DataCallback {
+        void onSuccess(DataSnapshot dataSnapshot);
         void onError(String errorMessage);
     }
 }

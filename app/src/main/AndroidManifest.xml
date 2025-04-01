@@ -49,11 +49,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name="com.espressif.MediwatchApplication"
-            android:theme="@style/AppTheme.NoActionBar"
-            tools:ignore="Instantiatable" />
         <activity
             android:name="com.espressif.ui.activities.provision_activities.EspMainActivity"
             android:label="@string/title_activity_esp_main"

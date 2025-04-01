@@ -9,9 +9,11 @@ public class SharedPreferencesHelper {
 
     private static SharedPreferencesHelper instance;
     private final SharedPreferences preferences;
+    private final SharedPreferences.Editor editor;
 
     private SharedPreferencesHelper(Context context) {
         preferences = context.getSharedPreferences(AppConstants.PREF_NAME_USER, Context.MODE_PRIVATE);
+        editor = preferences.edit();
     }
 
     public static synchronized SharedPreferencesHelper getInstance(Context context) {
@@ -25,7 +27,8 @@ public class SharedPreferencesHelper {
      * Métodos para userType
      */
     public void saveUserType(String userType) {
-        preferences.edit().putString(AppConstants.KEY_USER_TYPE, userType).apply();
+        editor.putString(AppConstants.KEY_USER_TYPE, userType);
+        editor.apply();
     }
 
     public String getUserType() {
@@ -36,7 +39,8 @@ public class SharedPreferencesHelper {
      * Métodos para estado de login
      */
     public void setLoggedIn(boolean isLoggedIn) {
-        preferences.edit().putBoolean(AppConstants.KEY_IS_LOGGED_IN, isLoggedIn).apply();
+        editor.putBoolean(AppConstants.KEY_IS_LOGGED_IN, isLoggedIn);
+        editor.apply();
     }
 
     public boolean isLoggedIn() {
@@ -47,7 +51,8 @@ public class SharedPreferencesHelper {
      * Métodos para provisioning
      */
     public void setCompletedProvisioning(boolean hasCompleted) {
-        preferences.edit().putBoolean(AppConstants.KEY_HAS_COMPLETED_PROVISIONING, hasCompleted).apply();
+        editor.putBoolean(AppConstants.KEY_HAS_COMPLETED_PROVISIONING, hasCompleted);
+        editor.apply();
     }
 
     public boolean hasCompletedProvisioning() {
@@ -58,7 +63,6 @@ public class SharedPreferencesHelper {
      * Métodos para información del usuario
      */
     public void saveUserInfo(String name, String email) {
-        SharedPreferences.Editor editor = preferences.edit();
         if (name != null) {
             editor.putString("user_name", name);
         }
@@ -77,13 +81,84 @@ public class SharedPreferencesHelper {
     }
 
     /**
+     * Métodos para IDs de paciente
+     */
+    
+    /**
+     * Guarda el ID único del paciente (para usuarios tipo paciente)
+     * @param patientId ID único del paciente
+     */
+    public void savePatientId(String patientId) {
+        editor.putString(AppConstants.KEY_PATIENT_ID, patientId);
+        editor.apply();
+    }
+
+    /**
+     * Obtiene el ID único del paciente
+     * @return El ID del paciente o null si no está disponible
+     */
+    public String getPatientId() {
+        return preferences.getString(AppConstants.KEY_PATIENT_ID, null);
+    }
+
+    /**
+     * Guarda el ID del paciente al que está conectado un familiar
+     * @param patientId ID del paciente al que se conectará
+     */
+    public void saveConnectedPatientId(String patientId) {
+        editor.putString(AppConstants.KEY_CONNECTED_PATIENT_ID, patientId);
+        editor.apply();
+    }
+
+    /**
+     * Obtiene el ID del paciente al que está conectado un familiar
+     * @return ID del paciente conectado o null si no hay conexión
+     */
+    public String getConnectedPatientId() {
+        return preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_ID, null);
+    }
+
+    /**
+     * Guarda el email del paciente conectado (información adicional)
+     */
+    public void saveConnectedPatientEmail(String email) {
+        editor.putString(AppConstants.KEY_CONNECTED_PATIENT_EMAIL, email);
+        editor.apply();
+    }
+
+    /**
+     * Obtiene el email del paciente conectado
+     */
+    public String getConnectedPatientEmail() {
+        return preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_EMAIL, null);
+    }
+
+    /**
+     * Guarda el nombre del paciente conectado
+     */
+    public void saveConnectedPatientName(String name) {
+        editor.putString(AppConstants.KEY_CONNECTED_PATIENT_NAME, name);
+        editor.apply();
+    }
+
+    /**
+     * Obtiene el nombre del paciente conectado
+     */
+    public String getConnectedPatientName() {
+        return preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_NAME, "Paciente");
+    }
+
+    /**
      * Limpiar datos de usuario (logout)
      */
     public void clearUserData() {
-        preferences.edit()
-            .remove(AppConstants.KEY_IS_LOGGED_IN)
+        editor.remove(AppConstants.KEY_IS_LOGGED_IN)
             .remove("user_name")
             .remove("user_email")
+            .remove(AppConstants.KEY_PATIENT_ID)
+            .remove(AppConstants.KEY_CONNECTED_PATIENT_ID)
+            .remove(AppConstants.KEY_CONNECTED_PATIENT_EMAIL)
+            .remove(AppConstants.KEY_CONNECTED_PATIENT_NAME)
             .apply();
     }
 

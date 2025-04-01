@@ -1,0 +1,220 @@
+1. Generar un ID único para el paciente
+
+Puedes modificar la clase UserRepository para generar un ID único cuando un paciente se registra:
+
+javaCopiarpublic void signInWithGoogle(GoogleSignInAccount account, AuthCallback callback) {
+    // Código existente...
+    
+    // Si el usuario es un paciente, generar y asignar un ID único
+    if (getUserType().equals(AppConstants.USER_TYPE_PATIENT)) {
+        String uniquePatientId = generateUniquePatientId();
+        user.setPatientId(uniquePatientId);
+        // Guardar el ID en la database
+        savePatientIdToDatabase(user.getEmail(), uniquePatientId);
+    }
+    
+    // Continuar con el callback...
+}
+
+private String generateUniquePatientId() {
+    // Generar un código alfanumérico de 6 caracteres
+    // Esto es simple pero efectivo para un número razonable de usuarios
+    String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    StringBuilder sb = new StringBuilder();
+    Random random = new Random();
+    for (int i = 0; i < 6; i++) {
+        sb.append(chars.charAt(random.nextInt(chars.length())));
+    }
+    return sb.toString();
+}
+
+private void savePatientIdToDatabase(String email, String patientId) {
+    // Guardar en realtime database
+    DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
+    patientIdsRef.child(patientId).setValue(email);
+    
+    // También guardar en las preferencias locales
+    SharedPreferences.Editor editor = preferences.edit();
+    editor.putString(AppConstants.KEY_PATIENT_ID, patientId);
+    editor.apply();
+}
+2. Modificar la interfaz de usuario para familiares
+Cuando un usuario se identifica como familiar en el SplashActivity, debes agregar un paso adicional para introducir el ID del paciente:
+javaCopiarbtnFamily.setOnClickListener(v -> {
+    // Guardar preferencia
+    saveUserType(AppConstants.USER_TYPE_FAMILY);
+    activeDialog.dismiss();
+    // Para familiares, mostrar diálogo para introducir ID de paciente
+    showFamilyConnectDialog();
+});
+
+3. Crear el diálogo para que el familiar introduzca el ID
+
+javaCopiarprivate void showFamilyConnectDialog() {
+    // Cerrar cualquier diálogo previo que pueda estar abierto
+    closeActiveDialog();
+    
+    AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    LayoutInflater inflater = getLayoutInflater();
+    View dialogView = inflater.inflate(R.layout.dialog_family_connect, null);
+    builder.setView(dialogView);
+    builder.setCancelable(false);
+    
+    activeDialog = builder.create();
+
+    EditText etPatientId = dialogView.findViewById(R.id.et_patient_id);
+    Button btnConnect = dialogView.findViewById(R.id.btn_connect);
+    Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
+
+    btnConnect.setOnClickListener(v -> {
+        String patientId = etPatientId.getText().toString().trim().toUpperCase();
+        if (patientId.isEmpty()) {
+            etPatientId.setError("Por favor ingrese el ID del paciente");
+            return;
+        }
+
+        // Mostrar diálogo de progreso
+        ProgressDialog progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("Conectando...");
+        progressDialog.setCancelable(false);
+        progressDialog.show();
+
+        // Verificar ID en la base de datos
+        verifyPatientId(patientId, new PatientIdVerificationCallback() {
+            @Override
+            public void onVerified(String patientEmail) {
+                progressDialog.dismiss();
+                activeDialog.dismiss();
+                
+                // Guardar el ID del paciente para este familiar
+                userRepository.saveConnectedPatientId(patientId, patientEmail);
+                
+                // Continuar al flujo de provisioning
+                startEspMainActivity();
+            }
+
+            @Override
+            public void onError(String message) {
+                progressDialog.dismiss();
+                Toast.makeText(SplashActivity.this, message, Toast.LENGTH_SHORT).show();
+            }
+        });
+    });
+
+    btnCancel.setOnClickListener(v -> {
+        activeDialog.dismiss();
+        // Si cancela, volvemos al diálogo de selección de tipo
+        showUserTypeDialog();
+    });
+
+    // Mostrar el diálogo
+    if (!isFinishing() && !isDestroyed()) {
+        activeDialog.show();
+    }
+}
+
+// Interfaz para el callback de verificación
+interface PatientIdVerificationCallback {
+    void onVerified(String patientEmail);
+    void onError(String message);
+}
+
+// Método para verificar el ID del paciente
+private void verifyPatientId(String patientId, PatientIdVerificationCallback callback) {
+    DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
+    patientIdsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+        @Override
+        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+            if (dataSnapshot.exists()) {
+                String patientEmail = dataSnapshot.getValue(String.class);
+                callback.onVerified(patientEmail);
+            } else {
+                callback.onError("ID de paciente no válido");
+            }
+        }
+
+        @Override
+        public void onCancelled(@NonNull DatabaseError databaseError) {
+            callback.onError("Error de conexión: " + databaseError.getMessage());
+        }
+    });
+}
+
+4. Crear el layout para el diálogo del familiar
+Crea un nuevo archivo XML dialog_family_connect.xml en tu carpeta de layouts:
+xmlCopiar<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Conectar con paciente"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Por favor, ingrese el código de 6 dígitos proporcionado por el paciente:"
+        android:layout_marginBottom="16dp"/>
+
+    <EditText
+        android:id="@+id/et_patient_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Código del paciente"
+        android:inputType="textCapCharacters"
+        android:maxLength="6"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cancelar"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btn_connect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Conectar"/>
+    </LinearLayout>
+</LinearLayout>
+
+5. Actualizar la clase UserRepository
+Agrega métodos para manejar el ID del paciente en UserRepository:
+javaCopiarpublic void saveConnectedPatientId(String patientId, String patientEmail) {
+    SharedPreferences.Editor editor = preferences.edit();
+    editor.putString(AppConstants.KEY_CONNECTED_PATIENT_ID, patientId);
+    editor.putString(AppConstants.KEY_CONNECTED_PATIENT_EMAIL, patientEmail);
+    editor.apply();
+}
+
+public String getConnectedPatientId() {
+    return preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_ID, null);
+}
+
+public String getPatientId() {
+    return preferences.getString(AppConstants.KEY_PATIENT_ID, null);
+}
+6. Actualizar AppConstants
+Añade estas constantes a la clase AppConstants:
+javaCopiar// Para IDs de pacientes
+public static final String KEY_PATIENT_ID = "patient_id";
+public static final String KEY_CONNECTED_PATIENT_ID = "connected_patient_id";
+public static final String KEY_CONNECTED_PATIENT_EMAIL = "connected_patient_email";
