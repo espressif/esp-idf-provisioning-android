@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.espressif.AppConstants;
 import com.espressif.ui.activities.provision_activities.EspMainActivity;
+import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.mediwatch.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
@@ -33,6 +34,9 @@ import com.espressif.data.repository.UserRepository;
 
 import java.util.Arrays;
 import java.util.List;
+
+import android.app.ProgressDialog;
+import android.widget.Toast;
 
 public class SplashActivity extends AppCompatActivity {
 
@@ -105,16 +109,67 @@ public class SplashActivity extends AppCompatActivity {
             // Es paciente pero no ha iniciado sesión
             showGoogleSignInDialog();
         } else {
-            // Usuario ya configurado, verificar si ha completado el provisioning
-            if (!hasCompletedProvisioning) {
-                // Redirigir a EspMainActivity para provisioning
-                startEspMainActivity();
-            } else {
-                // En el futuro, redirigir a MainActivity con Bottom Navigation
-                // Por ahora, vamos a EspMain
-                startEspMainActivity();
-            }
+            // Usuario ya configurado, verificar si hay dispositivo conectado
+            checkDeviceConnection();
         }
+    }
+
+    /**
+     * Verifica si hay un dispositivo ESP32 conectado antes de decidir qué pantalla mostrar
+     */
+    private void checkDeviceConnection() {
+        // Mostrar un diálogo de progreso
+        AlertDialog progressDialog = new AlertDialog.Builder(this)
+                .setTitle(getString(R.string.device_search_title))
+                .setMessage(getString(R.string.device_search_message))
+                .setCancelable(false)
+                .create();
+        progressDialog.show();
+
+        // Verificar si hay dispositivo conectado
+        DeviceConnectionChecker deviceChecker = new DeviceConnectionChecker(this);
+        deviceChecker.checkConnection(new DeviceConnectionChecker.ConnectionCheckListener() {
+            @Override
+            public void onConnectionCheckResult(boolean isConnected) {
+                runOnUiThread(() -> {
+                    // Cerrar el diálogo de progreso
+                    if (progressDialog.isShowing()) {
+                        progressDialog.dismiss();
+                    }
+
+                    if (isConnected) {
+                        // ¡Genial! Un dispositivo está conectado, vamos directo al MainActivity
+                        Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        // No hay dispositivo conectado, mostrar la pantalla de provisioning
+                        startEspMainActivity();
+                    }
+                    
+                    // Liberar recursos
+                    deviceChecker.release();
+                });
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                // En caso de error, mostrar EspMainActivity por seguridad
+                runOnUiThread(() -> {
+                    // Cerrar el diálogo de progreso
+                    if (progressDialog.isShowing()) {
+                        progressDialog.dismiss();
+                    }
+                    
+                    Log.e(TAG, "Error al verificar dispositivo: " + errorMessage);
+                    // Mostrar la pantalla de provisioning en caso de error
+                    startEspMainActivity();
+                    
+                    // Liberar recursos
+                    deviceChecker.release();
+                });
+            }
+        });
     }
 
     /**

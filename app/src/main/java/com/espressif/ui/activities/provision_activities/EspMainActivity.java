@@ -70,7 +70,6 @@ public class EspMainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_esp_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -79,6 +78,13 @@ public class EspMainActivity extends AppCompatActivity {
 
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
         provisionManager = ESPProvisionManager.getInstance(getApplicationContext());
+        
+        // Mostrar mensaje informativo al usuario
+        new AlertDialog.Builder(this)
+                .setTitle("Configuración de dispositivo")
+                .setMessage("No se ha detectado ningún dispositivo MEDIWATCH en la red. Puedes configurar un nuevo dispositivo o buscar uno existente.")
+                .setPositiveButton("Entendido", null)
+                .show();
     }
 
     @Override
