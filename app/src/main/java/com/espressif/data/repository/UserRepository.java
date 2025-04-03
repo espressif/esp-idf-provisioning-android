@@ -325,7 +325,36 @@ public class UserRepository {
                                     callback.onVerified(patient);
                                 } else {
                                     Log.e(TAG, "No se encontraron datos para el userId: " + userId);
-                                    callback.onError("No se encontraron datos del paciente asociado a este ID");
+                                    
+                                    // Cuando detectemos un patientId válido pero sin datos completos
+                                    Map<String, Object> minimalData = new HashMap<>();
+                                    minimalData.put("name", "Paciente " + finalPatientId);
+                                    minimalData.put("userType", AppConstants.USER_TYPE_PATIENT);
+                                    minimalData.put("patientId", finalPatientId);
+                                    
+                                    // Intentar obtener el email del registro en patient_ids
+                                    String patientEmail = snapshot.child("email").getValue(String.class);
+                                    if (patientEmail != null) {
+                                        minimalData.put("email", patientEmail);
+                                    }
+                                    minimalData.put("createdAt", ServerValue.TIMESTAMP);
+                                    
+                                    // Intentar reparar los datos
+                                    repairUserData(finalPatientId, minimalData);
+                                    
+                                    // Generar un usuario mínimo para continuar el proceso
+                                    User minimalUser = new User();
+                                    minimalUser.setId(userId);
+                                    minimalUser.setName("Paciente " + finalPatientId);
+                                    minimalUser.setEmail(patientEmail);
+                                    minimalUser.setUserType(AppConstants.USER_TYPE_PATIENT);
+                                    minimalUser.setPatientId(finalPatientId);
+                                    
+                                    // Guardar conexión para este familiar
+                                    preferencesHelper.saveConnectedPatientId(finalPatientId);
+                                    
+                                    Log.d(TAG, "Verificación exitosa con datos mínimos para paciente: " + finalPatientId);
+                                    callback.onVerified(minimalUser);
                                 }
                             }
 
@@ -373,6 +402,42 @@ public class UserRepository {
                     Log.e(TAG, "Error al actualizar usuario: " + errorMessage);
                 }
             });
+    }
+
+    /**
+     * Repara los datos faltantes de un usuario basado en su ID de paciente
+     * @param patientId ID del paciente
+     * @param userData Datos mínimos a guardar
+     */
+    public void repairUserData(String patientId, Map<String, Object> userData) {
+        DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
+        patientIdsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    String userId = snapshot.child("userId").getValue(String.class);
+                    if (userId != null) {
+                        // Guardar los datos mínimos en la tabla users
+                        firebaseDataSource.saveUserData(userId, userData, new FirebaseDataSource.DatabaseCallback() {
+                            @Override
+                            public void onSuccess() {
+                                Log.d(TAG, "Datos de usuario reparados para patientId: " + patientId);
+                            }
+
+                            @Override
+                            public void onError(String errorMessage) {
+                                Log.e(TAG, "Error al reparar datos: " + errorMessage);
+                            }
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error al intentar reparar datos: " + error.getMessage());
+            }
+        });
     }
 
     /**
