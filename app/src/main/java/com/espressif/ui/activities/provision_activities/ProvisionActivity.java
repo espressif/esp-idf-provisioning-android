@@ -14,9 +14,12 @@
 
 package com.espressif.ui.activities.provision_activities;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -34,6 +37,7 @@ import com.espressif.mediwatch.R;
 import com.espressif.provisioning.ESPConstants;
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.provisioning.listeners.ProvisionListener;
+import com.espressif.ui.activities.MainActivity;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -259,6 +263,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             progress3.setVisibility(View.GONE);
                             tvErrAtStep3.setVisibility(View.VISIBLE);
                             tvProvError.setVisibility(View.VISIBLE);
+                            btnOk.setVisibility(View.VISIBLE);
                             hideLoading();
                         }
                     });
@@ -275,7 +280,35 @@ public class ProvisionActivity extends AppCompatActivity {
                             tick3.setImageResource(R.drawable.ic_checkbox_on);
                             tick3.setVisibility(View.VISIBLE);
                             progress3.setVisibility(View.GONE);
-                            hideLoading();
+                            
+                            // Ocultar el botón de OK ya que redirigiremos automáticamente
+                            btnOk.setVisibility(View.GONE);
+                            
+                            // Save provisioning status
+                            SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putBoolean(AppConstants.KEY_IS_PROVISIONED, true);
+                            editor.apply();
+                            
+                            // Mostrar un mensaje de éxito temporal
+                            TextView tvSuccess = findViewById(R.id.tv_success_message);
+                            if (tvSuccess != null) {
+                                tvSuccess.setText(R.string.success_provisioning_message);
+                                tvSuccess.setVisibility(View.VISIBLE);
+                            }
+                            
+                            // Wait briefly to show success UI, then navigate to MainActivity
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // Navigate to MainActivity
+                                    Intent intent = new Intent(ProvisionActivity.this, MainActivity.class);
+                                    // Clear activity stack so user can't go back to provisioning
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    startActivity(intent);
+                                    finish();
+                                }
+                            }, 2000); // Aumentamos a 2 segundos para que el usuario pueda ver el mensaje de éxito
                         }
                     });
                 }
@@ -293,6 +326,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             tvErrAtStep3.setVisibility(View.VISIBLE);
                             tvErrAtStep3.setText(R.string.error_prov_step_3);
                             tvProvError.setVisibility(View.VISIBLE);
+                            btnOk.setVisibility(View.VISIBLE);
                             hideLoading();
                         }
                     });
@@ -411,6 +445,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             progress3.setVisibility(View.GONE);
                             tvErrAtStep3.setVisibility(View.VISIBLE);
                             tvProvError.setVisibility(View.VISIBLE);
+                            btnOk.setVisibility(View.VISIBLE);
                             hideLoading();
                         }
                     });
@@ -427,7 +462,35 @@ public class ProvisionActivity extends AppCompatActivity {
                             tick3.setImageResource(R.drawable.ic_checkbox_on);
                             tick3.setVisibility(View.VISIBLE);
                             progress3.setVisibility(View.GONE);
-                            hideLoading();
+                            
+                            // Ocultar el botón de OK ya que redirigiremos automáticamente
+                            btnOk.setVisibility(View.GONE);
+                            
+                            // Save provisioning status
+                            SharedPreferences sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+                            SharedPreferences.Editor editor = sharedPreferences.edit();
+                            editor.putBoolean(AppConstants.KEY_IS_PROVISIONED, true);
+                            editor.apply();
+                            
+                            // Mostrar un mensaje de éxito temporal
+                            TextView tvSuccess = findViewById(R.id.tv_success_message);
+                            if (tvSuccess != null) {
+                                tvSuccess.setText(R.string.success_provisioning_message);
+                                tvSuccess.setVisibility(View.VISIBLE);
+                            }
+                            
+                            // Wait briefly to show success UI, then navigate to MainActivity
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    // Navigate to MainActivity
+                                    Intent intent = new Intent(ProvisionActivity.this, MainActivity.class);
+                                    // Clear activity stack so user can't go back to provisioning
+                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    startActivity(intent);
+                                    finish();
+                                }
+                            }, 2000); // Aumentamos a 2 segundos para que el usuario pueda ver el mensaje de éxito
                         }
                     });
                 }
@@ -445,6 +508,7 @@ public class ProvisionActivity extends AppCompatActivity {
                             tvErrAtStep3.setVisibility(View.VISIBLE);
                             tvErrAtStep3.setText(R.string.error_prov_step_3);
                             tvProvError.setVisibility(View.VISIBLE);
+                            btnOk.setVisibility(View.VISIBLE);
                             hideLoading();
                         }
                     });

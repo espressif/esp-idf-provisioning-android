@@ -166,6 +166,7 @@
     <string name="device_search_error">Error al buscar dispositivo</string>
     <string name="device_search_title">Buscando dispositivo</string>
     <string name="device_search_message">Buscando dispositivos ESP32 en la red...</string>
+    <string name="success_provisioning_message">¡Conexión exitosa! Redirigiendo a la app principal...</string>
 
     <string name="home_welcome">Bienvenido a MEDIWATCH</string>
 
