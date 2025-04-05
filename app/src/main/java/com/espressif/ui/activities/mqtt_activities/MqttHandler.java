@@ -11,13 +11,49 @@ public class MqttHandler {
     private final MqttClient client;
     private final MqttConnectOptions options;
     private final Context context;
+    private UltrasonicSensorHandler ultrasonicHandler;
+    private final MqttCallback externalCallback;
 
     public MqttHandler(Context context, MqttCallback callback) {
         this.context = context;
+        this.externalCallback = callback;
+        
         try {
             String clientId = MqttClient.generateClientId();
             this.client = new MqttClient(AppConstants.MQTT_BROKER_URL, clientId, null);
-            this.client.setCallback(callback);
+            
+            // Usamos un wrapper para procesar algunos mensajes internamente y reenviar otros
+            this.client.setCallback(new MqttCallback() {
+                @Override
+                public void connectionLost(Throwable cause) {
+                    if (externalCallback != null) {
+                        externalCallback.connectionLost(cause);
+                    }
+                }
+
+                @Override
+                public void messageArrived(String topic, MqttMessage message) throws Exception {
+                    String payload = new String(message.getPayload());
+                    Log.d(TAG, "Mensaje recibido en tópico " + topic + ": " + payload);
+                    
+                    // Si el mensaje es del sensor ultrasónico, lo procesamos internamente
+                    if (ultrasonicHandler != null && (topic.contains("/ultrasonic") || topic.contains("/sensor"))) {
+                        ultrasonicHandler.processUltrasonicMessage(topic, message);
+                    }
+                    
+                    // Reenviar el mensaje al callback externo
+                    if (externalCallback != null) {
+                        externalCallback.messageArrived(topic, message);
+                    }
+                }
+
+                @Override
+                public void deliveryComplete(IMqttDeliveryToken token) {
+                    if (externalCallback != null) {
+                        externalCallback.deliveryComplete(token);
+                    }
+                }
+            });
             
             this.options = new MqttConnectOptions();
             this.options.setCleanSession(true);
@@ -28,6 +64,11 @@ public class MqttHandler {
             Log.e(TAG, "Error initializing MQTT client", e);
             throw new RuntimeException("Could not initialize MQTT client", e);
         }
+    }
+
+    public void initialize() {
+        // Inicializar el manejador de sensor ultrasónico
+        ultrasonicHandler = new UltrasonicSensorHandler(context);
     }
 
     public void connect() throws MqttException {

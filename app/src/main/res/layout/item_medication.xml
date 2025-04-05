@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/card_medication"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Encabezado del medicamento -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/header_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <!-- Indicador de tipo (pastilla, líquido) -->
+            <View
+                android:id="@+id/view_type_indicator"
+                android:layout_width="4dp"
+                android:layout_height="0dp"
+                android:background="@color/colorPrimary"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!-- Icono del medicamento -->
+            <ImageView
+                android:id="@+id/iv_medication_type"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_pill"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/view_type_indicator"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/colorPrimary" />
+
+            <!-- Detalles del medicamento -->
+            <TextView
+                android:id="@+id/tv_medication_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="8dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toStartOf="@id/tv_compartment"
+                app:layout_constraintStart_toEndOf="@id/iv_medication_type"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Paracetamol" />
+
+            <!-- Dosis y unidad -->
+            <TextView
+                android:id="@+id/tv_medication_dosage"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="8dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+                app:layout_constraintEnd_toStartOf="@id/tv_compartment"
+                app:layout_constraintStart_toEndOf="@id/iv_medication_type"
+                app:layout_constraintTop_toBottomOf="@id/tv_medication_name"
+                tools:text="500 mg - 1 pastilla" />
+
+            <!-- Compartimento -->
+            <TextView
+                android:id="@+id/tv_compartment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_compartment"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="C1" />
+
+            <!-- Dosis restantes -->
+            <TextView
+                android:id="@+id/tv_remaining_doses"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textStyle="italic"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_compartment"
+                tools:text="12 dosis restantes" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Separador -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/colorDivider" />
+
+        <!-- Sección de horarios -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_schedules"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:itemCount="2"
+            tools:listitem="@layout/item_schedule" />
+
+        <!-- Acciones para el medicamento -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_add_schedule"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="Añadir horario"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_add_schedule"
+                app:iconSize="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_edit"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="Editar"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_edit"
+                app:iconSize="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_delete"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="Eliminar"
+                android:textColor="@color/colorError"
+                android:textSize="12sp"
+                app:icon="@drawable/ic_delete"
+                app:iconSize="16dp"
+                app:iconTint="@color/colorError" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

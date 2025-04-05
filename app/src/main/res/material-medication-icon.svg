@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Píldora estilo Material Design -->
+  <path d="M6,15h12v1c0,2.2-1.8,4-4,4H10c-2.2,0-4-1.8-4-4V15z" fill="#BBDEFB" stroke="#1976D2" stroke-width="1"/>
+  <path d="M6,9v6h12V9H6z" fill="#E3F2FD" stroke="#1976D2" stroke-width="1"/>
+  <path d="M10,4h4c2.2,0,4,1.8,4,4v1H6V8c0-2.2,1.8-4,4-4z" fill="#BBDEFB" stroke="#1976D2" stroke-width="1"/>
+  
+  <!-- Cruz médica -->
+  <path d="M12,10v4M10,12h4" stroke="#1976D2" stroke-width="1.5"/>
+  
+  <!-- Detalles de la píldora -->
+  <path d="M8,7h1M12,7h1M16,7h1" fill="none" stroke="#1976D2" stroke-width="1" stroke-linecap="round"/>
+</svg>
