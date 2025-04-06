@@ -1,4 +1,4 @@
-package com.espressif.data.model;
+package com.espressif.ui.models;
 
 import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;

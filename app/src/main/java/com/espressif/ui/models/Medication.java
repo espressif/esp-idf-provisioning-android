@@ -1,4 +1,4 @@
-package com.espressif.data.model;
+package com.espressif.ui.models;
 
 import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;
@@ -20,7 +20,7 @@ public class Medication {
     private String unit;            // Unidad: ml, mg, pastillas, etc.
     private String notes;           // Notas adicionales
     private String patientId;       // ID del paciente asociado
-    private Map<String, Schedule> schedules; // Horarios programados por ID
+    private Map<String, com.espressif.ui.models.Schedule> schedules; // Horarios programados por ID
     private long createdAt;         // Timestamp de creación
     private long updatedAt;         // Timestamp de última modificación
     private int compartmentNumber;  // Número de compartimento en el dispensador (1-6)

@@ -1,4 +1,4 @@
-package com.espressif.data.model;
+package com.espressif.ui.models;
 
 /**
  * Constantes para los tipos de medicamentos y unidades disponibles.

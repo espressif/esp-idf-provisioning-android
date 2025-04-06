@@ -3,8 +3,8 @@ package com.espressif.ui.activities.mqtt_activities;
 import android.content.Context;
 import android.util.Log;
 
-import com.espressif.data.model.Medication;
-import com.espressif.data.model.Schedule;
+import com.espressif.ui.models.Medication;
+import com.espressif.ui.models.Schedule;
 import com.espressif.data.repository.MedicationRepository;
 import com.espressif.data.repository.UserRepository;
 

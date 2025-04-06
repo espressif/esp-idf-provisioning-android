@@ -4,8 +4,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.espressif.data.model.Medication;
-import com.espressif.data.model.Schedule;
+import com.espressif.ui.models.Medication;
+import com.espressif.ui.models.Schedule;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
