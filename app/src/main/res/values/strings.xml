@@ -169,5 +169,8 @@
     <string name="success_provisioning_message">¡Conexión exitosa! Redirigiendo a la app principal...</string>
 
     <string name="home_welcome">Bienvenido a MEDIWATCH</string>
+    <!-- Añade a strings.xml -->
+    <string name="add_medication">Añadir medicamento</string>
+    <string name="edit_medication">Editar medicamento</string>
 
 </resources>

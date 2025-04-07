@@ -11,4 +11,15 @@
         <item>softap</item>
         <item>both</item>
     </string-array>
+
+    <!-- Unidades para medicamentos -->
+    <string-array name="medication_units">
+        <item>mg</item>
+        <item>g</item>
+        <item>mcg</item>
+        <item>ml</item>
+        <item>cc</item>
+        <item>gota(s)</item>
+        <item>unidad(es)</item>
+    </string-array>
 </resources>

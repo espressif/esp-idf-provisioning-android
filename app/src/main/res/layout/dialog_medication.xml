@@ -70,49 +70,22 @@
 
         </RadioGroup>
 
-        <!-- Dosis y unidad -->
-        <LinearLayout
+        <!-- Cantidad de medicamento - MODIFICADO: Eliminada la unidad para pastillas -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_amount"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
+            android:hint="Número de pastillas/cápsulas por dosis">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_amount"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="0dp"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_amount"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:hint="Dosis">
+                android:inputType="numberDecimal" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_unit"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:hint="Unidad">
-
-                <AutoCompleteTextView
-                    android:id="@+id/dropdown_unit"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-        </LinearLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Notas adicionales -->
         <com.google.android.material.textfield.TextInputLayout
@@ -154,23 +127,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
+            android:orientation="vertical">
             <!-- Los compartimentos se añadirán dinámicamente según el tipo de medicamento -->
-
         </RadioGroup>
 
-        <!-- Dosis restantes -->
+        <!-- ELIMINADO: Campo de Total de dosis disponibles -->
+        <!-- Este campo se ha ocultado ya que se manejará en otra parte de la aplicación -->
         <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/til_remaining_doses"
+            android:id="@+id/til_total_doses"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:hint="Dosis restantes">
+            android:visibility="gone"
+            android:hint="Total de dosis disponibles">
 
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_remaining_doses"
+                android:id="@+id/et_total_doses"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="number" />

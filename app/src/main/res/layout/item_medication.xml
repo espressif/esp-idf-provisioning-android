@@ -78,7 +78,7 @@
                 android:id="@+id/tv_compartment"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_compartment"
+                android:background="@drawable/bg_compartment" 
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
@@ -133,10 +133,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minWidth="0dp"
-                android:text="Añadir horario"
+                android:text="Añadir\nhorario" 
                 android:textSize="12sp"
+                android:lines="2"              
                 app:icon="@drawable/ic_add_schedule"
-                app:iconSize="16dp" />
+                app:iconSize="16dp"
+                app:iconGravity="textStart" />  <!-- Mantener ícono a la izquierda -->
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_edit"

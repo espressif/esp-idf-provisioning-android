@@ -147,6 +147,8 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             // Configurar indicador de compartimento
             if (medication.getCompartmentNumber() > 0) {
                 tvCompartment.setVisibility(View.VISIBLE);
+                
+                // Código corregido - Asegurar que siempre muestre el número de compartimento correcto
                 String compartmentText = "C" + medication.getCompartmentNumber();
                 tvCompartment.setText(compartmentText);
                 

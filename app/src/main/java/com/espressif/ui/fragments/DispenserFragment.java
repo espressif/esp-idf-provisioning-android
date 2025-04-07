@@ -30,8 +30,11 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.espressif.ui.dialogs.DialogMedication;
 
-public class DispenserFragment extends Fragment implements MedicationAdapter.MedicationListener {
+public class DispenserFragment extends Fragment implements 
+        MedicationAdapter.MedicationListener,
+        DialogMedication.MedicationDialogListener {
 
     private DispenserViewModel viewModel;
     private MedicationAdapter adapter;
@@ -317,14 +320,33 @@ public class DispenserFragment extends Fragment implements MedicationAdapter.Med
     }
     
     private void showAddMedicationDialog() {
-        // En el siguiente paso implementaremos los diálogos
-        // Por ahora, solo mostrar un mensaje
-        Toast.makeText(requireContext(), "Añadir medicamento (Diálogo pendiente)", Toast.LENGTH_SHORT).show();
+        DialogMedication dialog = DialogMedication.newInstance();
+        dialog.show(getChildFragmentManager(), "dialog_add_medication");
     }
     
     private void showEditMedicationDialog(Medication medication) {
-        // En el siguiente paso implementaremos los diálogos
-        Toast.makeText(requireContext(), "Editar: " + medication.getName(), Toast.LENGTH_SHORT).show();
+        DialogMedication dialog = DialogMedication.newInstance(medication);
+        dialog.show(getChildFragmentManager(), "dialog_edit_medication");
+    }
+    
+    // Implementación de MedicationDialogListener
+    
+    @Override
+    public void onMedicationSaved(Medication medication) {
+        if (medication.getId() == null || medication.getId().isEmpty()) {
+            // Es un nuevo medicamento
+            viewModel.createMedication(medication);
+            Toast.makeText(requireContext(), "Medicamento añadido", Toast.LENGTH_SHORT).show();
+        } else {
+            // Es una actualización
+            viewModel.updateMedication(medication);
+            Toast.makeText(requireContext(), "Medicamento actualizado", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    @Override
+    public void onDialogCancelled() {
+        // No necesitamos hacer nada especial cuando se cancela
     }
     
     private void showAddScheduleDialog(Medication medication) {
