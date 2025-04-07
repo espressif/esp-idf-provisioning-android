@@ -5,13 +5,13 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.espressif.ui.models.Medication;
+import com.espressif.ui.models.MedicationType;
 import com.espressif.ui.models.Schedule;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
@@ -22,18 +22,19 @@ import java.util.UUID;
 
 /**
  * Repositorio para gestionar medicamentos y horarios en Firebase.
+ * Los medicamentos se almacenan dentro del nodo del paciente correspondiente.
  */
 public class MedicationRepository {
     
     private static final String TAG = "MedicationRepository";
     private static MedicationRepository instance;
     
-    // Referencia a Firebase
-    private final DatabaseReference medicationsRef;
+    // Referencia a Firebase - patients/[patientId]/medications
+    private final DatabaseReference patientsRef;
     
     private MedicationRepository() {
         FirebaseDatabase database = FirebaseDatabase.getInstance();
-        medicationsRef = database.getReference("medications");
+        patientsRef = database.getReference("patients");
     }
     
     /**
@@ -60,8 +61,20 @@ public class MedicationRepository {
             return;
         }
         
-        // Guardar en la ruta: medications/{patientId}/{medicationId}
-        medicationsRef.child(patientId)
+        // Asegurar que los medicamentos de tipo líquido siempre usen el compartimento 4
+        if (MedicationType.LIQUID.equals(medication.getType())) {
+            medication.setCompartmentNumber(4);
+            Log.d(TAG, "Forzando compartimento 4 para medicamento líquido: " + medication.getName());
+        }
+        
+        // Establecer timestamps
+        long currentTime = System.currentTimeMillis();
+        medication.setCreatedAt(currentTime);
+        medication.setUpdatedAt(currentTime);
+        
+        // Guardar en patients/[patientId]/medications/[medicationId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medication.getId())
                 .setValue(medication.toMap())
                 .addOnSuccessListener(aVoid -> {
@@ -89,12 +102,20 @@ public class MedicationRepository {
             return;
         }
         
+        // Asegurar que los medicamentos de tipo líquido siempre usen el compartimento 4
+        if (MedicationType.LIQUID.equals(medication.getType())) {
+            medication.setCompartmentNumber(4);
+            Log.d(TAG, "Forzando compartimento 4 para actualización de medicamento líquido: " + medication.getName());
+        }
+        
         // Actualizar el timestamp
         medication.setUpdatedAt(System.currentTimeMillis());
         
         Map<String, Object> medicationValues = medication.toMap();
         
-        medicationsRef.child(patientId)
+        // Actualizar en patients/[patientId]/medications/[medicationId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medication.getId())
                 .updateChildren(medicationValues)
                 .addOnSuccessListener(aVoid -> {
@@ -116,7 +137,9 @@ public class MedicationRepository {
             return;
         }
         
-        medicationsRef.child(patientId)
+        // Eliminar de patients/[patientId]/medications/[medicationId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .removeValue()
                 .addOnSuccessListener(aVoid -> {
@@ -138,7 +161,9 @@ public class MedicationRepository {
             return;
         }
         
-        medicationsRef.child(patientId)
+        // Obtener de patients/[patientId]/medications/
+        patientsRef.child(patientId)
+                .child("medications")
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -148,6 +173,17 @@ public class MedicationRepository {
                             try {
                                 Medication medication = snapshot.getValue(Medication.class);
                                 if (medication != null) {
+                                    // Asegurar que los medicamentos líquidos siempre tienen compartimento 4
+                                    if (MedicationType.LIQUID.equals(medication.getType()) && 
+                                        medication.getCompartmentNumber() != 4) {
+                                        medication.setCompartmentNumber(4);
+                                    }
+                                    
+                                    // Asegurar que el medicamento tiene el patientId correcto
+                                    if (medication.getPatientId() == null || !medication.getPatientId().equals(patientId)) {
+                                        medication.setPatientId(patientId);
+                                    }
+                                    
                                     medications.add(medication);
                                 }
                             } catch (Exception e) {
@@ -176,13 +212,21 @@ public class MedicationRepository {
             return;
         }
         
-        medicationsRef.child(patientId)
+        // Obtener de patients/[patientId]/medications/[medicationId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         Medication medication = dataSnapshot.getValue(Medication.class);
                         if (medication != null) {
+                            // Asegurar que los medicamentos líquidos siempre tienen compartimento 4
+                            if (MedicationType.LIQUID.equals(medication.getType()) && 
+                                medication.getCompartmentNumber() != 4) {
+                                medication.setCompartmentNumber(4);
+                            }
+                            
                             Log.d(TAG, "Medicamento cargado: " + medication.getName());
                             callback.onSuccess(medication);
                         } else {
@@ -213,7 +257,9 @@ public class MedicationRepository {
         
         schedule.setMedicationId(medicationId);
         
-        medicationsRef.child(patientId)
+        // Guardar en patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .child("schedules")
                 .child(schedule.getId())
@@ -237,7 +283,9 @@ public class MedicationRepository {
             return;
         }
         
-        medicationsRef.child(patientId)
+        // Eliminar de patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .child("schedules")
                 .child(scheduleId)
@@ -268,7 +316,9 @@ public class MedicationRepository {
             updates.put("lastTaken", System.currentTimeMillis());
         }
         
-        medicationsRef.child(patientId)
+        // Actualizar en patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .child("schedules")
                 .child(scheduleId)
@@ -301,6 +351,12 @@ public class MedicationRepository {
                     try {
                         Medication medication = snapshot.getValue(Medication.class);
                         if (medication != null) {
+                            // Asegurar que los medicamentos líquidos siempre tienen compartimento 4
+                            if (MedicationType.LIQUID.equals(medication.getType()) && 
+                                medication.getCompartmentNumber() != 4) {
+                                medication.setCompartmentNumber(4);
+                            }
+                            
                             medications.add(medication);
                         }
                     } catch (Exception e) {
@@ -319,7 +375,8 @@ public class MedicationRepository {
             }
         };
         
-        medicationsRef.child(patientId).addValueEventListener(listener);
+        // Escuchar cambios en patients/[patientId]/medications/
+        patientsRef.child(patientId).child("medications").addValueEventListener(listener);
         return listener;
     }
     
@@ -328,26 +385,10 @@ public class MedicationRepository {
      */
     public void stopListening(String patientId, ValueEventListener listener) {
         if (patientId != null && listener != null) {
-            medicationsRef.child(patientId).removeEventListener(listener);
+            patientsRef.child(patientId).child("medications").removeEventListener(listener);
         }
     }
     
-    /**
-     * Interfaz de callback para operaciones de base de datos
-     */
-    public interface DatabaseCallback {
-        void onSuccess();
-        void onError(String errorMessage);
-    }
-    
-    /**
-     * Interfaz de callback para operaciones que devuelven datos
-     */
-    public interface DataCallback<T> {
-        void onSuccess(T data);
-        void onError(String errorMessage);
-    }
-
     /**
      * Actualiza el estado de dispensado y detección por sensor de un medicamento
      */
@@ -374,7 +415,9 @@ public class MedicationRepository {
             updates.put("lastTaken", currentTime);
         }
         
-        medicationsRef.child(patientId)
+        // Actualizar en patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
+        patientsRef.child(patientId)
+                .child("medications")
                 .child(medicationId)
                 .child("schedules")
                 .child(scheduleId)
@@ -401,5 +444,21 @@ public class MedicationRepository {
      */
     public void markAsDispensed(String patientId, String medicationId, String scheduleId, DatabaseCallback callback) {
         updateDispensationStatus(patientId, medicationId, scheduleId, true, false, callback);
+    }
+    
+    /**
+     * Interfaz de callback para operaciones de base de datos
+     */
+    public interface DatabaseCallback {
+        void onSuccess();
+        void onError(String errorMessage);
+    }
+    
+    /**
+     * Interfaz de callback para operaciones que devuelven datos
+     */
+    public interface DataCallback<T> {
+        void onSuccess(T data);
+        void onError(String errorMessage);
     }
 }

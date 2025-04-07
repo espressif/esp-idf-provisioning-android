@@ -50,18 +50,25 @@ public class AppConstants {
     public static final String CAPABILITY_THREAD_SCAN = "thread_scan";
     public static final String CAPABILITY_THREAD_PROV = "thread_prov";
 
-    public static final String PREF_NAME_USER = "UserPreferences";
-    public static final String KEY_USER_TYPE = "userType";
-    public static final String KEY_IS_LOGGED_IN = "isLoggedIn";
-    public static final String KEY_HAS_COMPLETED_PROVISIONING = "hasCompletedProvisioning";
-    public static final String USER_TYPE_PATIENT = "patient";
-    public static final String USER_TYPE_FAMILY = "family";
-
+    // Nombre de las preferencias compartidas
+    public static final String PREF_NAME_USER = "user_preferences";
+    
     // Claves para SharedPreferences
+    public static final String KEY_IS_LOGGED_IN = "is_logged_in";
+    public static final String KEY_USER_NAME = "user_name";
+    public static final String KEY_USER_EMAIL = "user_email";
+    public static final String KEY_USER_TYPE = "user_type";
     public static final String KEY_PATIENT_ID = "patient_id";
     public static final String KEY_CONNECTED_PATIENT_ID = "connected_patient_id";
     public static final String KEY_CONNECTED_PATIENT_EMAIL = "connected_patient_email";
     public static final String KEY_CONNECTED_PATIENT_NAME = "connected_patient_name";
+    public static final String KEY_PROVISIONING_COMPLETED = "provisioning_completed";
+    public static final String KEY_HAS_COMPLETED_PROVISIONING = "hasCompletedProvisioning";
+    public static final String KEY_IS_PROVISIONED = "is_provisioned";
+
+    // Tipos de usuario
+    public static final String USER_TYPE_PATIENT = "patient";
+    public static final String USER_TYPE_FAMILY = "family";
 
     // MQTT constants
     public static final String MQTT_BROKER_URL = "tcp://broker.emqx.io:1883"; // Actualiza esta URL a tu broker real
@@ -70,5 +77,4 @@ public class AppConstants {
     public static final String MQTT_TOPIC_DEVICE_TELEMETRY = "/device/telemetry";
     public static final String MQTT_TOPIC_DEVICE_RESPONSE = "/device/response";
     public static final int MQTT_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos de timeout
-    public static final String KEY_IS_PROVISIONED = "is_provisioned";
 }

@@ -31,11 +31,21 @@ public class UserRepository {
     private final FirebaseDataSource firebaseDataSource;
     private final SharedPreferencesHelper preferencesHelper;
 
+    // Referencias a la base de datos
+    private final DatabaseReference patientsRef;
+    private final DatabaseReference authMappingsRef;
+
     private UserRepository(Context context) {
         this.firebaseDataSource = FirebaseDataSource.getInstance();
         this.preferencesHelper = SharedPreferencesHelper.getInstance(context);
+        
         // Inicializar Firebase
         firebaseDataSource.initialize(context);
+        
+        // Inicializar referencias de Firebase
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        patientsRef = database.getReference("patients");
+        authMappingsRef = database.getReference("auth_mappings");
     }
 
     public static synchronized UserRepository getInstance(Context context) {
@@ -65,8 +75,8 @@ public class UserRepository {
         firebaseDataSource.signInWithGoogle(account.getIdToken(), new FirebaseDataSource.AuthCallback() {
             @Override
             public void onSuccess(FirebaseUser user) {
-                // Guardar datos en Firebase
-                saveUserToDatabase(user, callback);
+                // Verificar si es un usuario existente (paciente o familiar)
+                checkExistingUser(user, callback);
             }
 
             @Override
@@ -77,134 +87,226 @@ public class UserRepository {
             }
         });
     }
-
+    
     /**
-     * Guarda información del usuario en la base de datos
+     * Verifica si el usuario ya existe en la base de datos
      */
-    private void saveUserToDatabase(FirebaseUser user, AuthCallback callback) {
-        String userId = user.getUid();
-        String userType = preferencesHelper.getUserType();
-
-        // Crear mapa con datos del usuario
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("email", user.getEmail());
-        userData.put("name", user.getDisplayName());
-        userData.put("userType", userType != null ? userType : "unknown");
-        userData.put("lastLogin", ServerValue.TIMESTAMP);
-
-        // Si es un paciente, generar un ID único
-        if (AppConstants.USER_TYPE_PATIENT.equals(userType)) {
-            generateUniquePatientIdAndSave(userId, userData, user, callback);
-        } else {
-            // Para usuarios que no son pacientes, guardar inmediatamente
-            completeUserSave(userId, userData, user, callback);
-        }
-    }
-
-    /**
-     * Genera un ID único para el paciente y lo guarda
-     */
-    private void generateUniquePatientIdAndSave(String userId, Map<String, Object> userData, 
-                                               FirebaseUser user, AuthCallback callback) {
-        // Verificar si ya tiene un ID
-        firebaseDataSource.getUserData(userId, new FirebaseDataSource.DataCallback() {
-            @Override
-            public void onSuccess(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists() && dataSnapshot.child("patientId").exists()) {
-                    // Ya tiene ID, usar el existente
-                    String existingId = dataSnapshot.child("patientId").getValue(String.class);
-                    userData.put("patientId", existingId);
-                    completeUserSave(userId, userData, user, callback);
-                } else {
-                    // No tiene ID, generar uno nuevo
-                    attemptPatientIdGeneration(userId, userData, user, callback);
-                }
-            }
-
-            @Override
-            public void onError(String errorMessage) {
-                // Error al verificar, generar nuevo ID
-                attemptPatientIdGeneration(userId, userData, user, callback);
-            }
-        });
-    }
-
-    /**
-     * Intenta generar un ID único de paciente
-     */
-    private void attemptPatientIdGeneration(String userId, Map<String, Object> userData, 
-                                           FirebaseUser user, AuthCallback callback) {
-        String candidateId = generatePatientIdCandidate();
+    private void checkExistingUser(FirebaseUser firebaseUser, AuthCallback callback) {
+        String userId = firebaseUser.getUid();
         
-        // Verificar si el ID ya existe
-        DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
-        patientIdsRef.child(candidateId).addListenerForSingleValueEvent(new ValueEventListener() {
+        // Verificar en auth_mappings si existe un patientId asociado
+        authMappingsRef.child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    // ID ya usado, intentar con otro
-                    attemptPatientIdGeneration(userId, userData, user, callback);
+                    // Usuario existente, obtener su patientId asociado
+                    String patientId = snapshot.getValue(String.class);
+                    
+                    if (patientId != null) {
+                        // Es un paciente existente, cargar sus datos
+                        loadPatientData(userId, patientId, firebaseUser, callback);
+                    } else {
+                        // Mapeo existe pero sin valor válido, tratar como usuario nuevo
+                        createNewUser(firebaseUser, callback);
+                    }
                 } else {
-                    // ID disponible, guardarlo
-                    userData.put("patientId", candidateId);
-                    
-                    // Registrar en la tabla de IDs de pacientes
-                    Map<String, Object> patientIdData = new HashMap<>();
-                    patientIdData.put("userId", userId);
-                    patientIdData.put("email", user.getEmail());
-                    patientIdData.put("timestamp", ServerValue.TIMESTAMP);
-                    
-                    patientIdsRef.child(candidateId).setValue(patientIdData)
-                        .addOnSuccessListener(aVoid -> {
-                            // ID guardado correctamente, continuar con el resto de datos
-                            completeUserSave(userId, userData, user, callback);
-                        })
-                        .addOnFailureListener(e -> {
-                            // Error al guardar ID, continuar sin él
-                            Log.e(TAG, "Error al guardar ID de paciente: " + e.getMessage());
-                            userData.remove("patientId");
-                            completeUserSave(userId, userData, user, callback);
-                        });
+                    // Usuario nuevo, crear según su tipo
+                    createNewUser(firebaseUser, callback);
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Error al verificar ID, continuar sin generar uno nuevo
-                Log.e(TAG, "Error al verificar ID: " + error.getMessage());
-                completeUserSave(userId, userData, user, callback);
+                Log.e(TAG, "Error al verificar usuario existente: " + error.getMessage());
+                createNewUser(firebaseUser, callback);
             }
         });
     }
-
+    
     /**
-     * Completa el proceso de guardado del usuario
+     * Carga los datos de un paciente existente
      */
-    private void completeUserSave(String userId, Map<String, Object> userData, 
-                                 FirebaseUser firebaseUser, AuthCallback callback) {
-        // Guardar datos en Firebase
-        firebaseDataSource.saveUserData(userId, userData, new FirebaseDataSource.DatabaseCallback() {
+    private void loadPatientData(String userId, String patientId, FirebaseUser firebaseUser, AuthCallback callback) {
+        patientsRef.child(patientId).child("basic_info").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onSuccess() {
-                Log.d(TAG, "Datos de usuario guardados correctamente");
-                
-                // Guardar patientId en preferencias si existe
-                if (userData.containsKey("patientId")) {
-                    preferencesHelper.savePatientId((String) userData.get("patientId"));
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // Crear objeto User con los datos
+                    User user = new User();
+                    user.setId(userId);
+                    user.setPatientId(patientId);
+                    
+                    String name = snapshot.child("name").getValue(String.class);
+                    user.setName(name != null ? name : firebaseUser.getDisplayName());
+                    
+                    String email = snapshot.child("email").getValue(String.class);
+                    user.setEmail(email != null ? email : firebaseUser.getEmail());
+                    
+                    String userType = snapshot.child("userType").getValue(String.class);
+                    user.setUserType(userType != null ? userType : AppConstants.USER_TYPE_PATIENT);
+                    
+                    // Guardar en preferencias
+                    saveUserPreferences(user);
+                    
+                    callback.onSuccess(user);
+                } else {
+                    // Datos incompletos, reparar y continuar
+                    repairPatientData(userId, patientId, firebaseUser, callback);
                 }
-                
-                completeSignIn(firebaseUser.getDisplayName(), callback);
             }
 
             @Override
-            public void onError(String errorMessage) {
-                Log.e(TAG, "Error al guardar datos: " + errorMessage);
-                // Continuar de todos modos
-                completeSignIn(firebaseUser.getDisplayName(), callback);
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error al cargar datos del paciente: " + error.getMessage());
+                // Continuar con datos básicos
+                User user = createBasicUser(userId, firebaseUser);
+                user.setPatientId(patientId);
+                saveUserPreferences(user);
+                callback.onSuccess(user);
             }
         });
     }
+    
+    /**
+     * Repara datos incompletos de un paciente
+     */
+    private void repairPatientData(String userId, String patientId, FirebaseUser firebaseUser, AuthCallback callback) {
+        // Crear datos básicos para el paciente
+        Map<String, Object> basicInfo = new HashMap<>();
+        basicInfo.put("userId", userId);
+        basicInfo.put("name", firebaseUser.getDisplayName());
+        basicInfo.put("email", firebaseUser.getEmail());
+        basicInfo.put("userType", AppConstants.USER_TYPE_PATIENT);
+        basicInfo.put("createdAt", ServerValue.TIMESTAMP);
+        
+        // Guardar en patients/[patientId]/basic_info
+        patientsRef.child(patientId).child("basic_info").updateChildren(basicInfo)
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "Datos de paciente reparados para patientId: " + patientId);
+                
+                // Crear usuario con datos básicos
+                User user = createBasicUser(userId, firebaseUser);
+                user.setPatientId(patientId);
+                saveUserPreferences(user);
+                callback.onSuccess(user);
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error al reparar datos del paciente: " + e.getMessage());
+                
+                // Continuar con datos básicos de todos modos
+                User user = createBasicUser(userId, firebaseUser);
+                user.setPatientId(patientId);
+                saveUserPreferences(user);
+                callback.onSuccess(user);
+            });
+    }
+    
+    /**
+     * Crea un nuevo usuario según el tipo seleccionado
+     */
+    private void createNewUser(FirebaseUser firebaseUser, AuthCallback callback) {
+        String userType = preferencesHelper.getUserType();
+        String userId = firebaseUser.getUid();
+        
+        if (AppConstants.USER_TYPE_PATIENT.equals(userType)) {
+            // Crear nuevo paciente
+            createNewPatient(userId, firebaseUser, callback);
+        } else if (AppConstants.USER_TYPE_FAMILY.equals(userType)) {
+            // Para familiar, primero debe conectarse a un paciente
+            User user = createBasicUser(userId, firebaseUser);
+            saveUserPreferences(user);
+            callback.onSuccess(user);
+        } else {
+            // Tipo desconocido, usar datos básicos
+            User user = createBasicUser(userId, firebaseUser);
+            saveUserPreferences(user);
+            callback.onSuccess(user);
+        }
+    }
+    
+    /**
+     * Crea un nuevo paciente con ID único
+     */
+    private void createNewPatient(String userId, FirebaseUser firebaseUser, AuthCallback callback) {
+        generateUniquePatientId(candidateId -> {
+            if (candidateId != null) {
+                // Crear estructura básica del paciente
+                Map<String, Object> basicInfo = new HashMap<>();
+                basicInfo.put("userId", userId);
+                basicInfo.put("name", firebaseUser.getDisplayName());
+                basicInfo.put("email", firebaseUser.getEmail());
+                basicInfo.put("userType", AppConstants.USER_TYPE_PATIENT);
+                basicInfo.put("createdAt", ServerValue.TIMESTAMP);
+                
+                // Guardar en patients/[patientId]/basic_info
+                patientsRef.child(candidateId).child("basic_info").setValue(basicInfo)
+                    .addOnSuccessListener(aVoid -> {
+                        // Guardar mapeo de userId a patientId
+                        authMappingsRef.child(userId).setValue(candidateId)
+                            .addOnSuccessListener(aVoid2 -> {
+                                Log.d(TAG, "Nuevo paciente creado con ID: " + candidateId);
+                                
+                                // Crear usuario y guardarlo en preferencias
+                                User user = createBasicUser(userId, firebaseUser);
+                                user.setPatientId(candidateId);
+                                user.setUserType(AppConstants.USER_TYPE_PATIENT);
+                                saveUserPreferences(user);
+                                preferencesHelper.savePatientId(candidateId);
+                                
+                                callback.onSuccess(user);
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error al crear mapeo de auth: " + e.getMessage());
+                                // Continuar con el usuario de todos modos
+                                User user = createBasicUser(userId, firebaseUser);
+                                user.setPatientId(candidateId);
+                                user.setUserType(AppConstants.USER_TYPE_PATIENT);
+                                saveUserPreferences(user);
+                                callback.onSuccess(user);
+                            });
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al crear paciente: " + e.getMessage());
+                        // Continuar con datos básicos
+                        User user = createBasicUser(userId, firebaseUser);
+                        saveUserPreferences(user);
+                        callback.onSuccess(user);
+                    });
+            } else {
+                // No se pudo generar un ID único
+                Log.e(TAG, "No se pudo generar un ID único para el paciente");
+                User user = createBasicUser(userId, firebaseUser);
+                saveUserPreferences(user);
+                callback.onSuccess(user);
+            }
+        });
+    }
+    
+    /**
+     * Genera un ID único para el paciente
+     */
+    private void generateUniquePatientId(PatientIdCallback callback) {
+        String candidateId = generatePatientIdCandidate();
+        patientsRef.child(candidateId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    // ID ya existe, intentar otro
+                    generateUniquePatientId(callback);
+                } else {
+                    // ID disponible
+                    callback.onIdGenerated(candidateId);
+                }
+            }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error al verificar ID candidato: " + error.getMessage());
+                callback.onIdGenerated(null);
+            }
+        });
+    }
+    
     /**
      * Genera un candidato para ID de paciente
      * @return Un ID alfanumérico único de 6 caracteres
@@ -221,6 +323,35 @@ public class UserRepository {
         }
         
         return sb.toString();
+    }
+    
+    /**
+     * Crea un objeto de usuario básico a partir de FirebaseUser
+     */
+    private User createBasicUser(String userId, FirebaseUser firebaseUser) {
+        User user = new User();
+        user.setId(userId);
+        user.setName(firebaseUser.getDisplayName());
+        user.setEmail(firebaseUser.getEmail());
+        user.setUserType(preferencesHelper.getUserType());
+        return user;
+    }
+    
+    /**
+     * Guarda la información del usuario en las preferencias locales
+     */
+    private void saveUserPreferences(User user) {
+        preferencesHelper.setLoggedIn(true);
+        preferencesHelper.saveUserInfo(user.getName(), user.getEmail());
+        preferencesHelper.saveUserType(user.getUserType());
+        
+        if (user.getPatientId() != null) {
+            preferencesHelper.savePatientId(user.getPatientId());
+        }
+        
+        if (user.getConnectedPatientId() != null) {
+            preferencesHelper.saveConnectedPatientId(user.getConnectedPatientId());
+        }
     }
 
     /**
@@ -242,34 +373,6 @@ public class UserRepository {
     }
 
     /**
-     * Finaliza el proceso de inicio de sesión
-     */
-    private void completeSignIn(String displayName, AuthCallback callback) {
-        preferencesHelper.setLoggedIn(true);
-        
-        User user = new User(
-            null, 
-            displayName, 
-            preferencesHelper.getUserEmail(),
-            preferencesHelper.getUserType()
-        );
-        
-        // Si hay un patientId guardado, asignarlo al usuario
-        String patientId = preferencesHelper.getPatientId();
-        if (patientId != null) {
-            user.setPatientId(patientId);
-        }
-        
-        // Si hay un connectedPatientId guardado, asignarlo al usuario
-        String connectedPatientId = preferencesHelper.getConnectedPatientId();
-        if (connectedPatientId != null) {
-            user.setConnectedPatientId(connectedPatientId);
-        }
-        
-        callback.onSuccess(user);
-    }
-
-    /**
      * Verifica si un ID de paciente es válido y retorna el usuario asociado
      */
     public void verifyPatientId(String patientId, PatientVerificationCallback callback) {
@@ -283,240 +386,89 @@ public class UserRepository {
         
         // Convertir a mayúsculas para asegurar consistencia
         patientId = patientId.toUpperCase().trim();
+        final String finalPatientId = patientId;
         
-        // Verificar si el ID existe
-        Log.d(TAG, "Consultando ID de paciente: " + patientId);
-        
-        final String finalPatientId = patientId; // Para usar en lambda
-        DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
-        patientIdsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
+        // Verificar si el paciente existe directamente
+        patientsRef.child(patientId).child("basic_info").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    Log.d(TAG, "ID encontrado: " + finalPatientId);
-                    // ID existe, obtener datos del paciente
+                    // Paciente encontrado, extraer información
                     String userId = snapshot.child("userId").getValue(String.class);
-                    Log.d(TAG, "userId asociado: " + userId);
+                    String name = snapshot.child("name").getValue(String.class);
+                    String email = snapshot.child("email").getValue(String.class);
                     
-                    if (userId != null) {
-                        // Obtener datos completos del paciente
-                        firebaseDataSource.getUserData(userId, new FirebaseDataSource.DataCallback() {
-                            @Override
-                            public void onSuccess(DataSnapshot dataSnapshot) {
-                                if (dataSnapshot.exists()) {
-                                    Log.d(TAG, "Datos de usuario encontrados para userId: " + userId);
-                                    // Construir objeto User
-                                    User patient = new User();
-                                    patient.setId(userId);
-                                    
-                                    String name = dataSnapshot.child("name").getValue(String.class);
-                                    patient.setName(name != null ? name : "Paciente");
-                                    
-                                    String email = dataSnapshot.child("email").getValue(String.class);
-                                    patient.setEmail(email);
-                                    
-                                    patient.setUserType(AppConstants.USER_TYPE_PATIENT);
-                                    patient.setPatientId(finalPatientId);
-                                    
-                                    // Guardar conexión para este familiar
-                                    preferencesHelper.saveConnectedPatientId(finalPatientId);
-                                    
-                                    Log.d(TAG, "Verificación exitosa para paciente: " + name);
-                                    callback.onVerified(patient);
-                                } else {
-                                    Log.e(TAG, "No se encontraron datos para el userId: " + userId);
-                                    
-                                    // Cuando detectemos un patientId válido pero sin datos completos
-                                    Map<String, Object> minimalData = new HashMap<>();
-                                    minimalData.put("name", "Paciente " + finalPatientId);
-                                    minimalData.put("userType", AppConstants.USER_TYPE_PATIENT);
-                                    minimalData.put("patientId", finalPatientId);
-                                    
-                                    // Intentar obtener el email del registro en patient_ids
-                                    String patientEmail = snapshot.child("email").getValue(String.class);
-                                    if (patientEmail != null) {
-                                        minimalData.put("email", patientEmail);
-                                    }
-                                    minimalData.put("createdAt", ServerValue.TIMESTAMP);
-                                    
-                                    // Intentar reparar los datos
-                                    repairUserData(finalPatientId, minimalData);
-                                    
-                                    // Generar un usuario mínimo para continuar el proceso
-                                    User minimalUser = new User();
-                                    minimalUser.setId(userId);
-                                    minimalUser.setName("Paciente " + finalPatientId);
-                                    minimalUser.setEmail(patientEmail);
-                                    minimalUser.setUserType(AppConstants.USER_TYPE_PATIENT);
-                                    minimalUser.setPatientId(finalPatientId);
-                                    
-                                    // Guardar conexión para este familiar
-                                    preferencesHelper.saveConnectedPatientId(finalPatientId);
-                                    
-                                    Log.d(TAG, "Verificación exitosa con datos mínimos para paciente: " + finalPatientId);
-                                    callback.onVerified(minimalUser);
-                                }
-                            }
-
-                            @Override
-                            public void onError(String errorMessage) {
-                                Log.e(TAG, "Error al obtener datos del paciente: " + errorMessage);
-                                callback.onError("Error al obtener datos: " + errorMessage);
-                            }
-                        });
-                    } else {
-                        Log.e(TAG, "El ID existe pero no tiene userId asociado: " + finalPatientId);
-                        callback.onError("ID de paciente inválido (sin usuario asociado)");
-                    }
+                    // Crear objeto usuario
+                    User patient = new User();
+                    patient.setId(userId);
+                    patient.setName(name != null ? name : "Paciente " + finalPatientId);
+                    patient.setEmail(email);
+                    patient.setUserType(AppConstants.USER_TYPE_PATIENT);
+                    patient.setPatientId(finalPatientId);
+                    
+                    // Guardar los datos del paciente en preferencias
+                    preferencesHelper.saveConnectedPatientId(finalPatientId);
+                    if (name != null) preferencesHelper.saveConnectedPatientName(name);
+                    if (email != null) preferencesHelper.saveConnectedPatientEmail(email);
+                    
+                    // Registrar al usuario actual como familiar
+                    registerAsFamilyMember(finalPatientId);
+                    
+                    Log.d(TAG, "Verificación exitosa para paciente: " + patient.getName());
+                    callback.onVerified(patient);
                 } else {
-                    Log.e(TAG, "No se encontró el ID: " + finalPatientId);
-                    callback.onError("No se encontró el ID de paciente: " + finalPatientId);
+                    Log.e(TAG, "No se encontró el paciente: " + finalPatientId);
+                    callback.onError("No se encontró el paciente con ID: " + finalPatientId);
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Error en la consulta: " + error.getMessage());
+                Log.e(TAG, "Error al verificar paciente: " + error.getMessage());
                 callback.onError("Error al verificar ID: " + error.getMessage());
             }
         });
     }
-
+    
     /**
-     * Actualiza un objeto User en la base de datos
+     * Registra al usuario actual como familiar de un paciente
      */
-    public void updateUser(User user) {
-        if (!firebaseDataSource.isInitialized() || user.getId() == null) {
+    private void registerAsFamilyMember(String patientId) {
+        FirebaseUser currentUser = firebaseDataSource.getCurrentUser();
+        if (currentUser == null) {
+            Log.e(TAG, "No hay usuario autenticado para registrar como familiar");
             return;
         }
         
-        firebaseDataSource.saveUserData(user.getId(), user.toMap(), 
-            new FirebaseDataSource.DatabaseCallback() {
-                @Override
-                public void onSuccess() {
-                    Log.d(TAG, "Usuario actualizado correctamente");
-                }
-
-                @Override
-                public void onError(String errorMessage) {
-                    Log.e(TAG, "Error al actualizar usuario: " + errorMessage);
-                }
-            });
+        String familyUserId = currentUser.getUid();
+        
+        // Crear datos del familiar
+        Map<String, Object> familyData = new HashMap<>();
+        familyData.put("userId", familyUserId);
+        familyData.put("name", currentUser.getDisplayName());
+        familyData.put("email", currentUser.getEmail());
+        familyData.put("joinedAt", ServerValue.TIMESTAMP);
+        familyData.put("userType", AppConstants.USER_TYPE_FAMILY);
+        
+        // Guardar en patients/[patientId]/family_members/[userId]
+        patientsRef.child(patientId)
+                .child("family_members")
+                .child(familyUserId)
+                .updateChildren(familyData)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Usuario registrado como familiar para el paciente: " + patientId);
+                    
+                    // También actualizar las preferencias locales
+                    preferencesHelper.saveUserType(AppConstants.USER_TYPE_FAMILY);
+                    preferencesHelper.saveConnectedPatientId(patientId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al registrar como familiar: " + e.getMessage());
+                });
     }
 
-    /**
-     * Repara los datos faltantes de un usuario basado en su ID de paciente
-     * @param patientId ID del paciente
-     * @param userData Datos mínimos a guardar
-     */
-    public void repairUserData(String patientId, Map<String, Object> userData) {
-        DatabaseReference patientIdsRef = FirebaseDatabase.getInstance().getReference("patient_ids");
-        patientIdsRef.child(patientId).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String userId = snapshot.child("userId").getValue(String.class);
-                    if (userId != null) {
-                        // Guardar los datos mínimos en la tabla users
-                        firebaseDataSource.saveUserData(userId, userData, new FirebaseDataSource.DatabaseCallback() {
-                            @Override
-                            public void onSuccess() {
-                                Log.d(TAG, "Datos de usuario reparados para patientId: " + patientId);
-                            }
-
-                            @Override
-                            public void onError(String errorMessage) {
-                                Log.e(TAG, "Error al reparar datos: " + errorMessage);
-                            }
-                        });
-                    }
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Error al intentar reparar datos: " + error.getMessage());
-            }
-        });
-    }
-
-    /**
-     * Verifica el estado de autenticación del usuario
-     */
-    public boolean isUserLoggedIn() {
-        return preferencesHelper.isLoggedIn();
-    }
-
-    /**
-     * Obtiene el tipo de usuario
-     */
-    public String getUserType() {
-        return preferencesHelper.getUserType();
-    }
-
-    /**
-     * Guarda el tipo de usuario
-     */
-    public void saveUserType(String userType) {
-        preferencesHelper.saveUserType(userType);
-    }
-
-    /**
-     * Verifica si ha completado el provisioning
-     */
-    public boolean hasCompletedProvisioning() {
-        return preferencesHelper.hasCompletedProvisioning();
-    }
-
-    /**
-     * Establece el estado de provisioning
-     */
-    public void setCompletedProvisioning(boolean hasCompleted) {
-        preferencesHelper.setCompletedProvisioning(hasCompleted);
-    }
-
-    /**
-     * Guarda el ID de paciente conectado para usuarios familiares
-     */
-    public void saveConnectedPatientId(String patientId) {
-        preferencesHelper.saveConnectedPatientId(patientId);
-    }
-
-    /**
-     * Obtiene el ID de paciente conectado para usuarios familiares
-     */
-    public String getConnectedPatientId() {
-        return preferencesHelper.getConnectedPatientId();
-    }
-
-    /**
-     * Guarda el nombre del paciente conectado
-     */
-    public void saveConnectedPatientName(String name) {
-        preferencesHelper.saveConnectedPatientName(name);
-    }
-
-    /**
-     * Guarda el email del paciente conectado
-     */
-    public void saveConnectedPatientEmail(String email) {
-        preferencesHelper.saveConnectedPatientEmail(email);
-    }
-
-    /**
-     * Obtiene el nombre del paciente conectado
-     */
-    public String getConnectedPatientName() {
-        return preferencesHelper.getConnectedPatientName();
-    }
-
-    /**
-     * Obtiene el email del paciente conectado
-     */
-    public String getConnectedPatientEmail() {
-        return preferencesHelper.getConnectedPatientEmail();
-    }
-
+    // Resto de métodos auxiliares y de utilidad
+    
     /**
      * Cierra la sesión del usuario
      */
@@ -526,20 +478,7 @@ public class UserRepository {
         }
         preferencesHelper.clearUserData();
     }
-
-    /**
-     * Obtiene el nombre del usuario
-     */
-    public String getUserName() {
-        if (firebaseDataSource.isInitialized()) {
-            FirebaseUser user = firebaseDataSource.getCurrentUser();
-            if (user != null && user.getDisplayName() != null) {
-                return user.getDisplayName();
-            }
-        }
-        return preferencesHelper.getUserName();
-    }
-
+    
     /**
      * Obtiene el usuario actual
      */
@@ -578,6 +517,71 @@ public class UserRepository {
         return user;
     }
 
+    /**
+     * Verifica si el usuario ha iniciado sesión
+     */
+    public boolean isUserLoggedIn() {
+        return preferencesHelper.isLoggedIn();
+    }
+
+    /**
+     * Obtiene el ID del paciente conectado
+     */
+    public String getConnectedPatientId() {
+        return preferencesHelper.getConnectedPatientId();
+    }
+
+    /**
+     * Obtiene el tipo de usuario
+     */
+    public String getUserType() {
+        return preferencesHelper.getUserType();
+    }
+
+    /**
+     * Guarda el tipo de usuario
+     */
+    public void saveUserType(String userType) {
+        preferencesHelper.saveUserType(userType);
+    }
+
+    /**
+     * Guarda el ID del paciente conectado
+     */
+    public void saveConnectedPatientId(String patientId) {
+        preferencesHelper.saveConnectedPatientId(patientId);
+    }
+
+    /**
+     * Guarda el nombre del paciente conectado
+     */
+    public void saveConnectedPatientName(String name) {
+        preferencesHelper.saveConnectedPatientName(name);
+    }
+
+    /**
+     * Guarda el correo del paciente conectado
+     */
+    public void saveConnectedPatientEmail(String email) {
+        preferencesHelper.saveConnectedPatientEmail(email);
+    }
+
+    /**
+     * Verifica si el usuario ha completado el proceso de provisioning
+     */
+    public boolean hasCompletedProvisioning() {
+        return preferencesHelper.hasCompletedProvisioning();
+    }
+
+    // Interfaces adicionales
+    
+    /**
+     * Interface para generación de ID de paciente
+     */
+    private interface PatientIdCallback {
+        void onIdGenerated(String patientId);
+    }
+    
     /**
      * Interface de callback para autenticación
      */
