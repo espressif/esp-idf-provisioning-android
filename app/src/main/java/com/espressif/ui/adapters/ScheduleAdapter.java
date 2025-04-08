@@ -161,18 +161,67 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
                 // Programado pero no tomado (atrasado)
                 ivStatus.setImageResource(R.drawable.ic_schedule_missed);
                 ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorError));
-                tvStatusText.setText("Programado");
+                tvStatusText.setText("Pendiente (retrasado)");
                 return;
             }
             
-            // Programado para el futuro
+            // Programado para el futuro - Mostrar cuenta regresiva
             ivStatus.setImageResource(R.drawable.ic_schedule_pending);
             ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
             
-            // Mostrar cuándo está programado
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            String timeLabel = sdf.format(new Date(schedule.getNextScheduled()));
-            tvStatusText.setText("Próxima dosis: " + timeLabel);
+            // Calcular tiempo restante para mostrar cuenta regresiva de forma concisa
+            String countdown = formatCountdown(schedule.getNextScheduled() - now);
+            tvStatusText.setText(countdown); // Mostrar solo la cuenta regresiva para evitar superposiciones
         }
+    }
+    
+    /**
+     * Formatea un tiempo en milisegundos a una cadena de cuenta regresiva concisa
+     * @param timeInMillis Tiempo en milisegundos
+     * @return Texto formateado (ej: "En 2d 3h", "En 45m", etc.)
+     */
+    private String formatCountdown(long timeInMillis) {
+        if (timeInMillis <= 0) {
+            return "Ahora";
+        }
+        
+        // Constantes de tiempo en milisegundos
+        final long MINUTE_IN_MILLIS = 60 * 1000;
+        final long HOUR_IN_MILLIS = 60 * MINUTE_IN_MILLIS;
+        final long DAY_IN_MILLIS = 24 * HOUR_IN_MILLIS;
+        
+        StringBuilder result = new StringBuilder("En ");
+        
+        // Calcular días, horas y minutos
+        long days = timeInMillis / DAY_IN_MILLIS;
+        timeInMillis %= DAY_IN_MILLIS;
+        
+        long hours = timeInMillis / HOUR_IN_MILLIS;
+        timeInMillis %= HOUR_IN_MILLIS;
+        
+        long minutes = timeInMillis / MINUTE_IN_MILLIS;
+        
+        // Usar formato abreviado para evitar superposiciones
+        if (days > 0) {
+            result.append(days).append("d");
+            
+            // Si faltan más de 2 días, no mostrar las horas
+            if (days <= 2 && hours > 0) {
+                result.append(" ").append(hours).append("h");
+            }
+        } else if (hours > 0) {
+            result.append(hours).append("h");
+            
+            // Añadir minutos solo si son relevantes
+            if (hours < 10 && minutes > 0) {
+                result.append(" ").append(minutes).append("m");
+            }
+        } else if (minutes > 0) {
+            result.append(minutes).append("m");
+        } else {
+            result = new StringBuilder("<1m");
+        }
+        
+        return result.toString();
     }
 }
