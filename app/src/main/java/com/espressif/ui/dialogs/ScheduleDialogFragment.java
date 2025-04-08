@@ -61,6 +61,10 @@ public class ScheduleDialogFragment extends DialogFragment {
     private SwitchMaterial switchActive;
     private MaterialButton btnCancel, btnSave;
     
+    // Añadir una nueva variable para controlar el formato de hora
+    private boolean use24HourFormat = true; // Por defecto usamos formato 24h
+    private TextView tvHourFormat; // Nuevo TextView para mostrar/cambiar el formato
+    
     // Datos
     private String medicationId;
     private String medicationName;
@@ -175,6 +179,9 @@ public class ScheduleDialogFragment extends DialogFragment {
         btnCancel = view.findViewById(R.id.btn_cancel);
         btnSave = view.findViewById(R.id.btn_save);
         
+        // Referencia al nuevo TextView para el formato de hora
+        tvHourFormat = view.findViewById(R.id.tv_hour_format);
+        
         return view;
     }
     
@@ -190,6 +197,9 @@ public class ScheduleDialogFragment extends DialogFragment {
         }
         
         tvMedicationName.setText(medicationName);
+        
+        // Inicializar el formato de hora
+        updateFormatDisplay(); // Añade esta línea
         
         // Configurar hora seleccionada por defecto
         updateTimeDisplay();
@@ -235,6 +245,13 @@ public class ScheduleDialogFragment extends DialogFragment {
                 saveSchedule();
             }
         });
+        
+        // Click en el formato de hora para cambiar entre 12h/24h
+        tvHourFormat.setOnClickListener(v -> {
+            use24HourFormat = !use24HourFormat;
+            updateFormatDisplay();
+            updateTimeDisplay(); // Actualizar la visualización de la hora según el nuevo formato
+        });
     }
     
     /**
@@ -248,7 +265,7 @@ public class ScheduleDialogFragment extends DialogFragment {
                     this.minute = minute;
                     updateTimeDisplay();
                 },
-                hour, minute, true);
+                hour, minute, use24HourFormat); // Usar el formato elegido
         timePickerDialog.show();
     }
     
@@ -256,7 +273,16 @@ public class ScheduleDialogFragment extends DialogFragment {
      * Actualiza el texto de la hora seleccionada
      */
     private void updateTimeDisplay() {
-        String timeText = String.format(Locale.getDefault(), "%02d:%02d", hour, minute);
+        String timeText;
+        if (use24HourFormat) {
+            timeText = String.format(Locale.getDefault(), "%02d:%02d", hour, minute);
+        } else {
+            // Convertir a formato 12h
+            int displayHour = hour % 12;
+            if (displayHour == 0) displayHour = 12; // Las 0 horas en formato 12h son las 12 AM
+            String amPm = hour >= 12 ? "PM" : "AM";
+            timeText = String.format(Locale.getDefault(), "%d:%02d %s", displayHour, minute, amPm);
+        }
         tvSelectedTime.setText(timeText);
     }
     
@@ -350,6 +376,10 @@ public class ScheduleDialogFragment extends DialogFragment {
         
         // Configurar estado activo
         switchActive.setChecked(schedule.isActive());
+        
+        // Si el horario tiene información de formato, usarla
+        use24HourFormat = schedule.isUse24HourFormat();
+        updateFormatDisplay();
     }
     
     /**
@@ -386,6 +416,7 @@ public class ScheduleDialogFragment extends DialogFragment {
             schedule.setMedicationId(medicationId);
             schedule.setHour(hour);
             schedule.setMinute(minute);
+            schedule.setUse24HourFormat(use24HourFormat); // Guardar el formato de hora
             
             // Configurar los días según la selección
             // Cambiamos de array a ArrayList
@@ -549,5 +580,12 @@ public class ScheduleDialogFragment extends DialogFragment {
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
         return false;
+    }
+
+    /**
+     * Actualiza la visualización del formato de hora (12h o 24h)
+     */
+    private void updateFormatDisplay() {
+        tvHourFormat.setText(use24HourFormat ? "24h" : "AM/PM");
     }
 }

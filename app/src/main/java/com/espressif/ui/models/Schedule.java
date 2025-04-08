@@ -27,6 +27,7 @@ public class Schedule {
     private boolean detectedBySensor;   // Indica si el sensor ultrasónico detectó la pastilla/líquido
     private long dispensedAt;           // Timestamp de cuándo se dispensó el medicamento
     private long detectedAt;            // Timestamp de cuándo el sensor detectó el medicamento
+    private boolean use24HourFormat = true; // Por defecto usar formato 24h
 
     // Constructor vacío requerido para Firebase
     public Schedule() {
@@ -183,6 +184,14 @@ public class Schedule {
         this.detectedAt = detectedAt;
     }
 
+    public boolean isUse24HourFormat() {
+        return use24HourFormat;
+    }
+
+    public void setUse24HourFormat(boolean use24HourFormat) {
+        this.use24HourFormat = use24HourFormat;
+    }
+
     // Métodos auxiliares
     @Exclude
     public void setDailySchedule() {
@@ -294,6 +303,7 @@ public class Schedule {
         result.put("detectedBySensor", detectedBySensor);
         result.put("dispensedAt", dispensedAt);
         result.put("detectedAt", detectedAt);
+        result.put("use24HourFormat", use24HourFormat);
         
         return result;
     }
@@ -303,7 +313,14 @@ public class Schedule {
      */
     @Exclude
     public String getFormattedTime() {
-        return String.format("%02d:%02d", hour, minute);
+        if (use24HourFormat) {
+            return String.format("%02d:%02d", hour, minute);
+        } else {
+            int displayHour = hour % 12;
+            if (displayHour == 0) displayHour = 12;
+            String amPm = hour >= 12 ? "PM" : "AM";
+            return String.format("%d:%02d %s", displayHour, minute, amPm);
+        }
     }
 
     /**
