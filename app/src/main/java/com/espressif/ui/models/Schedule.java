@@ -4,6 +4,7 @@ import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;
 
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -17,7 +18,7 @@ public class Schedule {
     private String medicationId;    // ID del medicamento asociado
     private int hour;               // Hora (0-23)
     private int minute;             // Minuto (0-59)
-    private boolean[] daysOfWeek;   // Días de la semana [lun, mar, mié, jue, vie, sáb, dom]
+    private ArrayList<Boolean> daysOfWeek;   // Días de la semana [lun, mar, mié, jue, vie, sáb, dom]
     private boolean active;         // Estado activo/inactivo
     private boolean takingConfirmed; // Confirmación de toma
     private long lastTaken;         // Timestamp última toma
@@ -36,18 +37,18 @@ public class Schedule {
         this.id = UUID.randomUUID().toString();
         this.hour = hour;
         this.minute = minute;
-        this.daysOfWeek = new boolean[7]; // Por defecto, todos los días están desactivados
+        this.daysOfWeek = new ArrayList<>(Arrays.asList(new Boolean[7])); // Por defecto, todos los días están desactivados
         this.active = true;
-        Arrays.fill(this.daysOfWeek, false); // Inicialmente ningún día seleccionado
+        Arrays.fill(this.daysOfWeek.toArray(new Boolean[0]), false); // Inicialmente ningún día seleccionado
     }
 
     // Constructor completo
-    public Schedule(String id, String medicationId, int hour, int minute, boolean[] daysOfWeek, boolean active) {
+    public Schedule(String id, String medicationId, int hour, int minute, ArrayList<Boolean> daysOfWeek, boolean active) {
         this.id = id != null ? id : UUID.randomUUID().toString();
         this.medicationId = medicationId;
         this.hour = hour;
         this.minute = minute;
-        this.daysOfWeek = daysOfWeek != null ? daysOfWeek : new boolean[7];
+        this.daysOfWeek = daysOfWeek != null ? daysOfWeek : new ArrayList<>(Arrays.asList(new Boolean[7]));
         this.active = active;
         this.takingConfirmed = false;
         
@@ -90,12 +91,22 @@ public class Schedule {
         updateNextScheduledTime();
     }
 
-    public boolean[] getDaysOfWeek() {
+    public ArrayList<Boolean> getDaysOfWeek() {
         return daysOfWeek;
     }
 
-    public void setDaysOfWeek(boolean[] daysOfWeek) {
+    public void setDaysOfWeek(ArrayList<Boolean> daysOfWeek) {
         this.daysOfWeek = daysOfWeek;
+        updateNextScheduledTime();
+    }
+
+    // Opcional: método de conveniencia para establecer desde array booleano
+    public void setDaysOfWeekFromArray(boolean[] days) {
+        ArrayList<Boolean> daysList = new ArrayList<>();
+        for (boolean day : days) {
+            daysList.add(day);
+        }
+        this.daysOfWeek = daysList;
         updateNextScheduledTime();
     }
 
@@ -176,39 +187,39 @@ public class Schedule {
     @Exclude
     public void setDailySchedule() {
         if (daysOfWeek == null) {
-            daysOfWeek = new boolean[7];
+            daysOfWeek = new ArrayList<>(Arrays.asList(new Boolean[7]));
         }
-        Arrays.fill(daysOfWeek, true);
+        Arrays.fill(daysOfWeek.toArray(new Boolean[0]), true);
         updateNextScheduledTime();
     }
 
     @Exclude
     public void setWeekdaySchedule() {
         if (daysOfWeek == null) {
-            daysOfWeek = new boolean[7];
+            daysOfWeek = new ArrayList<>(Arrays.asList(new Boolean[7]));
         }
         // Lunes a viernes (0-4)
         for (int i = 0; i < 5; i++) {
-            daysOfWeek[i] = true;
+            daysOfWeek.set(i, true);
         }
         // Sábado y domingo (5-6)
-        daysOfWeek[5] = false;
-        daysOfWeek[6] = false;
+        daysOfWeek.set(5, false);
+        daysOfWeek.set(6, false);
         updateNextScheduledTime();
     }
 
     @Exclude
     public void setWeekendSchedule() {
         if (daysOfWeek == null) {
-            daysOfWeek = new boolean[7];
+            daysOfWeek = new ArrayList<>(Arrays.asList(new Boolean[7]));
         }
         // Lunes a viernes (0-4)
         for (int i = 0; i < 5; i++) {
-            daysOfWeek[i] = false;
+            daysOfWeek.set(i, false);
         }
         // Sábado y domingo (5-6)
-        daysOfWeek[5] = true;
-        daysOfWeek[6] = true;
+        daysOfWeek.set(5, true);
+        daysOfWeek.set(6, true);
         updateNextScheduledTime();
     }
 
@@ -216,7 +227,7 @@ public class Schedule {
     public boolean isForToday() {
         java.util.Calendar calendar = java.util.Calendar.getInstance();
         int today = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
-        return daysOfWeek != null && daysOfWeek[today];
+        return daysOfWeek != null && daysOfWeek.get(today);
     }
 
     @Exclude
@@ -227,7 +238,7 @@ public class Schedule {
         int currentDayOfWeek = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
 
         // Si el horario de hoy ya pasó, buscar el próximo día disponible
-        boolean scheduleForToday = daysOfWeek != null && daysOfWeek[currentDayOfWeek] && 
+        boolean scheduleForToday = daysOfWeek != null && daysOfWeek.get(currentDayOfWeek) && 
                                    (hour > currentHour || (hour == currentHour && minute > currentMinute));
 
         if (scheduleForToday) {
@@ -241,7 +252,7 @@ public class Schedule {
             int daysToAdd = 1;
             int nextDay = (currentDayOfWeek + daysToAdd) % 7;
             
-            while (daysOfWeek == null || !daysOfWeek[nextDay]) {
+            while (daysOfWeek == null || !daysOfWeek.get(nextDay)) {
                 daysToAdd++;
                 nextDay = (currentDayOfWeek + daysToAdd) % 7;
                 
@@ -309,8 +320,8 @@ public class Schedule {
         boolean allDays = true;
         boolean noDays = true;
         
-        for (int i = 0; i < daysOfWeek.length; i++) {
-            if (daysOfWeek[i]) {
+        for (int i = 0; i < daysOfWeek.size(); i++) {
+            if (daysOfWeek.get(i)) {
                 noDays = false;
                 sb.append(dayNames[i]).append(" ");
             } else {

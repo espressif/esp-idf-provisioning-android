@@ -31,10 +31,12 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.espressif.ui.dialogs.DialogMedication;
+import com.espressif.ui.dialogs.ScheduleDialogFragment;
 
 public class DispenserFragment extends Fragment implements 
         MedicationAdapter.MedicationListener,
-        DialogMedication.MedicationDialogListener {
+        DialogMedication.MedicationDialogListener,
+        ScheduleDialogFragment.ScheduleDialogListener {  // Añadir esta interfaz
 
     private DispenserViewModel viewModel;
     private MedicationAdapter adapter;
@@ -350,8 +352,27 @@ public class DispenserFragment extends Fragment implements
     }
     
     private void showAddScheduleDialog(Medication medication) {
-        // En el siguiente paso implementaremos los diálogos
-        Toast.makeText(requireContext(), "Añadir horario para: " + medication.getName(), Toast.LENGTH_SHORT).show();
+        if (medication == null || medication.getId() == null) {
+            Toast.makeText(requireContext(), "Error: medicamento no válido", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        ScheduleDialogFragment dialogFragment = ScheduleDialogFragment.newInstance(
+                medication.getId(), medication.getName());
+        dialogFragment.setListener(this);
+        dialogFragment.show(getChildFragmentManager(), "schedule_dialog");
+    }
+    
+    private void showEditScheduleDialog(Medication medication, Schedule schedule) {
+        if (medication == null || medication.getId() == null || schedule == null || schedule.getId() == null) {
+            Toast.makeText(requireContext(), "Error: datos no válidos", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        ScheduleDialogFragment dialogFragment = ScheduleDialogFragment.newInstance(
+                medication.getId(), medication.getName(), schedule.getId());
+        dialogFragment.setListener(this);
+        dialogFragment.show(getChildFragmentManager(), "schedule_dialog");
     }
     
     private void confirmDeleteMedication(Medication medication) {
@@ -389,15 +410,24 @@ public class DispenserFragment extends Fragment implements
         return new ScheduleAdapter.ScheduleListener() {
             @Override
             public void onScheduleClick(Schedule schedule) {
-                // En el siguiente paso, esto abriría un diálogo para editar el horario
-                Toast.makeText(requireContext(), "Horario seleccionado: " + schedule.getFormattedTime(), Toast.LENGTH_SHORT).show();
+                // Abrir diálogo para editar el horario seleccionado
+                showEditScheduleDialog(medication, schedule);
             }
             
             @Override
             public void onScheduleActiveChanged(Schedule schedule, boolean active) {
                 // Actualizar el estado activo del horario
+                schedule.setActive(active);
                 viewModel.saveSchedule(medication.getId(), schedule);
             }
         };
+    }
+
+    @Override
+    public void onScheduleSaved(Schedule schedule) {
+        if (schedule != null && schedule.getMedicationId() != null) {
+            viewModel.saveSchedule(schedule.getMedicationId(), schedule);
+            Toast.makeText(requireContext(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
+        }
     }
 }
