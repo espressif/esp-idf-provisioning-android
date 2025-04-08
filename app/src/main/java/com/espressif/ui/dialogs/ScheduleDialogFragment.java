@@ -28,6 +28,7 @@ import com.espressif.ui.models.Schedule;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -35,6 +36,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.List;
 
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -64,6 +66,13 @@ public class ScheduleDialogFragment extends DialogFragment {
     // Añadir una nueva variable para controlar el formato de hora
     private boolean use24HourFormat = true; // Por defecto usamos formato 24h
     private TextView tvHourFormat; // Nuevo TextView para mostrar/cambiar el formato
+    
+    // Añadir variables de clase para los nuevos componentes
+    private MaterialRadioButton rbInterval;
+    private LinearLayout layoutIntervalHours;
+    private RadioGroup rgInterval;
+    private MaterialRadioButton rbInterval4, rbInterval6, rbInterval8, rbInterval12;
+    private TextInputEditText etTreatmentDays;
     
     // Datos
     private String medicationId;
@@ -182,6 +191,16 @@ public class ScheduleDialogFragment extends DialogFragment {
         // Referencia al nuevo TextView para el formato de hora
         tvHourFormat = view.findViewById(R.id.tv_hour_format);
         
+        // Inicializar nuevos componentes
+        rbInterval = view.findViewById(R.id.rb_interval);
+        layoutIntervalHours = view.findViewById(R.id.layout_interval_hours);
+        rgInterval = view.findViewById(R.id.rg_interval);
+        rbInterval4 = view.findViewById(R.id.rb_interval_4);
+        rbInterval6 = view.findViewById(R.id.rb_interval_6);
+        rbInterval8 = view.findViewById(R.id.rb_interval_8);
+        rbInterval12 = view.findViewById(R.id.rb_interval_12);
+        etTreatmentDays = view.findViewById(R.id.et_treatment_days);
+        
         return view;
     }
     
@@ -230,10 +249,15 @@ public class ScheduleDialogFragment extends DialogFragment {
         
         // Cambio en la selección de frecuencia
         rgFrequency.setOnCheckedChangeListener((group, checkedId) -> {
+            // Ocultar todos los layouts específicos primero
+            layoutCustomDays.setVisibility(View.GONE);
+            layoutIntervalHours.setVisibility(View.GONE);
+            
+            // Mostrar el layout correspondiente según la selección
             if (checkedId == R.id.rb_custom) {
                 layoutCustomDays.setVisibility(View.VISIBLE);
-            } else {
-                layoutCustomDays.setVisibility(View.GONE);
+            } else if (checkedId == R.id.rb_interval) {
+                layoutIntervalHours.setVisibility(View.VISIBLE);
             }
         });
         
@@ -380,6 +404,31 @@ public class ScheduleDialogFragment extends DialogFragment {
         // Si el horario tiene información de formato, usarla
         use24HourFormat = schedule.isUse24HourFormat();
         updateFormatDisplay();
+        
+        // Verificar si está en modo intervalo
+        if (schedule.isIntervalMode()) {
+            rbInterval.setChecked(true);
+            layoutIntervalHours.setVisibility(View.VISIBLE);
+            
+            // Configurar el intervalo correcto
+            switch (schedule.getIntervalHours()) {
+                case 4:
+                    rbInterval4.setChecked(true);
+                    break;
+                case 6:
+                    rbInterval6.setChecked(true);
+                    break;
+                case 12:
+                    rbInterval12.setChecked(true);
+                    break;
+                default:
+                    rbInterval8.setChecked(true);
+                    break;
+            }
+            
+            // Mostrar días de tratamiento
+            etTreatmentDays.setText(String.valueOf(schedule.getTreatmentDays()));
+        }
     }
     
     /**
@@ -419,29 +468,61 @@ public class ScheduleDialogFragment extends DialogFragment {
             schedule.setUse24HourFormat(use24HourFormat); // Guardar el formato de hora
             
             // Configurar los días según la selección
-            // Cambiamos de array a ArrayList
             ArrayList<Boolean> days = new ArrayList<>(7);
             for (int i = 0; i < 7; i++) {
                 days.add(false); // Inicializar con falsos
             }
             
-            if (rbDaily.isChecked()) {
+            if (rbInterval.isChecked()) {
+                // Si es por intervalos, configurar atributos específicos
+                int intervalHours = 8; // Valor predeterminado
+                if (rbInterval4.isChecked()) intervalHours = 4;
+                else if (rbInterval6.isChecked()) intervalHours = 6;
+                else if (rbInterval12.isChecked()) intervalHours = 12;
+                
+                // Obtener días de tratamiento (con validación)
+                int treatmentDays = 2; // Valor predeterminado
+                try {
+                    String daysStr = etTreatmentDays.getText().toString();
+                    if (!daysStr.isEmpty()) {
+                        treatmentDays = Integer.parseInt(daysStr);
+                        if (treatmentDays <= 0) treatmentDays = 1;
+                        if (treatmentDays > 30) treatmentDays = 30; // Limitar a un mes como máximo
+                    }
+                } catch (NumberFormatException e) {
+                    // En caso de error, usar el valor predeterminado
+                }
+                
+                // Guardar en el objeto Schedule
+                schedule.setIntervalMode(true);
+                schedule.setIntervalHours(intervalHours);
+                schedule.setTreatmentDays(treatmentDays);
+                
+                // Activar todos los días para que se generen los horarios correspondientes
+                for (int i = 0; i < 7; i++) {
+                    days.set(i, true);
+                }
+                
+                // Calcular fecha de finalización del tratamiento
+                Calendar endDate = Calendar.getInstance();
+                endDate.add(Calendar.DAY_OF_MONTH, treatmentDays);
+                schedule.setTreatmentEndDate(endDate.getTimeInMillis());
+            } else if (rbDaily.isChecked()) {
+                // Todos los días
                 for (int i = 0; i < 7; i++) {
                     days.set(i, true);
                 }
             } else if (rbWeekdays.isChecked()) {
-                for (int i = 0; i < 5; i++) { // Lun-Vie
+                // Lunes a viernes
+                for (int i = 0; i < 5; i++) {
                     days.set(i, true);
                 }
-                days.set(5, false); // Sáb
-                days.set(6, false); // Dom
             } else if (rbWeekends.isChecked()) {
-                for (int i = 0; i < 5; i++) { // Lun-Vie
-                    days.set(i, false);
-                }
-                days.set(5, true); // Sáb
-                days.set(6, true); // Dom
-            } else { // Personalizado
+                // Sábado y domingo
+                days.set(5, true);
+                days.set(6, true);
+            } else if (rbCustom.isChecked()) {
+                // Días personalizados
                 days.set(0, cbMonday.isChecked());
                 days.set(1, cbTuesday.isChecked());
                 days.set(2, cbWednesday.isChecked());
@@ -463,40 +544,11 @@ public class ScheduleDialogFragment extends DialogFragment {
                 return;
             }
             
-            // Notificar primero al listener
-            // Esto puede servir como fallback si hay problemas con la base de datos
-            if (listener != null) {
-                listener.onScheduleSaved(schedule);
-            }
-            
-            // Luego intentar guardar en Firebase
-            try {
-                medicationRepository.saveSchedule(patientId, medicationId, schedule, new MedicationRepository.DatabaseCallback() {
-                    @Override
-                    public void onSuccess() {
-                        if (isAdded() && getActivity() != null) {
-                            Toast.makeText(getActivity(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
-                            dismiss();
-                        }
-                    }
-                    
-                    @Override
-                    public void onError(String errorMessage) {
-                        if (isAdded() && getActivity() != null) {
-                            // Error al guardar en Firebase pero ya notificamos al listener,
-                            // así que la UI se actualizará localmente
-                            Toast.makeText(getActivity(), "Advertencia: Cambios locales aplicados, pero hubo un error al sincronizar: " + errorMessage, Toast.LENGTH_LONG).show();
-                            dismiss();
-                        }
-                    }
-                });
-            } catch (Exception e) {
-                // Si falla la llamada a Firebase, al menos la UI se actualizará localmente
-                // porque ya notificamos al listener
-                Toast.makeText(requireContext(), "Error de conexión: Los cambios se aplicarán cuando vuelvas a conectarte", Toast.LENGTH_LONG).show();
-                e.printStackTrace();
-                dismiss();
-            }
+            // Paso 1: Verificar si hay horarios existentes para eliminarlos
+            checkAndRemoveExistingSchedules(schedule, () -> {
+                // Paso 2: Luego de verificar y eliminar (si era necesario), continuar con el guardado
+                continueWithSave(schedule);
+            });
             
         } catch (Exception e) {
             // Capturar cualquier otra excepción no controlada
@@ -504,6 +556,111 @@ public class ScheduleDialogFragment extends DialogFragment {
                 Toast.makeText(getContext(), "Error inesperado: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 e.printStackTrace(); 
             }
+        }
+    }
+    
+    /**
+     * Verifica si hay horarios existentes para este medicamento y los elimina
+     * @param newSchedule El nuevo horario a guardar
+     * @param onComplete Callback a ejecutar cuando se complete el proceso
+     */
+    private void checkAndRemoveExistingSchedules(Schedule newSchedule, Runnable onComplete) {
+        // Obtener medicamento actual para ver sus horarios
+        medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication medication) {
+                if (medication != null && medication.getSchedules() != null && !medication.getSchedules().isEmpty()) {
+                    // Hay horarios existentes, necesitamos eliminarlos
+                    
+                    // Obtener todos los IDs de horarios excepto el actual (si estamos editando)
+                    List<String> schedulesToRemove = new ArrayList<>();
+                    for (String id : medication.getSchedules().keySet()) {
+                        // Si estamos editando, no eliminar el mismo que estamos editando
+                        if (scheduleId == null || !id.equals(scheduleId)) {
+                            schedulesToRemove.add(id);
+                        }
+                    }
+                    
+                    // Si no hay nada que eliminar, continuar con el guardado
+                    if (schedulesToRemove.isEmpty()) {
+                        onComplete.run();
+                        return;
+                    }
+                    
+                    // Contador para saber cuándo hemos terminado con todas las eliminaciones
+                    final int[] counter = {schedulesToRemove.size()};
+                    
+                    // Eliminar cada horario uno por uno
+                    for (String idToRemove : schedulesToRemove) {
+                        medicationRepository.deleteSchedule(patientId, medicationId, idToRemove, new MedicationRepository.DatabaseCallback() {
+                            @Override
+                            public void onSuccess() {
+                                counter[0]--;
+                                // Cuando todos han sido eliminados, continuar con el guardado
+                                if (counter[0] <= 0) {
+                                    onComplete.run();
+                                }
+                            }
+                            
+                            @Override
+                            public void onError(String errorMessage) {
+                                // Incluso si falla la eliminación, continuamos (intentamos lo mejor posible)
+                                Log.e(TAG, "Error al eliminar horario anterior: " + errorMessage);
+                                counter[0]--;
+                                if (counter[0] <= 0) {
+                                    onComplete.run();
+                                }
+                            }
+                        });
+                    }
+                } else {
+                    // No hay horarios existentes, continuar directamente
+                    onComplete.run();
+                }
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // Si hay un error al obtener el medicamento, intentamos guardar de todas formas
+                Log.e(TAG, "Error al verificar horarios existentes: " + errorMessage);
+                onComplete.run();
+            }
+        });
+    }
+    
+    /**
+     * Continúa con el proceso de guardado después de eliminar horarios existentes
+     */
+    private void continueWithSave(Schedule schedule) {
+        // Notificar primero al listener (código existente)
+        if (listener != null) {
+            listener.onScheduleSaved(schedule);
+        }
+        
+        // Luego intentar guardar en Firebase (código existente)
+        try {
+            medicationRepository.saveSchedule(patientId, medicationId, schedule, new MedicationRepository.DatabaseCallback() {
+                @Override
+                public void onSuccess() {
+                    if (isAdded() && getActivity() != null) {
+                        Toast.makeText(getActivity(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
+                        dismiss();
+                    }
+                }
+                
+                @Override
+                public void onError(String errorMessage) {
+                    if (isAdded() && getActivity() != null) {
+                        Toast.makeText(getActivity(), "Advertencia: Cambios locales aplicados, pero hubo un error al sincronizar: " + errorMessage, Toast.LENGTH_LONG).show();
+                        dismiss();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            // Si falla la llamada a Firebase (código existente)
+            Toast.makeText(requireContext(), "Error de conexión: Los cambios se aplicarán cuando vuelvas a conectarte", Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+            dismiss();
         }
     }
     

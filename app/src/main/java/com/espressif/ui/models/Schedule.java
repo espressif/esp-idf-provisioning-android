@@ -28,6 +28,10 @@ public class Schedule {
     private long dispensedAt;           // Timestamp de cuándo se dispensó el medicamento
     private long detectedAt;            // Timestamp de cuándo el sensor detectó el medicamento
     private boolean use24HourFormat = true; // Por defecto usar formato 24h
+    private boolean intervalMode = false;
+    private int intervalHours = 0;
+    private int treatmentDays = 0;
+    private long treatmentEndDate = 0;
 
     // Constructor vacío requerido para Firebase
     public Schedule() {
@@ -190,6 +194,38 @@ public class Schedule {
 
     public void setUse24HourFormat(boolean use24HourFormat) {
         this.use24HourFormat = use24HourFormat;
+    }
+
+    public boolean isIntervalMode() {
+        return intervalMode;
+    }
+
+    public void setIntervalMode(boolean intervalMode) {
+        this.intervalMode = intervalMode;
+    }
+
+    public int getIntervalHours() {
+        return intervalHours;
+    }
+
+    public void setIntervalHours(int intervalHours) {
+        this.intervalHours = intervalHours;
+    }
+
+    public int getTreatmentDays() {
+        return treatmentDays;
+    }
+
+    public void setTreatmentDays(int treatmentDays) {
+        this.treatmentDays = treatmentDays;
+    }
+
+    public long getTreatmentEndDate() {
+        return treatmentEndDate;
+    }
+
+    public void setTreatmentEndDate(long treatmentEndDate) {
+        this.treatmentEndDate = treatmentEndDate;
     }
 
     // Métodos auxiliares

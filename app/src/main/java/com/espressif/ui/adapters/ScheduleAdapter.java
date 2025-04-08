@@ -165,6 +165,21 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
                 return;
             }
             
+            // Si está en modo intervalo y aún dentro del período de tratamiento
+            if (schedule.isIntervalMode() && schedule.getTreatmentEndDate() > System.currentTimeMillis()) {
+                // Mostrar información sobre el intervalo
+                String intervalText = "Cada " + schedule.getIntervalHours() + "h";
+                
+                // Calcular días restantes
+                int daysLeft = (int)((schedule.getTreatmentEndDate() - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)) + 1;
+                if (daysLeft > 0) {
+                    intervalText += " • " + daysLeft + (daysLeft == 1 ? " día" : " días") + " restante" + (daysLeft == 1 ? "" : "s");
+                }
+                
+                tvStatusText.setText(intervalText);
+                return;
+            }
+            
             // Programado para el futuro - Mostrar cuenta regresiva
             ivStatus.setImageResource(R.drawable.ic_schedule_pending);
             ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));

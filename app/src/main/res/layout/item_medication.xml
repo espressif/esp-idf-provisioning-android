@@ -88,18 +88,6 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="C1" />
 
-            <!-- Dosis restantes -->
-            <TextView
-                android:id="@+id/tv_remaining_doses"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                android:textStyle="italic"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tv_compartment"
-                tools:text="12 dosis restantes" />
-
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- Separador -->

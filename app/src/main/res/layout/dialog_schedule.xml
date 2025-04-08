@@ -1,215 +1,425 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout 
+<ScrollView 
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:fillViewport="true">
 
-    <TextView
-        android:id="@+id/tv_dialog_title"
+    <LinearLayout 
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Programar horario"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tv_medication_name"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="Paracetamol"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
-
-    <!-- Selector de hora -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Hora de la toma"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-        android:textStyle="bold" />
-
-    <LinearLayout
-        android:id="@+id/layout_time_picker"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_time_picker"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:padding="12dp">
+        android:orientation="vertical"
+        android:padding="16dp">
 
         <TextView
-            android:id="@+id/tv_selected_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="08:00"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginStart="8dp"
-            android:src="@drawable/ic_timer"
-            app:tint="@color/colorAccent" />
-
-        <!-- Añadir TextView para mostrar el formato actual -->
-        <TextView
-            android:id="@+id/tv_hour_format"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:background="@drawable/bg_hour_format"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="24h"
-            android:textColor="@color/colorAccent"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Selector de días de la semana -->
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Días de la semana"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-        android:textStyle="bold" />
-
-    <RadioGroup
-        android:id="@+id/rg_frequency"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:orientation="vertical">
-
-        <com.google.android.material.radiobutton.MaterialRadioButton
-            android:id="@+id/rb_daily"
+            android:id="@+id/tv_dialog_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:text="Programar horario"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_medication_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Paracetamol"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1" />
+
+        <!-- Selector de hora -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Hora de la toma"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/layout_time_picker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_time_picker"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/tv_selected_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="08:00"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_timer"
+                app:tint="@color/colorAccent" />
+
+            <!-- Añadir TextView para mostrar el formato actual -->
+            <TextView
+                android:id="@+id/tv_hour_format"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:background="@drawable/bg_hour_format"
+                android:paddingStart="8dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="4dp"
+                android:text="24h"
+                android:textColor="@color/colorAccent"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Selector de días de la semana -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Días de la semana"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+            android:textStyle="bold" />
+
+        <RadioGroup
+            android:id="@+id/rg_frequency"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/rb_daily"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="Todos los días" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/rb_weekdays"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Días laborables (Lun-Vie)" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/rb_weekends"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Fines de semana (Sáb-Dom)" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/rb_custom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Personalizado" />
+
+            <com.google.android.material.radiobutton.MaterialRadioButton
+                android:id="@+id/rb_interval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Por intervalos horarios" />
+
+        </RadioGroup>
+
+        <!-- Selección personalizada de días -->
+        <LinearLayout
+            android:id="@+id/layout_custom_days"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_horizontal"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <!-- Día Lunes -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="L"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_monday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Martes -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="M"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_tuesday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Miércoles -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="X"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_wednesday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Jueves -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="J"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_thursday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Viernes -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="V"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_friday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Sábado -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="S"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_saturday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+
+            <!-- Día Domingo -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="D"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+                    
+                <CheckBox
+                    android:id="@+id/cb_sunday"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="2dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_interval_hours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Selección de intervalo horario -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tomar cada:"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/rg_interval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/rb_interval_4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4 horas" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/rb_interval_6"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="6 horas" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/rb_interval_8"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="8 horas" />
+
+                <com.google.android.material.radiobutton.MaterialRadioButton
+                    android:id="@+id/rb_interval_12"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12 horas" />
+            </RadioGroup>
+
+            <!-- Duración del tratamiento -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Duración del tratamiento:"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:hint="Días"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_treatment_days"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:text="2" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="días" />
+            </LinearLayout>
+
+            <!-- Información de próximas dosis -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textStyle="italic"
+                android:textSize="12sp"
+                android:text="La primera dosis será a la hora seleccionada, y las siguientes se programarán automáticamente según el intervalo." />
+        </LinearLayout>
+
+        <!-- Estado activo/inactivo -->
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_active"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:checked="true"
-            android:text="Todos los días" />
+            android:text="Horario activo" />
 
-        <com.google.android.material.radiobutton.MaterialRadioButton
-            android:id="@+id/rb_weekdays"
+        <!-- Botones de acción -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Días laborables (Lun-Vie)" />
+            android:layout_marginTop="24dp"
+            android:gravity="end"
+            android:orientation="horizontal">
 
-        <com.google.android.material.radiobutton.MaterialRadioButton
-            android:id="@+id/rb_weekends"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fines de semana (Sáb-Dom)" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cancel"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancelar" />
 
-        <com.google.android.material.radiobutton.MaterialRadioButton
-            android:id="@+id/rb_custom"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Personalizado" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_save"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="Guardar" />
 
-    </RadioGroup>
-
-    <!-- Selección personalizada de días -->
-    <LinearLayout
-        android:id="@+id/layout_custom_days"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="center_horizontal"
-        android:orientation="horizontal"
-        android:visibility="gone">
-
-        <CheckBox
-            android:id="@+id/cb_monday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="L" />
-
-        <CheckBox
-            android:id="@+id/cb_tuesday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="M" />
-
-        <CheckBox
-            android:id="@+id/cb_wednesday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="X" />
-
-        <CheckBox
-            android:id="@+id/cb_thursday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="J" />
-
-        <CheckBox
-            android:id="@+id/cb_friday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="V" />
-
-        <CheckBox
-            android:id="@+id/cb_saturday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="S" />
-
-        <CheckBox
-            android:id="@+id/cb_sunday"
-            android:layout_width="36dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:text="D" />
+        </LinearLayout>
 
     </LinearLayout>
-
-    <!-- Estado activo/inactivo -->
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/switch_active"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:checked="true"
-        android:text="Horario activo" />
-
-    <!-- Botones de acción -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:gravity="end"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_cancel"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Cancelar" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_save"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="Guardar" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</ScrollView>
