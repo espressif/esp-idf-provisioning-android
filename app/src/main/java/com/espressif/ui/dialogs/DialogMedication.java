@@ -24,6 +24,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -170,21 +171,27 @@ public class DialogMedication extends DialogFragment {
         });
     }
 
+    // Replace the updateCompartmentOptions method with this improved version
     private void updateCompartmentOptions(String type) {
         rgCompartment.removeAllViews();
         
         // Obtener compartimentos disponibles según el tipo
-        List<Integer> availableCompartments;
+        List<Integer> availableCompartments = new ArrayList<>();
         
         if (isEditMode && editingMedication != null) {
-            // En modo edición, incluir siempre el compartimento actual como disponible
-            availableCompartments = compartmentManager.getAvailableCompartments(type);
+            // En modo edición, si el medicamento sigue siendo del mismo tipo,
+            // incluir su compartimento actual como disponible
             int currentCompartment = editingMedication.getCompartmentNumber();
+            String currentType = editingMedication.getType();
             
-            if (currentCompartment > 0 && 
-                !availableCompartments.contains(currentCompartment) && 
-                MedicationType.isCompatibleWithCompartment(type, currentCompartment)) {
-                availableCompartments.add(currentCompartment);
+            // Obtener compartimentos libres
+            availableCompartments = compartmentManager.getAvailableCompartments(type);
+            
+            // Si estamos editando el mismo tipo de medicamento, incluir su compartimento actual
+            if (type.equals(currentType) && currentCompartment > 0) {
+                if (!availableCompartments.contains(currentCompartment)) {
+                    availableCompartments.add(currentCompartment);
+                }
             }
         } else {
             // En modo creación, mostrar solo compartimentos libres
@@ -211,7 +218,15 @@ public class DialogMedication extends DialogFragment {
         
         // Añadir opciones para compartimentos disponibles
         for (int compartmentNumber : availableCompartments) {
-            addCompartmentOption(compartmentNumber);
+            // Verificar si este compartimento es compatible con el tipo actual
+            // Esto es una verificación adicional para mayor seguridad
+            boolean isCompatible = 
+                (type.equals(MedicationType.PILL) && compartmentNumber <= MAX_PILL_COMPARTMENTS) ||
+                (type.equals(MedicationType.LIQUID) && compartmentNumber == MAX_PILL_COMPARTMENTS + 1);
+                
+            if (isCompatible) {
+                addCompartmentOption(compartmentNumber);
+            }
         }
         
         // Seleccionar el compartimento adecuado
@@ -334,6 +349,7 @@ public class DialogMedication extends DialogFragment {
         updateCompartmentOptions(editingMedication.getType());
     }
 
+    // Replace the saveMedication method with this improved version
     private void saveMedication() {
         String name = etMedicationName.getText().toString().trim();
         float amount = Float.parseFloat(etAmount.getText().toString().trim());
@@ -344,13 +360,45 @@ public class DialogMedication extends DialogFragment {
         
         // Determinar el compartimento seleccionado
         int selectedCompartment = 0;
+        boolean compartmentFound = false;
+        
+        // Recorrer todos los RadioButtons en el RadioGroup
         for (int i = 0; i < rgCompartment.getChildCount(); i++) {
-            RadioButton rb = (RadioButton) rgCompartment.getChildAt(i);
-            if (rb.isChecked()) {
-                // Obtenemos el valor del tag que representa el número real del compartimento
-                selectedCompartment = (int) rb.getTag();
-                break;
+            View child = rgCompartment.getChildAt(i);
+            if (child instanceof RadioButton) {
+                RadioButton rb = (RadioButton) child;
+                if (rb.isChecked() && rb.getTag() instanceof Integer) {
+                    // Obtenemos el valor del tag que representa el número real del compartimento
+                    selectedCompartment = (int) rb.getTag();
+                    compartmentFound = true;
+                    break;
+                }
             }
+        }
+        
+        // Verificación de seguridad: si no se encontró un compartimento o está ocupado 
+        // (y no es el mismo medicamento), mostrar un error
+        if (!compartmentFound) {
+            showMessage("Error: No se ha seleccionado un compartimento válido");
+            return;
+        }
+        
+        // Verificar si el compartimento es válido para este tipo de medicamento
+        boolean isValidCompartment = false;
+        
+        if (isEditMode && editingMedication != null && editingMedication.getCompartmentNumber() == selectedCompartment) {
+            // Si estamos editando y manteniendo el mismo compartimento, es válido
+            isValidCompartment = true;
+        } else {
+            // Si es un nuevo medicamento o cambio de compartimento, verificar disponibilidad
+            isValidCompartment = type.equals(MedicationType.PILL) ? 
+                (selectedCompartment <= MAX_PILL_COMPARTMENTS && !compartmentManager.isCompartmentOccupied(selectedCompartment)) :
+                (selectedCompartment == MAX_PILL_COMPARTMENTS + 1 && !compartmentManager.isCompartmentOccupied(selectedCompartment));
+        }
+        
+        if (!isValidCompartment) {
+            showMessage("Error: El compartimento seleccionado no está disponible o no es compatible");
+            return;
         }
         
         // Crear o actualizar el objeto Medication
@@ -361,10 +409,9 @@ public class DialogMedication extends DialogFragment {
             medication.setName(name);
             medication.setType(type);
             medication.setAmount(amount);
-            medication.setUnit(type.equals(MedicationType.PILL) ? "" : "ml"); // Sin unidad para pastillas, ml para líquidos
+            medication.setUnit(type.equals(MedicationType.PILL) ? "" : "ml");
             medication.setNotes(notes);
             medication.setCompartmentNumber(selectedCompartment);
-            // Mantener el valor de dosis restantes en edición
         } else {
             // Crear nuevo medicamento
             medication = new Medication();
@@ -372,10 +419,10 @@ public class DialogMedication extends DialogFragment {
             medication.setName(name);
             medication.setType(type);
             medication.setAmount(amount);
-            medication.setUnit(type.equals(MedicationType.PILL) ? "" : "ml"); // Sin unidad para pastillas, ml para líquidos
+            medication.setUnit(type.equals(MedicationType.PILL) ? "" : "ml");
             medication.setNotes(notes);
             medication.setCompartmentNumber(selectedCompartment);
-            medication.setRemainingDoses(0); // Inicializar en 0, se actualizará en otro lugar
+            medication.setRemainingDoses(0);
         }
         
         // Si estamos editando, liberar el compartimento anterior si cambió

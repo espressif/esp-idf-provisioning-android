@@ -35,6 +35,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -67,6 +68,7 @@ public class EspMainActivity extends AppCompatActivity {
     private MaterialButton btnFindDevice;
     private DeviceConnectionChecker deviceChecker;
     private ProgressDialogFragment progressDialog;
+    private boolean isWaitingForBluetoothActivation = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +107,20 @@ public class EspMainActivity extends AppCompatActivity {
             ivEsp.setImageResource(R.drawable.ic_esp_softap);
         } else {
             ivEsp.setImageResource(R.drawable.ic_esp);
+        }
+        
+        // Verificar si estamos esperando la activación manual de Bluetooth
+        if (isWaitingForBluetoothActivation) {
+            BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            if (bluetoothManager != null && bluetoothManager.getAdapter().isEnabled()) {
+                isWaitingForBluetoothActivation = false;
+                // Solo continuar si los permisos están concedidos
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED &&
+                     checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED)) {
+                    startProvisioningFlow();
+                }
+            }
         }
     }
 
@@ -153,6 +169,30 @@ public class EspMainActivity extends AppCompatActivity {
 
         if (requestCode == REQUEST_ENABLE_BT && resultCode == RESULT_OK) {
             Toast.makeText(this, "Bluetooth is turned ON, you can provision device now.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        // Manejo de permisos de Bluetooth
+        if (requestCode == 3) {
+            boolean allPermissionsGranted = true;
+            for (int result : grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false;
+                    break;
+                }
+            }
+            
+            if (allPermissionsGranted) {
+                // Intentar activar Bluetooth nuevamente
+                addDeviceClick();
+            } else {
+                Toast.makeText(this, "Los permisos de Bluetooth son necesarios para provisionar el dispositivo", 
+                              Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -205,21 +245,55 @@ public class EspMainActivity extends AppCompatActivity {
     };
 
     private void addDeviceClick() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (!isLocationEnabled()) {
+                askForLocation();
+                return;
+            }
+        }
 
         if (BuildConfig.isQrCodeSupported) {
-
             gotoQrCodeActivity();
-
         } else {
-
             if (deviceType.equals(AppConstants.DEVICE_TYPE_BLE) || deviceType.equals(AppConstants.DEVICE_TYPE_BOTH)) {
+                // Primero verificamos si tenemos los permisos necesarios en Android 12+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
+                        checkSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                        // Solicitar permisos
+                        requestPermissions(new String[]{
+                                android.Manifest.permission.BLUETOOTH_SCAN, 
+                                android.Manifest.permission.BLUETOOTH_CONNECT
+                        }, 3);
+                        return;
+                    }
+                }
 
                 final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
                 BluetoothAdapter bleAdapter = bluetoothManager.getAdapter();
 
                 if (!bleAdapter.isEnabled()) {
-                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                    startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                    try {
+                        // Intentamos usar el método tradicional para todas las versiones
+                        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+                    } catch (SecurityException e) {
+                        // Si falla (puede ocurrir en Android 12+ incluso con permisos concedidos), 
+                        // usamos el método alternativo con dialog
+                        Log.e(TAG, "Error activando Bluetooth: " + e.getMessage());
+                        
+                        // Mostrar diálogo más amigable
+                        new AlertDialog.Builder(this)
+                            .setTitle("Activar Bluetooth")
+                            .setMessage("Para conectarte al dispositivo MEDIWATCH, es necesario activar el Bluetooth.")
+                            .setPositiveButton("Activar", (dialog, which) -> {
+                                isWaitingForBluetoothActivation = true;
+                                Intent intent = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+                                startActivity(intent);
+                            })
+                            .setNegativeButton("Cancelar", null)
+                            .show();
+                    }
                 } else {
                     startProvisioningFlow();
                 }

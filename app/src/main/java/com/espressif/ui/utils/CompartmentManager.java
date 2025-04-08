@@ -134,4 +134,40 @@ public class CompartmentManager {
     public int getMedicationCompartment(String medicationId) {
         return medicationCompartments.getOrDefault(medicationId, -1);
     }
+
+    /**
+     * Verifica si hay compartimentos disponibles para un tipo específico de medicamento
+     * @param medicationType Tipo de medicamento (PILL o LIQUID)
+     * @return true si hay al menos un compartimento disponible
+     */
+    public boolean hasAvailableCompartments(String medicationType) {
+        return !getAvailableCompartments(medicationType).isEmpty();
+    }
+
+    /**
+     * Verifica si un compartimento está disponible para un tipo específico de medicamento
+     * @param compartmentNumber Número de compartimento a verificar
+     * @param medicationType Tipo de medicamento (PILL o LIQUID)
+     * @return true si el compartimento está disponible para ese tipo de medicamento
+     */
+    public boolean isCompartmentAvailableForType(int compartmentNumber, String medicationType) {
+        // Verificar si es un número de compartimento válido
+        if (compartmentNumber <= 0 || compartmentNumber > TOTAL_COMPARTMENTS) {
+            return false;
+        }
+        
+        // Verificar si el compartimento ya está ocupado
+        if (occupiedCompartments[compartmentNumber]) {
+            return false;
+        }
+        
+        // Verificar compatibilidad con el tipo
+        if (medicationType.equals(MedicationType.PILL)) {
+            return compartmentNumber <= TOTAL_PILL_COMPARTMENTS;
+        } else if (medicationType.equals(MedicationType.LIQUID)) {
+            return compartmentNumber == TOTAL_PILL_COMPARTMENTS + 1;
+        }
+        
+        return false;
+    }
 }
