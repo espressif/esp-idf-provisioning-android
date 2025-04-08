@@ -19,6 +19,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.espressif.data.repository.MedicationRepository;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.Schedule;
 import com.espressif.mediwatch.R;
@@ -32,6 +33,9 @@ import com.google.android.material.floatingactionbutton.ExtendedFloatingActionBu
 import com.google.android.material.snackbar.Snackbar;
 import com.espressif.ui.dialogs.DialogMedication;
 import com.espressif.ui.dialogs.ScheduleDialogFragment;
+import com.espressif.ui.utils.CompartmentManager;
+
+import java.util.List;
 
 public class DispenserFragment extends Fragment implements 
         MedicationAdapter.MedicationListener,
@@ -65,6 +69,8 @@ public class DispenserFragment extends Fragment implements
     // Agregar este campo a la clase
     private DeviceConnectionChecker connectionChecker;
 
+    private CompartmentManager compartmentManager;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -77,6 +83,9 @@ public class DispenserFragment extends Fragment implements
         
         // Inicializar ViewModel
         viewModel = new ViewModelProvider(this).get(DispenserViewModel.class);
+        
+        // Inicializar el gestor de compartimentos
+        compartmentManager = CompartmentManager.getInstance();
         
         // Configurar vistas
         setupViews(view);
@@ -249,9 +258,25 @@ public class DispenserFragment extends Fragment implements
         });
     }
     
+    // Reemplazar el método loadData() (línea aprox 198) con esta versión:
     private void loadData() {
         // Empezar a escuchar cambios en los medicamentos
         viewModel.startListeningForMedications(patientId);
+        
+        // Utilizar el método correcto del repositorio
+        viewModel.getMedicationRepository().getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+            @Override
+            public void onSuccess(List<Medication> medications) {
+                // Actualizar el estado de ocupación de los compartimentos
+                compartmentManager.refreshOccupation(medications);
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // Manejar error si es necesario
+                showErrorMessage("Error al cargar medicamentos: " + errorMessage);
+            }
+        });
     }
     
     private void updateUiState(DispenserViewModel.UIState state) {
@@ -338,10 +363,38 @@ public class DispenserFragment extends Fragment implements
         if (medication.getId() == null || medication.getId().isEmpty()) {
             // Es un nuevo medicamento
             viewModel.createMedication(medication);
+            
+            // Marcar el compartimento como ocupado
+            compartmentManager.occupyCompartment(medication.getCompartmentNumber(), medication.getId());
+            
             Toast.makeText(requireContext(), "Medicamento añadido", Toast.LENGTH_SHORT).show();
         } else {
             // Es una actualización
-            viewModel.updateMedication(medication);
+            // Verificar si cambió el compartimento
+            viewModel.getMedicationRepository().getMedication(patientId, medication.getId(), 
+                new MedicationRepository.DataCallback<Medication>() {
+                    @Override
+                    public void onSuccess(Medication oldMedication) {
+                        if (oldMedication != null && 
+                            oldMedication.getCompartmentNumber() != medication.getCompartmentNumber()) {
+                            // Liberar el compartimento anterior
+                            compartmentManager.freeCompartment(oldMedication.getCompartmentNumber());
+                            // Ocupar el nuevo compartimento
+                            compartmentManager.occupyCompartment(medication.getCompartmentNumber(), 
+                                                                medication.getId());
+                        }
+                        // Actualizar el medicamento
+                        viewModel.updateMedication(medication);
+                    }
+                    
+                    @Override
+                    public void onError(String errorMessage) {
+                        // Si hay error al obtener el medicamento anterior, 
+                        // simplemente actualizamos el nuevo
+                        viewModel.updateMedication(medication);
+                    }
+                });
+            
             Toast.makeText(requireContext(), "Medicamento actualizado", Toast.LENGTH_SHORT).show();
         }
     }
@@ -375,11 +428,23 @@ public class DispenserFragment extends Fragment implements
         dialogFragment.show(getChildFragmentManager(), "schedule_dialog");
     }
     
+    // Reemplazar el método confirmDeleteMedication() (línea aprox 491) con esta versión:
     private void confirmDeleteMedication(Medication medication) {
-        // En la implementación completa, esto mostraría un diálogo de confirmación
-        // Por ahora, eliminar directamente
-        viewModel.deleteMedication(medication.getId());
-        Toast.makeText(requireContext(), "Medicamento eliminado: " + medication.getName(), Toast.LENGTH_SHORT).show();
+        if (medication != null && medication.getId() != null) {
+            // Asegurarnos de liberar el compartimento correctamente
+            int compartmentNumber = medication.getCompartmentNumber();
+            if (compartmentNumber > 0) {
+                // Si conocemos el número de compartimento, lo liberamos directamente
+                compartmentManager.freeCompartment(compartmentNumber);
+            } else {
+                // Si no lo conocemos, intentamos buscarlo por el ID
+                compartmentManager.freeMedicationCompartment(medication.getId());
+            }
+            
+            // Eliminar el medicamento
+            viewModel.deleteMedication(medication.getId());
+            Toast.makeText(requireContext(), "Medicamento eliminado: " + medication.getName(), Toast.LENGTH_SHORT).show();
+        }
     }
     
     // Implementación de MedicationListener para manejar clicks en los medicamentos
@@ -429,5 +494,22 @@ public class DispenserFragment extends Fragment implements
             viewModel.saveSchedule(schedule.getMedicationId(), schedule);
             Toast.makeText(requireContext(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    // Reemplazar el método refreshCompartmentStatus() (línea aprox 491) con esta versión:
+    private void refreshCompartmentStatus() {
+        // Utilizar el mismo método de repositorio que en loadData
+        viewModel.getMedicationRepository().getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+            @Override
+            public void onSuccess(List<Medication> medications) {
+                compartmentManager.refreshOccupation(medications);
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                // Opcional: manejar error
+                showErrorMessage("Error al actualizar estado de compartimentos: " + errorMessage);
+            }
+        });
     }
 }

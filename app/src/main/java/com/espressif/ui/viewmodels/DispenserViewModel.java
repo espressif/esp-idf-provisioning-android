@@ -16,6 +16,7 @@ import com.espressif.ui.models.Schedule;
 import com.espressif.data.repository.MedicationRepository;
 import com.espressif.ui.activities.mqtt_activities.MqttHandler;
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
+import com.espressif.ui.utils.CompartmentManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,10 +49,13 @@ public class DispenserViewModel extends AndroidViewModel {
     private final MutableLiveData<String> dispenserStatus = new MutableLiveData<>("Desconectado");
     private final MutableLiveData<Integer> batteryLevel = new MutableLiveData<>(0);
     
+    private CompartmentManager compartmentManager;
+
     public DispenserViewModel(@NonNull Application application) {
         super(application);
         medicationRepository = MedicationRepository.getInstance();
         executor = Executors.newSingleThreadExecutor();
+        compartmentManager = CompartmentManager.getInstance();
     }
     
     /**
@@ -70,6 +74,7 @@ public class DispenserViewModel extends AndroidViewModel {
         medicationRepository.getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
             @Override
             public void onSuccess(List<Medication> data) {
+                compartmentManager.refreshOccupation(data);
                 updateMedicationsList(data);
             }
 
@@ -470,5 +475,10 @@ public class DispenserViewModel extends AndroidViewModel {
         PILLS,
         LIQUIDS,
         TODAY
+    }
+
+    // 1. AÑADIR un método para obtener el repositorio (si no existe ya):
+    public MedicationRepository getMedicationRepository() {
+        return medicationRepository;
     }
 }

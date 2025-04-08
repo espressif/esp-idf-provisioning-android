@@ -17,11 +17,14 @@ import androidx.fragment.app.DialogFragment;
 import com.espressif.mediwatch.R;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.MedicationType;
+import com.espressif.ui.utils.CompartmentManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.radiobutton.MaterialRadioButton;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.util.List;
 import java.util.UUID;
 
 public class DialogMedication extends DialogFragment {
@@ -53,6 +56,8 @@ public class DialogMedication extends DialogFragment {
     // Constantes para el número total de compartimentos por tipo
     private static final int MAX_PILL_COMPARTMENTS = 3;
     private static final int MAX_LIQUID_COMPARTMENTS = 1;
+
+    private CompartmentManager compartmentManager;
 
     public static DialogMedication newInstance() {
         return new DialogMedication();
@@ -94,6 +99,9 @@ public class DialogMedication extends DialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        // Inicializar el gestor de compartimentos
+        compartmentManager = CompartmentManager.getInstance();
 
         // Inicializar vistas
         initViews(view);
@@ -165,18 +173,48 @@ public class DialogMedication extends DialogFragment {
     private void updateCompartmentOptions(String type) {
         rgCompartment.removeAllViews();
         
-        // Determinamos qué compartimentos mostrar según el tipo
-        if (MedicationType.PILL.equals(type)) {
-            // Para pastillas: Compartimentos 1, 2 y 3
-            for (int i = 1; i <= MAX_PILL_COMPARTMENTS; i++) {
-                addCompartmentOption(i);
+        // Obtener compartimentos disponibles según el tipo
+        List<Integer> availableCompartments;
+        
+        if (isEditMode && editingMedication != null) {
+            // En modo edición, incluir siempre el compartimento actual como disponible
+            availableCompartments = compartmentManager.getAvailableCompartments(type);
+            int currentCompartment = editingMedication.getCompartmentNumber();
+            
+            if (currentCompartment > 0 && 
+                !availableCompartments.contains(currentCompartment) && 
+                MedicationType.isCompatibleWithCompartment(type, currentCompartment)) {
+                availableCompartments.add(currentCompartment);
             }
         } else {
-            // Para líquidos: SÓLO Compartimento 4
-            addCompartmentOption(4);  // Cambio: líquido siempre va en compartimento 4
+            // En modo creación, mostrar solo compartimentos libres
+            availableCompartments = compartmentManager.getAvailableCompartments(type);
         }
         
-        // Seleccionar el compartimento adecuado si estamos editando
+        // Si no hay compartimentos disponibles, mostrar mensaje
+        if (availableCompartments.isEmpty()) {
+            TextView tvNoCompartments = new TextView(requireContext());
+            tvNoCompartments.setText(type.equals(MedicationType.PILL) ? 
+                    "No hay compartimentos para pastillas disponibles" : 
+                    "El compartimento para líquidos está ocupado");
+            tvNoCompartments.setTextAppearance(R.style.TextAppearance_MaterialComponents_Body2);
+            tvNoCompartments.setTextColor(getResources().getColor(R.color.colorError));
+            rgCompartment.addView(tvNoCompartments);
+            
+            // Deshabilitar botón de guardar
+            btnSave.setEnabled(false);
+            return;
+        }
+        
+        // Habilitar botón de guardar
+        btnSave.setEnabled(true);
+        
+        // Añadir opciones para compartimentos disponibles
+        for (int compartmentNumber : availableCompartments) {
+            addCompartmentOption(compartmentNumber);
+        }
+        
+        // Seleccionar el compartimento adecuado
         selectCurrentCompartment();
     }
 
@@ -340,6 +378,17 @@ public class DialogMedication extends DialogFragment {
             medication.setRemainingDoses(0); // Inicializar en 0, se actualizará en otro lugar
         }
         
+        // Si estamos editando, liberar el compartimento anterior si cambió
+        if (isEditMode && editingMedication != null) {
+            int oldCompartment = editingMedication.getCompartmentNumber();
+            if (oldCompartment != selectedCompartment) {
+                compartmentManager.freeCompartment(oldCompartment);
+            }
+        }
+        
+        // Marcar el nuevo compartimento como ocupado
+        compartmentManager.occupyCompartment(selectedCompartment, medication.getId());
+        
         // Notificar al listener
         if (listener != null) {
             listener.onMedicationSaved(medication);
@@ -347,5 +396,13 @@ public class DialogMedication extends DialogFragment {
         
         // Cerrar el diálogo
         dismiss();
+    }
+
+    // Opcional: Añadir un método para actualizar la UI con un mensaje
+    private void showMessage(String message) {
+        View rootView = getView();
+        if (rootView != null) {
+            Snackbar.make(rootView, message, Snackbar.LENGTH_LONG).show();
+        }
     }
 }
