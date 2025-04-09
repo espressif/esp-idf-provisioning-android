@@ -77,7 +77,6 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
         private final TextView tvName;
         private final TextView tvDosage;
         private final TextView tvCompartment;
-        private final TextView tvRemainingDoses;
         private final ImageView ivType;
         private final View typeIndicator;
         private final RecyclerView recyclerSchedules;
@@ -92,7 +91,6 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             tvName = itemView.findViewById(R.id.tv_medication_name);
             tvDosage = itemView.findViewById(R.id.tv_medication_dosage);
             tvCompartment = itemView.findViewById(R.id.tv_compartment);
-            tvRemainingDoses = itemView.findViewById(R.id.tv_remaining_doses);
             ivType = itemView.findViewById(R.id.iv_medication_type);
             typeIndicator = itemView.findViewById(R.id.view_type_indicator);
             recyclerSchedules = itemView.findViewById(R.id.recycler_schedules);
@@ -159,14 +157,6 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
                 }
             } else {
                 tvCompartment.setVisibility(View.INVISIBLE);
-            }
-            
-            // Mostrar dosis restantes
-            if (medication.getRemainingDoses() > 0) {
-                tvRemainingDoses.setVisibility(View.VISIBLE);
-                tvRemainingDoses.setText(medication.getRemainingDoses() + " dosis restantes");
-            } else {
-                tvRemainingDoses.setVisibility(View.INVISIBLE);
             }
             
             // Configurar icono según el tipo

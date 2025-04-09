@@ -4,8 +4,8 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -22,7 +22,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder> {
+public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHolder> {
 
     private List<Schedule> schedules = new ArrayList<>();
     private final Context context;
@@ -44,15 +44,61 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
 
     @NonNull
     @Override
-    public ScheduleViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_schedule, parent, false);
-        return new ScheduleViewHolder(view);
+        view.setTag(R.id.tag_adapter, this); // Guardar referencia al adapter
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ScheduleViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Schedule schedule = schedules.get(position);
-        holder.bind(schedule);
+        
+        // Decidir qué vista mostrar según el tipo de horario
+        if (schedule.isIntervalMode()) {
+            // Mostrar vista de intervalos
+            holder.layoutStandardSchedule.setVisibility(View.GONE);
+            holder.layoutIntervalSchedule.setVisibility(View.VISIBLE);
+            
+            // Configurar la hora de inicio
+            String timeText = formatTime(schedule.getHour(), schedule.getMinute(), schedule.isUse24HourFormat());
+            holder.tvIntervalTime.setText(timeText);
+            
+            // Configurar información del intervalo
+            StringBuilder intervalInfo = new StringBuilder();
+            intervalInfo.append("Cada ").append(schedule.getIntervalHours()).append(" horas");
+            
+            // Calcular días restantes si la fecha de fin está en el futuro
+            if (schedule.getTreatmentEndDate() > System.currentTimeMillis()) {
+                long daysRemaining = (schedule.getTreatmentEndDate() - System.currentTimeMillis()) / (24 * 60 * 60 * 1000) + 1;
+                if (daysRemaining > 0) {
+                    intervalInfo.append(" • ")
+                               .append(daysRemaining)
+                               .append(" día")
+                               .append(daysRemaining > 1 ? "s" : "")
+                               .append(" restante")
+                               .append(daysRemaining > 1 ? "s" : "");
+                }
+            }
+            
+            holder.tvIntervalInfo.setText(intervalInfo.toString());
+        } else {
+            // Mostrar vista estándar
+            holder.layoutStandardSchedule.setVisibility(View.VISIBLE);
+            holder.layoutIntervalSchedule.setVisibility(View.GONE);
+            
+            // Código existente para formatear hora
+            String timeText = formatTime(schedule.getHour(), schedule.getMinute(), schedule.isUse24HourFormat());
+            holder.tvTime.setText(timeText);
+            
+            // Código existente para mostrar días
+            String daysText = formatDaysOfWeek(schedule.getDaysOfWeek());
+            holder.tvDays.setText(daysText);
+        }
+        
+        // Código común para ambos tipos (estado, switch, etc.)
+        holder.switchActive.setChecked(schedule.isActive());
+        updateStatusIndicator(holder, schedule);
     }
 
     @Override
@@ -69,125 +115,195 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         this.listener = listener;
     }
 
-    class ScheduleViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvTime;
-        private final TextView tvDays;
-        private final ImageView ivStatus;
-        private final TextView tvStatusText;
-        private final SwitchMaterial switchActive;
-
-        public ScheduleViewHolder(@NonNull View itemView) {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        // Referencias a las vistas
+        LinearLayout layoutStandardSchedule;
+        TextView tvTime;
+        TextView tvDays;
+        
+        LinearLayout layoutIntervalSchedule;
+        TextView tvIntervalTime;
+        TextView tvIntervalInfo;
+        
+        ImageView ivStatus;
+        TextView tvStatusText;
+        SwitchMaterial switchActive;
+        
+        // Referencia al adaptador
+        private final ScheduleAdapter adapter;
+        
+        // Constructor con todas las referencias a vistas
+        public ViewHolder(View itemView) {
             super(itemView);
+            
+            // Vista estándar
+            layoutStandardSchedule = itemView.findViewById(R.id.layout_standard_schedule);
             tvTime = itemView.findViewById(R.id.tv_time);
             tvDays = itemView.findViewById(R.id.tv_days);
+            
+            // Vista de intervalo
+            layoutIntervalSchedule = itemView.findViewById(R.id.layout_interval_schedule);
+            tvIntervalTime = itemView.findViewById(R.id.tv_interval_time);
+            tvIntervalInfo = itemView.findViewById(R.id.tv_interval_info);
+            
+            // Elementos comunes
             ivStatus = itemView.findViewById(R.id.iv_status);
             tvStatusText = itemView.findViewById(R.id.tv_status_text);
             switchActive = itemView.findViewById(R.id.switch_active);
             
+            // Guardar referencia al adaptador padre para acceder a sus métodos/variables
+            adapter = (ScheduleAdapter) itemView.getTag(R.id.tag_adapter);
+            
             // Click listener para el item
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onScheduleClick(schedules.get(position));
+                if (position != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    adapter.listener.onScheduleClick(adapter.schedules.get(position));
                 }
             });
             
             // Listener para el switch de activación
             switchActive.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 int position = getAdapterPosition();
-                if (position != RecyclerView.NO_POSITION && listener != null) {
-                    Schedule schedule = schedules.get(position);
+                if (position != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    Schedule schedule = adapter.schedules.get(position);
                     if (schedule.isActive() != isChecked) {
                         schedule.setActive(isChecked);
-                        listener.onScheduleActiveChanged(schedule, isChecked);
+                        adapter.listener.onScheduleActiveChanged(schedule, isChecked);
                     }
                 }
             });
         }
-
-        public void bind(Schedule schedule) {
-            tvTime.setText(schedule.getFormattedTime());
-            tvDays.setText(schedule.getFormattedDays());
-            
-            // Configurar el switch sin disparar el listener
-            switchActive.setOnCheckedChangeListener(null);
-            switchActive.setChecked(schedule.isActive());
-            switchActive.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (getAdapterPosition() != RecyclerView.NO_POSITION && listener != null) {
-                    Schedule currentSchedule = schedules.get(getAdapterPosition());
-                    if (currentSchedule.isActive() != isChecked) {
-                        currentSchedule.setActive(isChecked);
-                        listener.onScheduleActiveChanged(currentSchedule, isChecked);
-                    }
-                }
-            });
-            
-            // Estado de la toma
-            updateStatusIndicator(schedule);
+    }
+    
+    /**
+     * Convierte el array de días de la semana a un texto legible
+     * @param days Array de booleanos representando los días (Lun-Dom)
+     * @return Texto descriptivo de los días seleccionados
+     */
+    private String formatDaysOfWeek(ArrayList<Boolean> days) {
+        if (days == null || days.size() < 7) {
+            return "Horario sin días configurados";
         }
         
-        private void updateStatusIndicator(Schedule schedule) {
-            long now = System.currentTimeMillis();
-            
-            if (!schedule.isActive()) {
-                // Horario desactivado
-                ivStatus.setImageResource(R.drawable.ic_schedule_disabled);
-                ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorTextSecondary));
-                tvStatusText.setText("Desactivado");
-                return;
+        // Verificar patrones comunes
+        boolean allTrue = true;
+        boolean weekdaysOnly = true;
+        boolean weekendsOnly = true;
+        
+        // Verificar días laborables (Lun-Vie)
+        for (int i = 0; i < 5; i++) {
+            if (!days.get(i)) {
+                allTrue = false;
+                weekdaysOnly = false;
             }
-            
-            if (schedule.isDetectedBySensor()) {
-                // Medicamento dispensado y detectado
-                ivStatus.setImageResource(R.drawable.ic_checkbox_on);
-                ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorSuccess));
-                
-                // Mostrar cuándo fue tomado
-                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-                String timeLabel = sdf.format(new Date(schedule.getDetectedAt()));
-                tvStatusText.setText("Tomado a las " + timeLabel);
-                return;
-            }
-            
-            if (schedule.isDispensed() && !schedule.isDetectedBySensor()) {
-                // Dispensado pero no detectado
-                ivStatus.setImageResource(R.drawable.ic_dispensed);
-                ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
-                tvStatusText.setText("Dispensado");
-                return;
-            }
-            
-            if (schedule.getNextScheduled() < now) {
-                // Programado pero no tomado (atrasado)
-                ivStatus.setImageResource(R.drawable.ic_schedule_missed);
-                ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorError));
-                tvStatusText.setText("Pendiente (retrasado)");
-                return;
-            }
-            
-            // Si está en modo intervalo y aún dentro del período de tratamiento
-            if (schedule.isIntervalMode() && schedule.getTreatmentEndDate() > System.currentTimeMillis()) {
-                // Mostrar información sobre el intervalo
-                String intervalText = "Cada " + schedule.getIntervalHours() + "h";
-                
-                // Calcular días restantes
-                int daysLeft = (int)((schedule.getTreatmentEndDate() - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)) + 1;
-                if (daysLeft > 0) {
-                    intervalText += " • " + daysLeft + (daysLeft == 1 ? " día" : " días") + " restante" + (daysLeft == 1 ? "" : "s");
-                }
-                
-                tvStatusText.setText(intervalText);
-                return;
-            }
-            
-            // Programado para el futuro - Mostrar cuenta regresiva
-            ivStatus.setImageResource(R.drawable.ic_schedule_pending);
-            ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
-            
-            // Calcular tiempo restante para mostrar cuenta regresiva de forma concisa
-            String countdown = formatCountdown(schedule.getNextScheduled() - now);
-            tvStatusText.setText(countdown); // Mostrar solo la cuenta regresiva para evitar superposiciones
         }
+        
+        // Verificar fin de semana (Sáb-Dom)
+        for (int i = 5; i < 7; i++) {
+            if (!days.get(i)) {
+                allTrue = false;
+                weekendsOnly = false;
+            } else {
+                weekdaysOnly = false;
+            }
+        }
+        
+        // Devolver texto según el patrón
+        if (allTrue) {
+            return "Todos los días";
+        } else if (weekdaysOnly) {
+            return "Lunes a viernes";
+        } else if (weekendsOnly) {
+            return "Sábados y domingos";
+        } else {
+            // Lista específica de días
+            StringBuilder result = new StringBuilder();
+            String[] dayNames = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+            
+            for (int i = 0; i < 7; i++) {
+                if (days.get(i)) {
+                    if (result.length() > 0) {
+                        result.append(", ");
+                    }
+                    result.append(dayNames[i]);
+                }
+            }
+            
+            if (result.length() == 0) {
+                return "Ningún día seleccionado";
+            }
+            
+            return result.toString();
+        }
+    }
+    
+    /**
+     * Formatea hora y minutos en formato legible
+     * @param hour Hora (0-23)
+     * @param minute Minutos (0-59)
+     * @param use24HourFormat Si es true, usa formato 24h, si no, usa 12h (AM/PM)
+     * @return Hora formateada (ej. "08:30" o "8:30 AM")
+     */
+    private String formatTime(int hour, int minute, boolean use24HourFormat) {
+        if (use24HourFormat) {
+            // Formato 24 horas: "08:30"
+            return String.format(Locale.getDefault(), "%02d:%02d", hour, minute);
+        } else {
+            // Formato 12 horas: "8:30 AM"
+            int displayHour = hour % 12;
+            if (displayHour == 0) displayHour = 12; // Las 0 horas en formato 12h son las 12 AM
+            String amPm = hour >= 12 ? "PM" : "AM";
+            return String.format(Locale.getDefault(), "%d:%02d %s", displayHour, minute, amPm);
+        }
+    }
+    
+    private void updateStatusIndicator(ViewHolder holder, Schedule schedule) {
+        long now = System.currentTimeMillis();
+        
+        if (!schedule.isActive()) {
+            // Horario desactivado
+            holder.ivStatus.setImageResource(R.drawable.ic_schedule_disabled);
+            holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorTextSecondary));
+            holder.tvStatusText.setText("Desactivado");
+            return;
+        }
+        
+        if (schedule.isDetectedBySensor()) {
+            // Medicamento dispensado y detectado
+            holder.ivStatus.setImageResource(R.drawable.ic_checkbox_on);
+            holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorSuccess));
+            
+            // Mostrar cuándo fue tomado
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String timeLabel = sdf.format(new Date(schedule.getDetectedAt()));
+            holder.tvStatusText.setText("Tomado a las " + timeLabel);
+            return;
+        }
+        
+        if (schedule.isDispensed() && !schedule.isDetectedBySensor()) {
+            // Dispensado pero no detectado
+            holder.ivStatus.setImageResource(R.drawable.ic_dispensed);
+            holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
+            holder.tvStatusText.setText("Dispensado");
+            return;
+        }
+        
+        if (schedule.getNextScheduled() < now) {
+            // Programado pero no tomado (atrasado)
+            holder.ivStatus.setImageResource(R.drawable.ic_schedule_missed);
+            holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorError));
+            holder.tvStatusText.setText("Pendiente (retrasado)");
+            return;
+        }
+        
+        // Programado para el futuro - Mostrar cuenta regresiva
+        holder.ivStatus.setImageResource(R.drawable.ic_schedule_pending);
+        holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
+        
+        // Calcular tiempo restante para mostrar cuenta regresiva de forma concisa
+        String countdown = formatCountdown(schedule.getNextScheduled() - now);
+        holder.tvStatusText.setText(countdown); // Mostrar solo la cuenta regresiva para evitar superposiciones
     }
     
     /**

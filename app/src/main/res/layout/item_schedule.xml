@@ -8,29 +8,66 @@
     android:paddingHorizontal="16dp"
     android:paddingVertical="12dp">
 
-    <!-- Tiempo -->
-    <TextView
-        android:id="@+id/tv_time"
-        android:layout_width="wrap_content"
+    <!-- Contenedor de vista estándar - Para horarios normales -->
+    <LinearLayout
+        android:id="@+id/layout_standard_schedule"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-        android:textStyle="bold"
+        android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="08:00" />
+        app:layout_constraintEnd_toStartOf="@id/iv_status">
 
-    <!-- Días de la semana -->
-    <TextView
-        android:id="@+id/tv_days"
-        android:layout_width="wrap_content"
+        <!-- Tiempo -->
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            android:textStyle="bold"
+            tools:text="08:00" />
+
+        <!-- Días de la semana -->
+        <TextView
+            android:id="@+id/tv_days"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+            tools:text="Lunes, Miércoles, Viernes" />
+    </LinearLayout>
+
+    <!-- Contenedor de vista de intervalo - Para horarios por intervalos -->
+    <LinearLayout
+        android:id="@+id/layout_interval_schedule"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_time"
-        tools:text="Lunes, Miércoles, Viernes" />
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent" 
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/iv_status">
 
-    <!-- Estado de la toma -->
+        <!-- Hora de inicio -->
+        <TextView
+            android:id="@+id/tv_interval_time" 
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            android:textStyle="bold"
+            tools:text="08:00" />
+
+        <!-- Información de intervalo -->
+        <TextView
+            android:id="@+id/tv_interval_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+            tools:text="Cada 8 horas • 3 días restantes" />
+    </LinearLayout>
+
+    <!-- Estado de la toma (común para ambos modos) -->
     <ImageView
         android:id="@+id/iv_status"
         android:layout_width="24dp"
@@ -41,7 +78,7 @@
         app:layout_constraintTop_toTopOf="@id/tv_status_text"
         app:tint="@color/colorPending" />
 
-    <!-- Texto descriptivo del estado -->
+    <!-- Texto descriptivo del estado (común para ambos modos) -->
     <TextView
         android:id="@+id/tv_status_text"
         android:layout_width="wrap_content"
@@ -53,7 +90,7 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:text="Próxima dosis" />
 
-    <!-- Switch para activar/desactivar -->
+    <!-- Switch para activar/desactivar (común para ambos modos) -->
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switch_active"
         android:layout_width="wrap_content"
