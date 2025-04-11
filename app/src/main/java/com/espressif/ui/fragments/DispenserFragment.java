@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.data.repository.MedicationRepository;
+import com.espressif.ui.dialogs.ProgressDialogFragment;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.Schedule;
 import com.espressif.mediwatch.R;
@@ -34,6 +35,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.espressif.ui.dialogs.DialogMedication;
 import com.espressif.ui.dialogs.ScheduleDialogFragment;
 import com.espressif.ui.utils.CompartmentManager;
+import com.espressif.ui.viewmodels.MqttViewModel;
 
 import java.util.List;
 
@@ -71,6 +73,10 @@ public class DispenserFragment extends Fragment implements
 
     private CompartmentManager compartmentManager;
 
+    // Añade las siguientes declaraciones de variables en la clase DispenserFragment
+    private DispenserViewModel dispenserViewModel;
+    private MqttViewModel mqttViewModel;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -104,6 +110,31 @@ public class DispenserFragment extends Fragment implements
         
         // Cargar datos
         loadData();
+        
+        // Configurar el DispenserViewModel
+        dispenserViewModel = new ViewModelProvider(requireActivity()).get(DispenserViewModel.class);
+        
+        // Configurar el MqttViewModel
+        mqttViewModel = new ViewModelProvider(requireActivity()).get(MqttViewModel.class);
+        
+        // Conectar los ViewModels
+        dispenserViewModel.connectWithMqttViewModel(mqttViewModel);
+        
+        // Configurar observadores para la interfaz de usuario
+        setupObservers();
+        
+        // Iniciar la conexión MQTT
+        mqttViewModel.connect();
+        
+        // Cargar medicamentos
+        String patientId = getCurrentPatientId();  // Implementar este método según tu lógica
+        dispenserViewModel.loadMedications(patientId);
+    }
+
+    // Añadir este método:
+    private String getCurrentPatientId() {
+        // Aquí podrías obtener el ID del paciente desde tus preferencias
+        return patientId; // Usar la variable patientId que ya existe en la clase
     }
 
     // Agregar este método después de onViewCreated
@@ -251,11 +282,6 @@ public class DispenserFragment extends Fragment implements
         viewModel.getDispenserStatus().observe(getViewLifecycleOwner(), status -> {
             updateConnectionStatus(viewModel.getDispenserConnected().getValue(), status);
         });
-        
-        // Observar nivel de batería
-        viewModel.getBatteryLevel().observe(getViewLifecycleOwner(), batteryLevel -> {
-            updateBatteryLevel(batteryLevel);
-        });
     }
     
     // Reemplazar el método loadData() (línea aprox 198) con esta versión:
@@ -318,26 +344,6 @@ public class DispenserFragment extends Fragment implements
             ivDeviceStatus.setColorFilter(getResources().getColor(R.color.colorError, null));
             tvDeviceStatus.setText("Dispensador desconectado");
             tvDeviceDetails.setText("Verifica la conexión del dispositivo");
-        }
-    }
-    
-    private void updateBatteryLevel(Integer level) {
-        if (level == null) return;
-        
-        // Aquí podrías actualizar un indicador visual de batería
-        String statusText = tvDeviceDetails.getText().toString();
-        String batteryStatus = " | Batería: " + level + "%";
-        
-        // Evitar añadir múltiples veces la información de batería
-        if (!statusText.contains(" | Batería:")) {
-            tvDeviceDetails.setText(statusText + batteryStatus);
-        } else {
-            // Reemplazar la parte de la batería
-            int batteryIndex = statusText.indexOf(" | Batería:");
-            if (batteryIndex >= 0) {
-                String baseStatus = statusText.substring(0, batteryIndex);
-                tvDeviceDetails.setText(baseStatus + batteryStatus);
-            }
         }
     }
     
@@ -511,5 +517,55 @@ public class DispenserFragment extends Fragment implements
                 showErrorMessage("Error al actualizar estado de compartimentos: " + errorMessage);
             }
         });
+    }
+    
+    private void setupObservers() {
+        // Configurar los observadores existentes de dispenserViewModel...
+        
+        // Añadir observadores para MqttViewModel
+        mqttViewModel.getIsSyncingSchedules().observe(getViewLifecycleOwner(), isSyncing -> {
+            if (isSyncing) {
+                showSyncingDialog();
+            } else {
+                dismissSyncingDialog();
+            }
+        });
+    }
+
+    // Manejar botón de dispensar
+    private void handleDispenseClick(Medication medication, Schedule schedule) {
+        dispenserViewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
+    }
+
+    // Manejar botón de sincronizar
+    private void handleSyncClick() {
+        dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
+    }
+
+    // Mostrar diálogo durante la sincronización
+    private ProgressDialogFragment syncProgressDialog;
+
+    private void showSyncingDialog() {
+        if (syncProgressDialog == null) {
+            syncProgressDialog = ProgressDialogFragment.newInstance(
+                "Sincronización", "Sincronizando horarios con el dispensador...");
+            syncProgressDialog.setCancelable(false);
+        }
+        
+        if (!syncProgressDialog.isAdded()) {
+            syncProgressDialog.show(getParentFragmentManager(), "SyncDialog");
+        }
+    }
+
+    private void dismissSyncingDialog() {
+        if (syncProgressDialog != null && syncProgressDialog.isAdded()) {
+            syncProgressDialog.dismiss();
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        dismissSyncingDialog();
     }
 }

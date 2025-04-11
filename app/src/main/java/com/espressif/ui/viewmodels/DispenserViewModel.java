@@ -47,7 +47,6 @@ public class DispenserViewModel extends AndroidViewModel {
     // Estado del dispensador
     private final MutableLiveData<Boolean> dispenserConnected = new MutableLiveData<>(false);
     private final MutableLiveData<String> dispenserStatus = new MutableLiveData<>("Desconectado");
-    private final MutableLiveData<Integer> batteryLevel = new MutableLiveData<>(0);
     
     private CompartmentManager compartmentManager;
 
@@ -418,14 +417,6 @@ public class DispenserViewModel extends AndroidViewModel {
         dispenserStatus.postValue(status);
     }
     
-    /**
-     * Actualizará el nivel de batería del dispensador
-     * Esto será llamado desde la lógica de MQTT cuando se reciban actualizaciones
-     */
-    public void updateBatteryLevel(int level) {
-        batteryLevel.postValue(level);
-    }
-    
     // Métodos para cambiar el estado de la UI
     private void setLoadingState() {
         uiState.setValue(UIState.LOADING);
@@ -457,10 +448,6 @@ public class DispenserViewModel extends AndroidViewModel {
         return dispenserStatus;
     }
     
-    public LiveData<Integer> getBatteryLevel() {
-        return batteryLevel;
-    }
-    
     // Enum para estados de la UI
     public enum UIState {
         LOADING,
@@ -480,5 +467,73 @@ public class DispenserViewModel extends AndroidViewModel {
     // 1. AÑADIR un método para obtener el repositorio (si no existe ya):
     public MedicationRepository getMedicationRepository() {
         return medicationRepository;
+    }
+
+    /**
+     * Sincroniza el estado entre MqttViewModel y DispenserViewModel
+     * Esto debe ser llamado desde el Fragment o Activity principal
+     */
+    public void connectWithMqttViewModel(MqttViewModel mqttViewModel) {
+        // Observar el estado de conexión
+        mqttViewModel.getIsConnected().observeForever(connected -> {
+            updateDispenserConnectionStatus(connected, 
+                    connected ? "Conectado" : "Desconectado");
+        });
+        
+        // Observar el mensaje de estado
+        mqttViewModel.getStatusMessage().observeForever(status -> {
+            updateDispenserConnectionStatus(
+                    mqttViewModel.getIsConnected().getValue() != null && 
+                    mqttViewModel.getIsConnected().getValue(),
+                    status
+            );
+        });
+        
+        // Observar mensajes de error
+        mqttViewModel.getErrorMessage().observeForever(error -> {
+            if (error != null && !error.isEmpty()) {
+                errorMessage.setValue(error);
+            }
+        });
+    }
+    
+    /**
+     * Simula una dispensación manual - Actualizado para usar MqttViewModel
+     */
+    public void dispenseNow(String medicationId, String scheduleId, MqttViewModel mqttViewModel) {
+        if (patientId == null || medicationId == null || scheduleId == null) {
+            errorMessage.postValue("ID no válido");
+            return;
+        }
+        
+        // Enviar comando MQTT al dispensador
+        mqttViewModel.dispenseNow(medicationId, scheduleId);
+        
+        // También actualizar la base de datos
+        executor.execute(() -> {
+            medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, new MedicationRepository.DatabaseCallback() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "Medicamento marcado como dispensado: " + medicationId);
+                }
+    
+                @Override
+                public void onError(String errorMsg) {
+                    errorMessage.postValue("Error al marcar dispensación: " + errorMsg);
+                }
+            });
+        });
+    }
+    
+    /**
+     * Sincroniza los horarios con el dispensador
+     */
+    public void syncSchedulesWithDispenser(MqttViewModel mqttViewModel) {
+        if (medications.getValue() == null) {
+            errorMessage.postValue("No hay medicamentos para sincronizar");
+            return;
+        }
+        
+        mqttViewModel.syncSchedules(medications.getValue());
     }
 }

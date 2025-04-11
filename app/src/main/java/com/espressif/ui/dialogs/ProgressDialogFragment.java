@@ -1,4 +1,4 @@
-package com.espressif.ui.activities.mqtt_activities;
+package com.espressif.ui.dialogs;
 
 import android.app.Dialog;
 import android.content.DialogInterface;

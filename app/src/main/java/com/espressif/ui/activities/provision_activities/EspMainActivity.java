@@ -49,7 +49,7 @@ import com.espressif.mediwatch.BuildConfig;
 import com.espressif.mediwatch.R;
 import com.espressif.ui.activities.MainActivity; // ← AÑADE ESTA IMPORTACIÓN
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
-import com.espressif.ui.activities.mqtt_activities.ProgressDialogFragment;
+import com.espressif.ui.dialogs.ProgressDialogFragment;
 import com.google.android.material.button.MaterialButton;
 
 public class EspMainActivity extends AppCompatActivity {
