@@ -73,6 +73,21 @@
                 app:layout_constraintTop_toBottomOf="@id/tv_medication_name"
                 tools:text="500 mg - 1 pastilla" />
 
+            <!-- Añadir después de tv_medication_dosage -->
+            <TextView
+                android:id="@+id/tv_dosage_remaining"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="2dp"
+                android:layout_marginEnd="8dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                android:textColor="@color/colorAccent"
+                app:layout_constraintEnd_toStartOf="@id/tv_compartment"
+                app:layout_constraintStart_toEndOf="@id/iv_medication_type"
+                app:layout_constraintTop_toBottomOf="@id/tv_medication_dosage"
+                tools:text="Quedan 28 pastillas (14 dosis)" />
+
             <!-- Compartimento -->
             <TextView
                 android:id="@+id/tv_compartment"

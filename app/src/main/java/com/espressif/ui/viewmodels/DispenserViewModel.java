@@ -509,17 +509,20 @@ public class DispenserViewModel extends AndroidViewModel {
         // Enviar comando MQTT al dispensador
         mqttViewModel.dispenseNow(medicationId, scheduleId);
         
-        // También actualizar la base de datos
+        // Actualizar el conteo de pastillas
+        updatePillCount(medicationId);
+        
+        // También actualizar la base de datos con el estado de dispensación
         executor.execute(() -> {
             medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, new MedicationRepository.DatabaseCallback() {
                 @Override
                 public void onSuccess() {
-                    Log.d(TAG, "Medicamento marcado como dispensado: " + medicationId);
+                    Log.d(TAG, "Estado de dispensación actualizado correctamente");
                 }
-    
+                
                 @Override
                 public void onError(String errorMsg) {
-                    errorMessage.postValue("Error al marcar dispensación: " + errorMsg);
+                    errorMessage.postValue("Error al actualizar estado de dispensación: " + errorMsg);
                 }
             });
         });
@@ -535,5 +538,76 @@ public class DispenserViewModel extends AndroidViewModel {
         }
         
         mqttViewModel.syncSchedules(medications.getValue());
+    }
+
+    /**
+     * Actualiza el conteo de pastillas después de dispensar
+     */
+    private void updatePillCount(String medicationId) {
+        if (patientId == null || medicationId == null) {
+            return;
+        }
+        
+        // Obtener el medicamento actual
+        executor.execute(() -> {
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication != null) {
+                        // Llamar al método dispenseDose que disminuye los contadores
+                        medication.dispenseDose();
+                        
+                        // Guardar los cambios en la base de datos
+                        updateMedication(medication);
+                        
+                        Log.d(TAG, "Pastillas actualizadas para " + medication.getName() + 
+                              ". Quedan: " + medication.getTotalPills() + " pastillas, " +
+                              medication.calculateRemainingDoses() + " dosis.");
+                    }
+                }
+                
+                @Override
+                public void onError(String errorMsg) {
+                    Log.e(TAG, "Error al obtener medicamento para actualizar conteo: " + errorMsg);
+                    // Notificar al usuario - usar la variable de la clase, no el parámetro
+                    DispenserViewModel.this.errorMessage.postValue("Error al actualizar conteo de pastillas: " + errorMsg);
+                }
+            });
+        });
+    }
+
+    /**
+     * Actualiza la cantidad total de pastillas para un medicamento (recarga)
+     */
+    public void refillMedication(String medicationId, int newTotalPills) {
+        if (patientId == null || medicationId == null) {
+            errorMessage.postValue("ID no válido");
+            return;
+        }
+        
+        executor.execute(() -> {
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication != null) {
+                        // Actualizar el total de pastillas
+                        medication.setTotalPills(newTotalPills);
+                        medication.updateRemainingDoses();
+                        
+                        // Guardar los cambios
+                        updateMedication(medication);
+                        
+                        Log.d(TAG, "Compartimento rellenado para " + medication.getName() + 
+                              ". Nuevo total: " + newTotalPills);
+                    }
+                }
+                
+                @Override
+                public void onError(String errorMessage) {
+                    Log.e(TAG, "Error al obtener medicamento para rellenar: " + errorMessage);
+                    DispenserViewModel.this.errorMessage.postValue("Error al rellenar: " + errorMessage);
+                }
+            });
+        });
     }
 }

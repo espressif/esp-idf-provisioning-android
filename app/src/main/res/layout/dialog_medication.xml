@@ -87,6 +87,23 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Añadir después del campo de cantidad (amount) -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_total_pills"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Total de pastillas en el compartimento"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_total_pills"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- Notas adicionales -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_notes"

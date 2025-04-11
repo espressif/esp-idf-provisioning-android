@@ -54,6 +54,10 @@ public class DialogMedication extends DialogFragment {
     private MaterialButton btnCancel;
     private MaterialButton btnSave;
 
+    // Añadir estas variables de clase
+    private TextInputLayout tilTotalPills;
+    private TextInputEditText etTotalPills;
+
     // Constantes para el número total de compartimentos por tipo
     private static final int MAX_PILL_COMPARTMENTS = 3;
     private static final int MAX_LIQUID_COMPARTMENTS = 1;
@@ -137,6 +141,10 @@ public class DialogMedication extends DialogFragment {
         btnCancel = view.findViewById(R.id.btn_cancel);
         btnSave = view.findViewById(R.id.btn_save);
 
+        // En el método initViews, añadir:
+        tilTotalPills = view.findViewById(R.id.til_total_pills);
+        etTotalPills = view.findViewById(R.id.et_total_pills);
+
         // Configurar título según modo
         tvDialogTitle.setText(isEditMode ? R.string.edit_medication : R.string.add_medication);
         
@@ -150,12 +158,15 @@ public class DialogMedication extends DialogFragment {
         }
     }
 
+    // Modificar updateAmountFieldLabel para mostrar/ocultar campo de totalPills
     private void updateAmountFieldLabel() {
         // Cambiar el label del campo de cantidad según el tipo
         if (rbPill.isChecked()) {
             tilAmount.setHint("Número de pastillas/cápsulas por dosis");
+            tilTotalPills.setVisibility(View.VISIBLE);
         } else {
             tilAmount.setHint("Cantidad por dosis (ml)");
+            tilTotalPills.setVisibility(View.GONE);
         }
     }
 
@@ -293,6 +304,7 @@ public class DialogMedication extends DialogFragment {
         });
     }
 
+    // En validateInputs, añadir validación para totalPills
     private boolean validateInputs() {
         boolean isValid = true;
 
@@ -325,6 +337,28 @@ public class DialogMedication extends DialogFragment {
             }
         }
 
+        // Validar total de pastillas (solo para tipo PILL)
+        if (rbPill.isChecked()) {
+            String totalPillsStr = etTotalPills.getText().toString().trim();
+            if (TextUtils.isEmpty(totalPillsStr)) {
+                tilTotalPills.setError("El total de pastillas es obligatorio");
+                isValid = false;
+            } else {
+                try {
+                    int totalPills = Integer.parseInt(totalPillsStr);
+                    if (totalPills <= 0) {
+                        tilTotalPills.setError("Debe ser mayor que 0");
+                        isValid = false;
+                    } else {
+                        tilTotalPills.setError(null);
+                    }
+                } catch (NumberFormatException e) {
+                    tilTotalPills.setError("Valor no válido");
+                    isValid = false;
+                }
+            }
+        }
+
         return isValid;
     }
 
@@ -347,6 +381,11 @@ public class DialogMedication extends DialogFragment {
         
         // Establecer compartimento (se maneja en updateCompartmentOptions)
         updateCompartmentOptions(editingMedication.getType());
+
+        // En fillDataForEdit, añadir:
+        if (MedicationType.PILL.equals(editingMedication.getType())) {
+            etTotalPills.setText(String.valueOf(editingMedication.getTotalPills()));
+        }
     }
 
     // Replace the saveMedication method with this improved version
@@ -423,6 +462,16 @@ public class DialogMedication extends DialogFragment {
             medication.setNotes(notes);
             medication.setCompartmentNumber(selectedCompartment);
             medication.setRemainingDoses(0);
+        }
+
+        // Para píldoras, guardar también totalPills y pillsPerDose
+        if (type.equals(MedicationType.PILL)) {
+            int totalPills = Integer.parseInt(etTotalPills.getText().toString().trim());
+            int pillsPerDose = (int) amount;
+            
+            medication.setTotalPills(totalPills);
+            medication.setPillsPerDose(pillsPerDose);
+            medication.updateRemainingDoses();
         }
         
         // Si estamos editando, liberar el compartimento anterior si cambió

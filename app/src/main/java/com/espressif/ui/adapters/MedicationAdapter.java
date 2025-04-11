@@ -83,6 +83,7 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
         private final Button btnAddSchedule;
         private final Button btnEdit;
         private final Button btnDelete;
+        private final TextView tvRemainingPills;
         
         private final ScheduleAdapter scheduleAdapter;
 
@@ -97,6 +98,7 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             btnAddSchedule = itemView.findViewById(R.id.btn_add_schedule);
             btnEdit = itemView.findViewById(R.id.btn_edit);
             btnDelete = itemView.findViewById(R.id.btn_delete);
+            tvRemainingPills = itemView.findViewById(R.id.tv_dosage_remaining);
             
             // Configurar el RecyclerView anidado para los horarios
             recyclerSchedules.setLayoutManager(new LinearLayoutManager(context));
@@ -173,6 +175,30 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             
             // Configurar horarios
             scheduleAdapter.setSchedules(medication.getScheduleList());
+
+            // Mostrar información de pastillas/dosis restantes
+            if (MedicationType.PILL.equals(medication.getType())) {
+                int totalPills = medication.getTotalPills();
+                int pillsPerDose = medication.getPillsPerDose();
+                
+                if (pillsPerDose > 0) {
+                    int doses = totalPills / pillsPerDose;
+                    String remainingText = String.format("Quedan %d pastillas (%d dosis)", 
+                                                        totalPills, doses);
+                    tvRemainingPills.setText(remainingText);
+                    tvRemainingPills.setVisibility(View.VISIBLE);
+                } else {
+                    tvRemainingPills.setVisibility(View.GONE);
+                }
+            } else {
+                int doses = medication.getRemainingDoses();
+                if (doses > 0) {
+                    tvRemainingPills.setText("Quedan " + doses + " dosis");
+                    tvRemainingPills.setVisibility(View.VISIBLE);
+                } else {
+                    tvRemainingPills.setVisibility(View.GONE);
+                }
+            }
         }
     }
 }

@@ -25,6 +25,8 @@ public class Medication {
     private long updatedAt;         // Timestamp de última modificación
     private int compartmentNumber;  // Número de compartimento en el dispensador (1-6)
     private int remainingDoses;     // Dosis restantes en el dispensador
+    private int totalPills;         // Número total de pastillas en el compartimento
+    private int pillsPerDose;       // Número de pastillas por dosis
 
     // Constructor vacío requerido para Firebase
     public Medication() {
@@ -139,6 +141,22 @@ public class Medication {
         this.remainingDoses = remainingDoses;
     }
 
+    public int getTotalPills() {
+        return totalPills;
+    }
+
+    public void setTotalPills(int totalPills) {
+        this.totalPills = totalPills;
+    }
+
+    public int getPillsPerDose() {
+        return pillsPerDose;
+    }
+
+    public void setPillsPerDose(int pillsPerDose) {
+        this.pillsPerDose = pillsPerDose;
+    }
+
     // Métodos de ayuda para trabajar con horarios
     @Exclude
     public void addSchedule(Schedule schedule) {
@@ -190,6 +208,7 @@ public class Medication {
      * Convierte esta instancia a un Map para guardarlo en Firebase
      */
     @Exclude
+    // Eliminar la anotación @Override que causa el error
     public Map<String, Object> toMap() {
         HashMap<String, Object> result = new HashMap<>();
         result.put("id", id);
@@ -204,7 +223,46 @@ public class Medication {
         result.put("updatedAt", updatedAt);
         result.put("compartmentNumber", compartmentNumber);
         result.put("remainingDoses", remainingDoses);
+        result.put("totalPills", totalPills);
+        result.put("pillsPerDose", pillsPerDose);
         
         return result;
+    }
+
+    /**
+     * Calcula las dosis restantes basado en el número de pastillas
+     */
+    @Exclude
+    public int calculateRemainingDoses() {
+        if (MedicationType.PILL.equals(type) && pillsPerDose > 0) {
+            return totalPills / pillsPerDose;
+        }
+        return remainingDoses;
+    }
+
+    /**
+     * Actualiza las dosis restantes basado en el número de pastillas
+     */
+    @Exclude
+    public void updateRemainingDoses() {
+        if (MedicationType.PILL.equals(type) && pillsPerDose > 0) {
+            this.remainingDoses = totalPills / pillsPerDose;
+        }
+    }
+
+    /**
+     * Disminuye el número de pastillas cuando se dispensa una dosis
+     */
+    @Exclude
+    public void dispenseDose() {
+        if (MedicationType.PILL.equals(type)) {
+            totalPills -= pillsPerDose;
+            if (totalPills < 0) totalPills = 0;
+            updateRemainingDoses();
+        } else {
+            // Para medicamentos líquidos, simplemente restar una dosis
+            remainingDoses--;
+            if (remainingDoses < 0) remainingDoses = 0;
+        }
     }
 }
