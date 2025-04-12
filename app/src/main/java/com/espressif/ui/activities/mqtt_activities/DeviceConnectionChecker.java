@@ -50,6 +50,50 @@ public class DeviceConnectionChecker {
             public void messageArrived(String topic, MqttMessage mqttMessage) {
                 String payload = new String(mqttMessage.getPayload());
                 
+                // Auto-detección: Si recibimos un mensaje en /device/status y no tenemos
+                // un dispositivo guardado, intentamos extraer un ID y guardarlo
+                if (topic.contains("/device/status")) {
+                    try {
+                        JSONObject json = new JSONObject(payload);
+                        Log.d(TAG, "Procesando mensaje de status para auto-detección: " + json.toString());
+                        SharedPreferencesHelper prefsHelper = SharedPreferencesHelper.getInstance(context);
+                        String savedDeviceId = prefsHelper.getConnectedDeviceId();
+                        
+                        // Si no tenemos un dispositivo guardado, guardar este automáticamente
+                        // Relajar la condición de detección (no requerir explícitamente "type")
+                        if (savedDeviceId == null || savedDeviceId.isEmpty()) {
+                            // Extraer un ID, o generar uno si no encontramos
+                            String deviceId = "";
+                            if (json.has("deviceId")) {
+                                deviceId = json.getString("deviceId");
+                            } else if (json.has("ip")) {
+                                deviceId = "esp32-" + json.getString("ip").replace(".", "-");
+                                Log.d(TAG, "Usando IP para generar deviceId: " + deviceId);
+                            } else {
+                                deviceId = "esp32-" + UUID.randomUUID().toString().substring(0, 8);
+                                Log.d(TAG, "Usando UUID para generar deviceId: " + deviceId);
+                            }
+                            
+                            // Guardar este dispositivo en preferencias
+                            Log.d(TAG, "¡Auto-detección exitosa! Guardando dispositivo con ID: " + deviceId);
+                            prefsHelper.saveConnectedDeviceId(deviceId);
+                            
+                            // Marcar provisioning como completado
+                            prefsHelper.setProvisioningCompleted(true);
+                            
+                            // Notificar como conectado
+                            notifyListenerAndCleanup(true);
+                            return;
+                        } else {
+                            Log.d(TAG, "Ya existe un dispositivo guardado con ID: " + savedDeviceId + ", ignorando auto-detección");
+                        }
+                    } catch (JSONException e) {
+                        Log.e(TAG, "Error procesando mensaje de status para auto-detección", e);
+                        Log.e(TAG, "Mensaje problemático: " + payload);
+                        e.printStackTrace();
+                    }
+                }
+                
                 // Verificar si es nuestro propio mensaje PING
                 if (payload.contains("\"type\":\"ping\"") && payload.contains("\"clientId\":\"" + clientId + "\"")) {
                     return; // Ignorar nuestros propios mensajes ping
@@ -122,36 +166,65 @@ public class DeviceConnectionChecker {
     public void checkConnection(ConnectionCheckListener listener) {
         Log.d(TAG, "Iniciando verificación de conexión de dispositivo...");
         
+        // Evitar verificaciones concurrentes
+        if (isChecking.getAndSet(true)) {
+            listener.onError("Ya hay una verificación en progreso");
+            return;
+        }
+        
+        this.currentListener = listener;
         SharedPreferencesHelper prefsHelper = SharedPreferencesHelper.getInstance(context);
-        boolean hasCompletedProvisioning = prefsHelper.hasCompletedProvisioning();
-        Log.d(TAG, "¿Completó provisioning según SharedPreferencesHelper?: " + hasCompletedProvisioning);
         
-        // Verificar si hay un dispositivo previamente conectado
-        String savedDeviceId = prefsHelper.getConnectedDeviceId();
-        
-        if (savedDeviceId != null && !savedDeviceId.isEmpty()) {
-            Log.d(TAG, "Encontrado dispositivo guardado con ID: " + savedDeviceId);
-            // Evitar verificaciones concurrentes
-            if (isChecking.getAndSet(true)) {
-                listener.onError("Ya hay una verificación en progreso");
-                return;
+        try {
+            // Conectar al broker MQTT siempre
+            if (!mqttHandler.isConnected()) {
+                mqttHandler.connect();
             }
             
-            this.currentListener = listener;
+            // Suscribirse a múltiples tópicos, independientemente de si ya tenemos un ID guardado
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
+            mqttHandler.subscribe("/device/#", 1);
             
-            try {
-                // Conectar al broker MQTT
-                if (!mqttHandler.isConnected()) {
-                    mqttHandler.connect();
-                }
+            // Crear una suscripción especial para detectar cualquier mensaje de status
+            mqttHandler.subscribe("/device/status", 1);
+            
+            // Verificar si hay un dispositivo previamente conectado
+            String savedDeviceId = prefsHelper.getConnectedDeviceId();
+            
+            if (savedDeviceId == null || savedDeviceId.isEmpty()) {
+                Log.d(TAG, "No se encontró ningún dispositivo guardado, intentando descubrimiento automático");
                 
-                // Suscribirse a múltiples tópicos
-                mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
-                mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
-                mqttHandler.subscribe("/device/#", 1);
+                // NUEVO: Configurar un espera para escuchar posibles mensajes de estado
+                // que nos permitan detectar dispositivos automáticamente
+                this.timeoutRunnable = new Runnable() {
+                    @Override
+                    public void run() {
+                        ConnectionCheckListener listenerToNotify = currentListener;
+                        if (listenerToNotify != null) {
+                            // Limpiar referencias
+                            currentListener = null;
+                            timeoutRunnable = null;
+                            isChecking.set(false);
+                            
+                            Log.d(TAG, "No se detectó ningún dispositivo automáticamente");
+                            listenerToNotify.onConnectionCheckResult(false);
+                        }
+                    }
+                };
+                
+                // Programar un timeout más largo para dar tiempo a que lleguen mensajes
+                handler.postDelayed(timeoutRunnable, AppConstants.MQTT_CONNECTION_TIMEOUT_MS * 2);
+                
+                // No enviamos ping aquí, solo esperamos mensajes que puedan llegar
+                // Los mensajes serán manejados por messageArrived en el MqttCallback
+                
+            } else {
+                // Tenemos un ID guardado, verificar usando ping como antes
+                Log.d(TAG, "Encontrado dispositivo guardado con ID: " + savedDeviceId);
                 
                 // Crear mensaje ping con CustomMqttMessage
-                CustomMqttMessage pingMessage = CustomMqttMessage.createPing(null, true);
+                CustomMqttMessage pingMessage = CustomMqttMessage.createPing(savedDeviceId, true);
                 pingMessage.addPayload("clientId", clientId);
                 
                 // Añadir el clientId también al nivel raíz para compatibilidad
@@ -161,7 +234,7 @@ public class DeviceConnectionChecker {
                 // Publicar el mensaje de ping
                 mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, jsonObj.toString());
                 
-                // Configurar timeout
+                // Configurar timeout normal
                 this.timeoutRunnable = new Runnable() {
                     @Override
                     public void run() {
@@ -180,18 +253,15 @@ public class DeviceConnectionChecker {
                 
                 // Programar el timeout
                 handler.postDelayed(timeoutRunnable, AppConstants.MQTT_CONNECTION_TIMEOUT_MS);
-                
-            } catch (MqttException | JSONException e) {
-                Log.e(TAG, "Error en la verificación de conexión", e);
-                if (currentListener != null) {
-                    listener.onError("Error: " + e.getMessage());
-                    currentListener = null;
-                }
-                isChecking.set(false);
             }
-        } else {
-            Log.d(TAG, "No se encontró ningún dispositivo guardado");
-            listener.onConnectionCheckResult(false);
+            
+        } catch (MqttException | JSONException e) {
+            Log.e(TAG, "Error en la verificación de conexión", e);
+            if (currentListener != null) {
+                listener.onError("Error: " + e.getMessage());
+                currentListener = null;
+            }
+            isChecking.set(false);
         }
     }
     
