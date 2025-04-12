@@ -564,8 +564,34 @@ public class DispenserFragment extends Fragment implements
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        
+        // Iniciar actualización automática
+        if (adapter != null) {
+            adapter.startAutoUpdate();
+        }
+    }
+    
+    @Override
+    public void onPause() {
+        super.onPause();
+        
+        // Detener actualización automática cuando el fragmento no está visible
+        if (adapter != null) {
+            adapter.stopAutoUpdate();
+        }
+    }
+    
+    @Override
     public void onDestroy() {
         super.onDestroy();
+        
+        // Liberar recursos
+        if (adapter != null) {
+            adapter.release();
+        }
+        
         dismissSyncingDialog();
     }
 }

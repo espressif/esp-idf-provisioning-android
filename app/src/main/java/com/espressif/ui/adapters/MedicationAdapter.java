@@ -2,6 +2,8 @@ package com.espressif.ui.adapters;
 
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +29,12 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
     private final Context context;
     private final MedicationListener listener;
 
+    // Añadir estas variables para manejar la actualización automática
+    private final Handler autoUpdateHandler = new Handler(Looper.getMainLooper());
+    private final Runnable autoUpdateRunnable;
+    private boolean autoUpdateEnabled = false;
+    private static final long UPDATE_INTERVAL_MS = 60000; // Actualizar cada minuto
+
     public interface MedicationListener {
         void onMedicationClick(Medication medication);
         void onEditMedicationClick(Medication medication);
@@ -37,6 +45,20 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
     public MedicationAdapter(Context context, MedicationListener listener) {
         this.context = context;
         this.listener = listener;
+
+        // Inicializar el Runnable para actualización automática
+        autoUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Notificar cambios para refrescar todos los items
+                notifyDataSetChanged();
+
+                // Programar la próxima actualización si está habilitado
+                if (autoUpdateEnabled) {
+                    autoUpdateHandler.postDelayed(this, UPDATE_INTERVAL_MS);
+                }
+            }
+        };
     }
 
     @NonNull
@@ -71,6 +93,33 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             return medications.get(position);
         }
         return null;
+    }
+
+    /**
+     * Comienza la actualización automática de los horarios
+     */
+    public void startAutoUpdate() {
+        if (!autoUpdateEnabled) {
+            autoUpdateEnabled = true;
+            autoUpdateHandler.removeCallbacks(autoUpdateRunnable); // Remover cualquier callback pendiente
+            autoUpdateHandler.post(autoUpdateRunnable); // Iniciar inmediatamente
+        }
+    }
+
+    /**
+     * Detiene la actualización automática
+     */
+    public void stopAutoUpdate() {
+        autoUpdateEnabled = false;
+        autoUpdateHandler.removeCallbacks(autoUpdateRunnable);
+    }
+
+    /**
+     * Debe llamarse en onDestroy() de la Activity/Fragment para liberar recursos
+     */
+    public void release() {
+        stopAutoUpdate();
+        autoUpdateHandler.removeCallbacksAndMessages(null);
     }
 
     class MedicationViewHolder extends RecyclerView.ViewHolder {
