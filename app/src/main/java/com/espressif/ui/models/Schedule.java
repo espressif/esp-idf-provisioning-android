@@ -278,46 +278,112 @@ public class Schedule {
     @Exclude
     private void updateNextScheduledTime() {
         java.util.Calendar calendar = java.util.Calendar.getInstance();
-        int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
-        int currentMinute = calendar.get(java.util.Calendar.MINUTE);
-        int currentDayOfWeek = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
-
-        // Si el horario de hoy ya pasó, buscar el próximo día disponible
-        boolean scheduleForToday = daysOfWeek != null && daysOfWeek.get(currentDayOfWeek) && 
-                                   (hour > currentHour || (hour == currentHour && minute > currentMinute));
-
-        if (scheduleForToday) {
-            // Programar para hoy
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
-            calendar.set(java.util.Calendar.MINUTE, minute);
-            calendar.set(java.util.Calendar.SECOND, 0);
-            calendar.set(java.util.Calendar.MILLISECOND, 0);
-        } else {
-            // Buscar el próximo día disponible
-            int daysToAdd = 1;
-            int nextDay = (currentDayOfWeek + daysToAdd) % 7;
+        long currentTime = calendar.getTimeInMillis();
+        
+        // Si estamos en modo de intervalos, calcular basado en intervalos horarios
+        if (intervalMode && intervalHours > 0) {
+            // Definir constantes para evitar cálculos repetidos
+            final long HOUR_IN_MILLIS = 60 * 60 * 1000;
             
-            while (daysOfWeek == null || !daysOfWeek.get(nextDay)) {
-                daysToAdd++;
-                nextDay = (currentDayOfWeek + daysToAdd) % 7;
+            // Si no hay hora de inicio previa, usar la hora configurada hoy
+            if (lastTaken <= 0) {
+                // Configurar el calendario para la hora configurada hoy
+                calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                calendar.set(java.util.Calendar.MINUTE, minute);
+                calendar.set(java.util.Calendar.SECOND, 0);
+                calendar.set(java.util.Calendar.MILLISECOND, 0);
                 
-                if (daysToAdd > 7) {
-                    // No hay días programados, usar fecha lejana
-                    calendar.add(java.util.Calendar.YEAR, 1);
-                    nextScheduled = calendar.getTimeInMillis();
-                    return;
+                // Si la hora configurada ya pasó hoy, calcular la próxima dosis según el intervalo
+                if (calendar.getTimeInMillis() < currentTime) {
+                    // Calcular cuántas horas han pasado desde la hora configurada
+                    long timeSinceConfigured = currentTime - calendar.getTimeInMillis();
+                    long intervalMillis = intervalHours * HOUR_IN_MILLIS;
+                    
+                    // Calcular cuántos intervalos completos han pasado
+                    long intervalsPassed = (timeSinceConfigured / intervalMillis) + 1;
+                    
+                    // Calcular la próxima dosis sumando los intervalos correctos
+                    calendar.setTimeInMillis(calendar.getTimeInMillis() + (intervalsPassed * intervalMillis));
+                }
+            } else {
+                // Ya hay una dosis tomada anteriormente, calcular la próxima basada en esa
+                calendar.setTimeInMillis(lastTaken);
+                calendar.add(java.util.Calendar.HOUR_OF_DAY, intervalHours);
+                
+                // Si la próxima dosis ya pasó, recalcular desde el momento actual
+                if (calendar.getTimeInMillis() < currentTime) {
+                    long timeSinceLastDose = currentTime - lastTaken;
+                    long intervalMillis = intervalHours * HOUR_IN_MILLIS;
+                    
+                    // Calcular cuántos intervalos completos han pasado desde la última dosis
+                    long intervalsPassed = (timeSinceLastDose / intervalMillis) + 1;
+                    
+                    // Calcular la próxima dosis sumando los intervalos correctos
+                    calendar.setTimeInMillis(lastTaken + (intervalsPassed * intervalMillis));
                 }
             }
             
-            // Configurar para el próximo día encontrado
-            calendar.add(java.util.Calendar.DAY_OF_MONTH, daysToAdd);
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
-            calendar.set(java.util.Calendar.MINUTE, minute);
-            calendar.set(java.util.Calendar.SECOND, 0);
-            calendar.set(java.util.Calendar.MILLISECOND, 0);
+            // Verificar que no exceda la fecha de fin del tratamiento
+            if (treatmentEndDate > 0 && calendar.getTimeInMillis() > treatmentEndDate) {
+                // Si excede, usar el fin del tratamiento
+                calendar.setTimeInMillis(treatmentEndDate);
+            }
+        } else {
+            // Código existente para el modo basado en días de la semana
+            int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+            int currentMinute = calendar.get(java.util.Calendar.MINUTE);
+            int currentDayOfWeek = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
+
+            boolean scheduleForToday = daysOfWeek != null && 
+                                     daysOfWeek.size() > currentDayOfWeek &&
+                                     daysOfWeek.get(currentDayOfWeek) && 
+                                     (hour > currentHour || (hour == currentHour && minute > currentMinute));
+
+            if (scheduleForToday) {
+                // Programar para hoy
+                calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                calendar.set(java.util.Calendar.MINUTE, minute);
+                calendar.set(java.util.Calendar.SECOND, 0);
+                calendar.set(java.util.Calendar.MILLISECOND, 0);
+            } else {
+                // Buscar el próximo día disponible
+                if (daysOfWeek != null && !daysOfWeek.isEmpty()) {
+                    int daysToAdd = 1;
+                    int nextDay = (currentDayOfWeek + daysToAdd) % 7;
+                    
+                    boolean foundDay = false;
+                    int loopCount = 0;
+                    
+                    while (!foundDay && loopCount < 7) {
+                        if (nextDay < daysOfWeek.size() && daysOfWeek.get(nextDay)) {
+                            foundDay = true;
+                        } else {
+                            daysToAdd++;
+                            nextDay = (currentDayOfWeek + daysToAdd) % 7;
+                        }
+                        loopCount++;
+                    }
+                    
+                    if (foundDay) {
+                        calendar.add(java.util.Calendar.DAY_OF_MONTH, daysToAdd);
+                        calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                        calendar.set(java.util.Calendar.MINUTE, minute);
+                        calendar.set(java.util.Calendar.SECOND, 0);
+                        calendar.set(java.util.Calendar.MILLISECOND, 0);
+                    } else {
+                        // No se encontró ningún día activo, usar el día siguiente como fallback
+                        calendar.add(java.util.Calendar.DAY_OF_MONTH, 1);
+                        calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                        calendar.set(java.util.Calendar.MINUTE, minute);
+                        calendar.set(java.util.Calendar.SECOND, 0);
+                        calendar.set(java.util.Calendar.MILLISECOND, 0);
+                    }
+                }
+            }
         }
         
-        nextScheduled = calendar.getTimeInMillis();
+        // Guardar el próximo tiempo programado
+        this.nextScheduled = calendar.getTimeInMillis();
     }
 
     /**
@@ -340,6 +406,12 @@ public class Schedule {
         result.put("dispensedAt", dispensedAt);
         result.put("detectedAt", detectedAt);
         result.put("use24HourFormat", use24HourFormat);
+        
+        // Añadir propiedades de intervalo
+        result.put("intervalMode", intervalMode);
+        result.put("intervalHours", intervalHours);
+        result.put("treatmentDays", treatmentDays);
+        result.put("treatmentEndDate", treatmentEndDate);
         
         return result;
     }

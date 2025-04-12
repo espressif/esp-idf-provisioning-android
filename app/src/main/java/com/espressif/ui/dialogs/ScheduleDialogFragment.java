@@ -666,41 +666,62 @@ public class ScheduleDialogFragment extends DialogFragment {
     
     // Método auxiliar para calcular la próxima fecha programada
     private void calculateNextScheduledTime(Schedule schedule, ArrayList<Boolean> days) {
-        Calendar calendar = Calendar.getInstance();
-        int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-        int currentMinute = calendar.get(Calendar.MINUTE);
-        int currentDayOfWeek = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
-    
-        boolean scheduleForToday = days.get(currentDayOfWeek) && 
-                                 (hour > currentHour || (hour == currentHour && minute > currentMinute));
-    
-        if (scheduleForToday) {
-            calendar.set(Calendar.HOUR_OF_DAY, hour);
-            calendar.set(Calendar.MINUTE, minute);
-            calendar.set(Calendar.SECOND, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-        } else {
-            int daysToAdd = 1;
-            int nextDay = (currentDayOfWeek + daysToAdd) % 7;
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        
+        // Si es modo intervalo, calcular la próxima hora según el intervalo
+        if (schedule.isIntervalMode()) {
+            // Establecer la hora inicial
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+            calendar.set(java.util.Calendar.MINUTE, minute);
+            calendar.set(java.util.Calendar.SECOND, 0);
+            calendar.set(java.util.Calendar.MILLISECOND, 0);
             
-            boolean foundDay = false;
-            while (!foundDay && daysToAdd <= 7) {
-                if (days.get(nextDay)) {
-                    foundDay = true;
-                } else {
-                    daysToAdd++;
-                    nextDay = (currentDayOfWeek + daysToAdd) % 7;
-                }
+            // Si la hora ya pasó hoy, la primera dosis será en intervalHours horas
+            if (calendar.getTimeInMillis() < System.currentTimeMillis()) {
+                calendar.add(java.util.Calendar.HOUR_OF_DAY, schedule.getIntervalHours());
             }
             
-            if (foundDay) {
-                calendar.add(Calendar.DAY_OF_MONTH, daysToAdd);
-                calendar.set(Calendar.HOUR_OF_DAY, hour);
-                calendar.set(Calendar.MINUTE, minute);
-                calendar.set(Calendar.SECOND, 0);
-                calendar.set(Calendar.MILLISECOND, 0);
+            // Calcular fecha de fin del tratamiento
+            java.util.Calendar endDate = java.util.Calendar.getInstance();
+            endDate.add(java.util.Calendar.DAY_OF_MONTH, schedule.getTreatmentDays());
+            schedule.setTreatmentEndDate(endDate.getTimeInMillis());
+        } else {
+            // Código existente para modo basado en días de la semana
+            int currentHour = calendar.get(java.util.Calendar.HOUR_OF_DAY);
+            int currentMinute = calendar.get(java.util.Calendar.MINUTE);
+            int currentDayOfWeek = (calendar.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7; // Convertir a índice 0-6 (Lun-Dom)
+        
+            boolean scheduleForToday = days.get(currentDayOfWeek) && 
+                                     (hour > currentHour || (hour == currentHour && minute > currentMinute));
+        
+            if (scheduleForToday) {
+                calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                calendar.set(java.util.Calendar.MINUTE, minute);
+                calendar.set(java.util.Calendar.SECOND, 0);
+                calendar.set(java.util.Calendar.MILLISECOND, 0);
             } else {
-                calendar.add(Calendar.YEAR, 1);
+                int daysToAdd = 1;
+                int nextDay = (currentDayOfWeek + daysToAdd) % 7;
+                
+                boolean foundDay = false;
+                while (!foundDay && daysToAdd <= 7) {
+                    if (days.get(nextDay)) {
+                        foundDay = true;
+                    } else {
+                        daysToAdd++;
+                        nextDay = (currentDayOfWeek + daysToAdd) % 7;
+                    }
+                }
+                
+                if (foundDay) {
+                    calendar.add(java.util.Calendar.DAY_OF_MONTH, daysToAdd);
+                    calendar.set(java.util.Calendar.HOUR_OF_DAY, hour);
+                    calendar.set(java.util.Calendar.MINUTE, minute);
+                    calendar.set(java.util.Calendar.SECOND, 0);
+                    calendar.set(java.util.Calendar.MILLISECOND, 0);
+                } else {
+                    calendar.add(java.util.Calendar.YEAR, 1);
+                }
             }
         }
         
