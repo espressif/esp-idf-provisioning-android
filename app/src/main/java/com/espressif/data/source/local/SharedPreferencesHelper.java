@@ -2,6 +2,7 @@ package com.espressif.data.source.local;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
 
 import com.espressif.AppConstants;
 
@@ -27,33 +28,42 @@ public class SharedPreferencesHelper {
      * Métodos para userType
      */
     public void saveUserType(String userType) {
+        Log.d("SharedPrefsHelper", "Guardando tipo de usuario: " + userType);
         preferences.edit().putString(AppConstants.KEY_USER_TYPE, userType).apply();
     }
 
     public String getUserType() {
-        return preferences.getString(AppConstants.KEY_USER_TYPE, null);
+        String userType = preferences.getString(AppConstants.KEY_USER_TYPE, null);
+        Log.d("SharedPrefsHelper", "Obteniendo tipo de usuario: " + userType);
+        return userType;
     }
 
     /**
      * Métodos para estado de login
      */
     public void setLoggedIn(boolean isLoggedIn) {
+        Log.d("SharedPrefsHelper", "Estableciendo estado de login: " + isLoggedIn);
         preferences.edit().putBoolean(AppConstants.KEY_IS_LOGGED_IN, isLoggedIn).apply();
     }
 
     public boolean isLoggedIn() {
-        return preferences.getBoolean(AppConstants.KEY_IS_LOGGED_IN, false);
+        boolean isLoggedIn = preferences.getBoolean(AppConstants.KEY_IS_LOGGED_IN, false);
+        Log.d("SharedPrefsHelper", "Verificando estado de login: " + isLoggedIn);
+        return isLoggedIn;
     }
 
     /**
      * Métodos para provisioning
      */
     public void setProvisioningCompleted(boolean completed) {
+        Log.d("SharedPrefsHelper", "Estableciendo provisioning completado: " + completed);
         preferences.edit().putBoolean(AppConstants.KEY_PROVISIONING_COMPLETED, completed).apply();
     }
 
     public boolean hasCompletedProvisioning() {
-        return preferences.getBoolean(AppConstants.KEY_PROVISIONING_COMPLETED, false);
+        boolean hasCompleted = preferences.getBoolean(AppConstants.KEY_PROVISIONING_COMPLETED, false);
+        Log.d("SharedPrefsHelper", "Verificando provisioning completado: " + hasCompleted);
+        return hasCompleted;
     }
 
     /**
@@ -107,7 +117,9 @@ public class SharedPreferencesHelper {
      * @return ID del paciente conectado o null si no hay conexión
      */
     public String getConnectedPatientId() {
-        return preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_ID, null);
+        String patientId = preferences.getString(AppConstants.KEY_CONNECTED_PATIENT_ID, null);
+        Log.d("SharedPrefsHelper", "Obteniendo ID de paciente conectado: " + patientId);
+        return patientId;
     }
 
     /**
@@ -139,6 +151,27 @@ public class SharedPreferencesHelper {
     }
 
     /**
+     * Guarda el ID del dispositivo conectado
+     * @param deviceId ID del dispositivo
+     */
+    public void saveConnectedDeviceId(String deviceId) {
+        Log.d("SharedPrefsHelper", "Guardando ID de dispositivo conectado: " + deviceId);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(AppConstants.KEY_CONNECTED_DEVICE_ID, deviceId);
+        editor.apply();
+    }
+
+    /**
+     * Obtiene el ID del dispositivo conectado
+     * @return ID del dispositivo conectado o null si no hay ninguno
+     */
+    public String getConnectedDeviceId() {
+        String deviceId = preferences.getString(AppConstants.KEY_CONNECTED_DEVICE_ID, null);
+        Log.d("SharedPrefsHelper", "Obteniendo ID de dispositivo conectado: " + deviceId);
+        return deviceId;
+    }
+
+    /**
      * Limpiar datos de usuario (logout)
      */
     public void clearUserData() {
@@ -159,5 +192,32 @@ public class SharedPreferencesHelper {
      */
     public SharedPreferences getPreferences() {
         return preferences;
+    }
+
+    /**
+     * Guarda un valor booleano genérico
+     */
+    public void putBoolean(String key, boolean value) {
+        Log.d("SharedPrefsHelper", "Guardando booleano '" + key + "': " + value);
+        preferences.edit().putBoolean(key, value).apply();
+    }
+
+    /**
+     * Obtiene un valor booleano genérico
+     */
+    public boolean getBoolean(String key, boolean defaultValue) {
+        boolean value = preferences.getBoolean(key, defaultValue);
+        Log.d("SharedPrefsHelper", "Obteniendo booleano '" + key + "': " + value);
+        return value;
+    }
+
+    /**
+     * Limpia TODOS los datos de preferencias (reset completo)
+     */
+    public void clearAllData() {
+        Log.d("SharedPrefsHelper", "Borrando TODOS los datos de preferencias");
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.clear();
+        editor.apply();
     }
 }

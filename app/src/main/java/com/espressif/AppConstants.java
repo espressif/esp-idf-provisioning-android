@@ -65,6 +65,9 @@ public class AppConstants {
     public static final String KEY_PROVISIONING_COMPLETED = "provisioning_completed";
     public static final String KEY_HAS_COMPLETED_PROVISIONING = "hasCompletedProvisioning";
     public static final String KEY_IS_PROVISIONED = "is_provisioned";
+    public static final String KEY_CONNECTED_DEVICE_ID = "connected_device_id";
+    // Flag para indicar si el onboarding está completo
+    public static final String KEY_ONBOARDING_COMPLETED = "onboarding_completed";
 
     // Tipos de usuario
     public static final String USER_TYPE_PATIENT = "patient";

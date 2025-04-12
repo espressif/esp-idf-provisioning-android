@@ -9,6 +9,7 @@ import com.espressif.data.model.User;
 import com.espressif.data.source.local.SharedPreferencesHelper;
 import com.espressif.data.source.remote.FirebaseDataSource;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -341,15 +342,18 @@ public class UserRepository {
      * Guarda la información del usuario en las preferencias locales
      */
     private void saveUserPreferences(User user) {
+        Log.d(TAG, "Guardando preferencias de usuario: " + user.getName() + ", tipo: " + user.getUserType());
         preferencesHelper.setLoggedIn(true);
         preferencesHelper.saveUserInfo(user.getName(), user.getEmail());
         preferencesHelper.saveUserType(user.getUserType());
         
         if (user.getPatientId() != null) {
+            Log.d(TAG, "Guardando ID de paciente: " + user.getPatientId());
             preferencesHelper.savePatientId(user.getPatientId());
         }
         
         if (user.getConnectedPatientId() != null) {
+            Log.d(TAG, "Guardando ID de paciente conectado: " + user.getConnectedPatientId());
             preferencesHelper.saveConnectedPatientId(user.getConnectedPatientId());
         }
     }
@@ -519,9 +523,36 @@ public class UserRepository {
 
     /**
      * Verifica si el usuario ha iniciado sesión
+     * @return true si el usuario ha iniciado sesión, false en caso contrario
      */
     public boolean isUserLoggedIn() {
-        return preferencesHelper.isLoggedIn();
+        // Verificar PRIMERO en Firebase Auth
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        boolean firebaseLoggedIn = (currentUser != null);
+        
+        // Verificar el valor almacenado en SharedPreferences
+        boolean prefsLoggedIn = preferencesHelper.isLoggedIn();
+        
+        Log.d(TAG, "Estado de login - Firebase: " + firebaseLoggedIn + 
+               ", SharedPreferences: " + prefsLoggedIn);
+        
+        // Si hay inconsistencia, actualizar SharedPreferences para que coincida con Firebase
+        if (firebaseLoggedIn != prefsLoggedIn) {
+            preferencesHelper.setLoggedIn(firebaseLoggedIn);
+            Log.d(TAG, "Corrigiendo inconsistencia de login en SharedPreferences");
+        }
+        
+        // Devolver el estado real de Firebase
+        return firebaseLoggedIn;
+    }
+
+    /**
+     * Establece el estado de inicio de sesión del usuario
+     * @param isLoggedIn true si el usuario está logueado, false en caso contrario
+     */
+    public void setLoggedIn(boolean isLoggedIn) {
+        Log.d(TAG, "Estableciendo estado de login: " + isLoggedIn);
+        preferencesHelper.setLoggedIn(isLoggedIn);
     }
 
     /**
@@ -535,7 +566,9 @@ public class UserRepository {
      * Obtiene el tipo de usuario
      */
     public String getUserType() {
-        return preferencesHelper.getUserType();
+        String userType = preferencesHelper.getUserType();
+        Log.d(TAG, "Obteniendo tipo de usuario desde repositorio: " + userType);
+        return userType;
     }
 
     /**
@@ -570,7 +603,58 @@ public class UserRepository {
      * Verifica si el usuario ha completado el proceso de provisioning
      */
     public boolean hasCompletedProvisioning() {
-        return preferencesHelper.hasCompletedProvisioning();
+        boolean completed = preferencesHelper.hasCompletedProvisioning();
+        Log.d(TAG, "Verificando provisioning completado desde repositorio: " + completed);
+        return completed;
+    }
+
+    /**
+     * Verifica si el usuario ha completado el proceso completo de onboarding
+     * @return true si el usuario ha completado el flujo de onboarding, false en caso contrario
+     */
+    public boolean hasCompletedOnboarding() {
+        // Verificar doble flag - debe tener tanto sesión en Firebase como el flag de onboarding
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        boolean firebaseLoggedIn = (currentUser != null);
+        boolean onboardingCompleted = preferencesHelper.getBoolean(AppConstants.KEY_ONBOARDING_COMPLETED, false);
+        
+        Log.d(TAG, "Verificando onboarding - Firebase Auth: " + firebaseLoggedIn + 
+               ", Onboarding completado: " + onboardingCompleted);
+        
+        // Solo está completo si ambas condiciones son verdaderas
+        return firebaseLoggedIn && onboardingCompleted;
+    }
+
+    /**
+     * Marca que el usuario ha completado el proceso de onboarding
+     * @param completed true si el onboarding está completo
+     */
+    public void setOnboardingCompleted(boolean completed) {
+        Log.d(TAG, "Estableciendo estado de onboarding: " + completed);
+        preferencesHelper.putBoolean(AppConstants.KEY_ONBOARDING_COMPLETED, completed);
+    }
+
+    /**
+     * Realiza un restablecimiento completo de la aplicación
+     * Este método debe llamarse al desinstalar/reinstalar o cuando
+     * se desee volver al estado inicial
+     */
+    public void resetAppState() {
+        Log.d(TAG, "Realizando reset completo de la aplicación");
+        
+        // 1. Cerrar sesión en Firebase
+        if (firebaseDataSource.isInitialized()) {
+            firebaseDataSource.signOut();
+        }
+        
+        // 2. Borrar todos los datos de preferencias
+        preferencesHelper.clearAllData();
+        
+        // 3. Borrar específicamente los flags clave
+        preferencesHelper.putBoolean(AppConstants.KEY_ONBOARDING_COMPLETED, false);
+        preferencesHelper.setLoggedIn(false);
+        preferencesHelper.saveUserType(null);
+        
     }
 
     // Interfaces adicionales

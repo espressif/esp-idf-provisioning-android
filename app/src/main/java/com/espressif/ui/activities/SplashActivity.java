@@ -36,6 +36,8 @@ import com.google.android.gms.tasks.Task;
 
 import com.espressif.data.model.User;
 import com.espressif.data.repository.UserRepository;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Arrays;
 import java.util.List;
@@ -102,22 +104,67 @@ public class SplashActivity extends AppCompatActivity {
      * Verifica el estado del usuario y dirige al flujo correspondiente
      */
     private void checkUserStatus() {
+        // CAMBIO IMPORTANTE: Verificar si se completó el onboarding, no solo la autenticación
+        boolean onboardingCompleted = userRepository.hasCompletedOnboarding();
+        
+        // Si no se completó el onboarding, siempre mostrar la selección de tipo
+        if (!onboardingCompleted) {
+            Log.d(TAG, "El onboarding no está completo, mostrando selección de tipo de usuario");
+            
+            // Asegurarnos de que no queden datos parciales
+            userRepository.resetAppState();
+            
+            // Mostrar primera pantalla del flujo
+            showUserTypeDialog();
+            return;
+        }
+        
+        // A partir de aquí, verificación normal para usuario con onboarding completo
         String userType = userRepository.getUserType();
-        boolean isLoggedIn = userRepository.isUserLoggedIn();
+        
+        // Verificar estado de autenticación de Firebase
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        boolean isReallyLoggedIn = (currentUser != null);
+        
+        // Corregir inconsistencias si las hay
+        if (!isReallyLoggedIn && userRepository.isUserLoggedIn()) {
+            Log.d(TAG, "Inconsistencia detectada: Firebase muestra sin sesión pero SharedPreferences dice que hay sesión");
+            userRepository.setLoggedIn(false);
+        }
+        
+        boolean isLoggedIn = isReallyLoggedIn;
         boolean hasCompletedProvisioning = userRepository.hasCompletedProvisioning();
 
+        Log.d(TAG, "======= DIAGNÓSTICO DE FLUJO DE USUARIO =======");
+        Log.d(TAG, "Tipo de usuario: " + userType);
+        Log.d(TAG, "¿Está logueado en Firebase?: " + isReallyLoggedIn);
+        Log.d(TAG, "¿Está logueado en Prefs?: " + userRepository.isUserLoggedIn());
+        Log.d(TAG, "¿Completó provisioning?: " + hasCompletedProvisioning);
+        Log.d(TAG, "¿Completó onboarding?: " + onboardingCompleted);
+        Log.d(TAG, "ID de paciente conectado: " + userRepository.getConnectedPatientId());
+
         if (userType == null) {
-            // Primera vez - mostrar diálogo de selección
+            Log.d(TAG, "Flujo seleccionado: PRIMERA VEZ - mostrar selección de tipo");
             showUserTypeDialog();
         } else if (userType.equals(AppConstants.USER_TYPE_PATIENT) && !isLoggedIn) {
-            // Es paciente pero no ha iniciado sesión
+            Log.d(TAG, "Flujo seleccionado: PACIENTE SIN LOGIN - mostrar inicio de sesión");
             showGoogleSignInDialog();
         } else if (userType.equals(AppConstants.USER_TYPE_FAMILY) && 
                   userRepository.getConnectedPatientId() == null) {
-            // Es familiar pero no se ha conectado con ningún paciente
+            Log.d(TAG, "Flujo seleccionado: FAMILIAR SIN CONEXIÓN - mostrar conexión con paciente");
             showFamilyConnectionDialog();
         } else {
-            // Usuario ya configurado, verificar si hay dispositivo conectado
+            if (!isLoggedIn) {
+                Log.d(TAG, "Estado inconsistente: el usuario debería estar logueado pero no lo está. Redirigiendo a login");
+                if (userType.equals(AppConstants.USER_TYPE_PATIENT)) {
+                    showGoogleSignInDialog();
+                } else {
+                    showFamilyConnectionDialog();
+                }
+                return;
+            }
+            
+            Log.d(TAG, "Flujo seleccionado: USUARIO CONFIGURADO - verificar dispositivo conectado");
             checkDeviceConnection();
         }
     }
@@ -132,7 +179,11 @@ public class SplashActivity extends AppCompatActivity {
         progressDialog.setTitle(getString(R.string.device_search_title));
         progressDialog.setCancelable(false);
         progressDialog.show();
-
+        
+        Log.d(TAG, "==== Verificación en checkDeviceConnection ====");
+        Log.d(TAG, "Tipo de usuario: " + userRepository.getUserType());
+        Log.d(TAG, "¿Está logueado?: " + userRepository.isUserLoggedIn());
+        
         // Verificar si hay dispositivo conectado
         DeviceConnectionChecker deviceChecker = new DeviceConnectionChecker(this);
         deviceChecker.checkConnection(new DeviceConnectionChecker.ConnectionCheckListener() {
@@ -145,11 +196,13 @@ public class SplashActivity extends AppCompatActivity {
                     }
 
                     if (isConnected) {
+                        Log.d(TAG, "Dispositivo conectado - iniciando MainActivity");
                         // ¡Genial! Un dispositivo está conectado, vamos directo al MainActivity
                         Intent intent = new Intent(SplashActivity.this, MainActivity.class);
                         startActivity(intent);
                         finish();
                     } else {
+                        Log.d(TAG, "Dispositivo NO conectado - iniciando EspMainActivity");
                         // No hay dispositivo conectado, mostrar la pantalla de provisioning
                         startEspMainActivity();
                     }
@@ -161,6 +214,7 @@ public class SplashActivity extends AppCompatActivity {
 
             @Override
             public void onError(String errorMessage) {
+                Log.e(TAG, "Error en verificación de conexión: " + errorMessage);
                 runOnUiThread(() -> {
                     // Cerrar el diálogo de progreso
                     if (progressDialog.isShowing()) {
@@ -456,6 +510,13 @@ public class SplashActivity extends AppCompatActivity {
             userRepository.signInWithGoogle(account, new UserRepository.AuthCallback() {
                 @Override
                 public void onSuccess(User user) {
+                    // IMPORTANTE: Marcar que se completó el onboarding
+                    userRepository.setOnboardingCompleted(true);
+                    
+                    // Verificar estado de login después de autenticación exitosa
+                    Log.d(TAG, "Después de login exitoso, estado de login: " + userRepository.isUserLoggedIn());
+                    Log.d(TAG, "Datos de usuario: tipo=" + user.getUserType() + ", patientId=" + user.getPatientId());
+                    
                     // Si es un paciente nuevo, mostrar su ID único
                     if (AppConstants.USER_TYPE_PATIENT.equals(user.getUserType()) && 
                         user.getPatientId() != null) {
@@ -478,6 +539,9 @@ public class SplashActivity extends AppCompatActivity {
                 @Override
                 public void onError(String errorMessage) {
                     runOnUiThread(() -> {
+                        // IMPORTANTE: Restablecer estado en caso de error
+                        userRepository.setOnboardingCompleted(false);
+                        
                         Log.e(TAG, "Error en inicio de sesión: " + errorMessage);
                         Toast.makeText(SplashActivity.this, "Error: " + errorMessage, 
                                     Toast.LENGTH_SHORT).show();
@@ -487,10 +551,16 @@ public class SplashActivity extends AppCompatActivity {
             });
 
         } catch (ApiException e) {
-            Log.e(TAG, "Google Sign In failed: " + e.getStatusCode(), e);
+            // Restablecer estado en caso de error
+            userRepository.setOnboardingCompleted(false);
+            
+            Log.e(TAG, "Google Sign In failed: " + e.getStatusCode() + " - " + e.getMessage());
             showUserTypeDialog();
         } catch (Exception e) {
-            Log.e(TAG, "Unexpected error in Google Sign In", e);
+            // Restablecer estado en caso de error
+            userRepository.setOnboardingCompleted(false);
+            
+            Log.e(TAG, "Unexpected error in Google Sign In: " + e.getMessage(), e);
             showUserTypeDialog();
         }
     }
@@ -538,6 +608,12 @@ public class SplashActivity extends AppCompatActivity {
      * Inicia la actividad de provisioning
      */
     private void startEspMainActivity() {
+        Log.d(TAG, "========== Iniciando EspMainActivity ==========");
+        Log.d(TAG, "Resumen de estado de usuario:");
+        Log.d(TAG, "- Tipo: " + userRepository.getUserType());
+        Log.d(TAG, "- Logueado: " + userRepository.isUserLoggedIn());
+        Log.d(TAG, "- Provisioning completado: " + userRepository.hasCompletedProvisioning());
+        
         Intent intent = new Intent(this, EspMainActivity.class);
         startActivity(intent);
         finish(); // Cerrar esta actividad
