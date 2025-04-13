@@ -181,11 +181,16 @@ public class MqttViewModel extends AndroidViewModel {
     }
     
     /**
-     * Procesa los mensajes MQTT entrantes
+     * Procesa los mensajes MQTT entrantes - versión con logs reducidos
      */
     private void processIncomingMessage(String topic, MqttMessage mqttMessage) {
         String payload = new String(mqttMessage.getPayload());
-        Log.d(TAG, "Mensaje recibido en tópico " + topic + ": " + payload);
+        
+        // Solo registrar mensajes relevantes para sincronización
+        if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE) || 
+            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_STATUS)) {
+            Log.d(TAG, "🤖→📱 RECIBIDO [" + topic + "]: " + payload);
+        }
         
         try {
             // Intentar procesar como JSON
@@ -253,9 +258,11 @@ public class MqttViewModel extends AndroidViewModel {
         if (json.has("command") && "syncSchedules".equals(json.getString("command"))) {
             boolean success = json.optBoolean("success", false);
             if (success) {
+                Log.d(TAG, "✅ SYNC: Sincronización confirmada por el dispensador");
                 isSyncingSchedules.postValue(false);
             } else {
                 String errorMsg = json.optString("error", "Error desconocido");
+                Log.e(TAG, "❌ SYNC ERROR: " + errorMsg);
                 errorMessage.postValue("Error de sincronización: " + errorMsg);
                 isSyncingSchedules.postValue(false);
             }
@@ -285,8 +292,12 @@ public class MqttViewModel extends AndroidViewModel {
      */
     public void syncSchedules(List<Medication> medications) {
         if (medications == null || medications.isEmpty()) {
+            Log.d(TAG, "syncSchedules: No hay medicamentos para sincronizar");
             return;
         }
+        
+        // Reducir a un solo log inicial con información relevante
+        Log.d(TAG, "📱→🤖 SYNC: Iniciando sincronización de " + medications.size() + " medicamentos");
         
         isSyncingSchedules.postValue(true);
         
@@ -301,52 +312,73 @@ public class MqttViewModel extends AndroidViewModel {
                 JSONObject medicationObj = new JSONObject();
                 medicationObj.put("id", medication.getId());
                 medicationObj.put("name", medication.getName());
-                
-                // En Schedule.java se usa getCompartment(), no getCompartmentNumber()
                 medicationObj.put("compartment", medication.getCompartmentNumber());
+                medicationObj.put("type", medication.getType());
                 
-                medicationObj.put("type", medication.getType().toString());
+                // AÑADIR INFORMACIÓN DE DOSIFICACIÓN
+                medicationObj.put("pillsPerDose", medication.getPillsPerDose());
+                medicationObj.put("totalPills", medication.getTotalPills());
                 
                 JSONArray schedulesArray = new JSONArray();
+                int activeSchedulesCount = 0;
+                
                 for (Schedule schedule : medication.getScheduleList()) {
-                    JSONObject scheduleObj = new JSONObject();
-                    scheduleObj.put("id", schedule.getId());
-                    
-                    // Calcular los minutos a partir de hora y minuto
-                    int timeInMinutes = schedule.getHour() * 60 + schedule.getMinute();
-                    scheduleObj.put("time", timeInMinutes);
-                    
-                    // Convertir ArrayList<Boolean> a un array de índices de días activos
-                    JSONArray daysArray = new JSONArray();
-                    ArrayList<Boolean> daysOfWeek = schedule.getDaysOfWeek();
-                    if (daysOfWeek != null) {
-                        for (int i = 0; i < daysOfWeek.size(); i++) {
-                            if (daysOfWeek.get(i)) {
-                                daysArray.put(i + 1); // Se agrega +1 para que los días sean 1-7 en lugar de 0-6
+                    // SOLO INCLUIR HORARIOS ACTIVOS
+                    if (schedule.isActive()) {
+                        JSONObject scheduleObj = new JSONObject();
+                        scheduleObj.put("id", schedule.getId());
+                        
+                        // Calcular los minutos a partir de hora y minuto
+                        int timeInMinutes = schedule.getHour() * 60 + schedule.getMinute();
+                        scheduleObj.put("time", timeInMinutes);
+                        
+                        // AÑADIR INFORMACIÓN DE MODO INTERVALO
+                        scheduleObj.put("intervalMode", schedule.isIntervalMode());
+                        if (schedule.isIntervalMode()) {
+                            scheduleObj.put("intervalHours", schedule.getIntervalHours());
+                            scheduleObj.put("treatmentDays", schedule.getTreatmentDays());
+                        }
+                        
+                        // Convertir ArrayList<Boolean> a un array de índices de días activos
+                        JSONArray daysArray = new JSONArray();
+                        ArrayList<Boolean> daysOfWeek = schedule.getDaysOfWeek();
+                        if (daysOfWeek != null) {
+                            for (int i = 0; i < daysOfWeek.size(); i++) {
+                                if (daysOfWeek.get(i)) {
+                                    daysArray.put(i + 1);
+                                }
                             }
                         }
+                        scheduleObj.put("days", daysArray);
+                        schedulesArray.put(scheduleObj);
+                        activeSchedulesCount++;
                     }
-                    scheduleObj.put("days", daysArray);
-                    schedulesArray.put(scheduleObj);
                 }
                 
                 medicationObj.put("schedules", schedulesArray);
                 medicationsArray.put(medicationObj);
+                
+                // Log resumido por medicamento
+                Log.d(TAG, "📱→🤖 SYNC: " + medication.getName() + " [Compartimento " + 
+                      medication.getCompartmentNumber() + "] - " + activeSchedulesCount + " horarios activos");
             }
             
             // Añadir el array de medicamentos al mensaje
             syncMessage.addPayload("medications", medicationsArray);
+            syncMessage.addPayload("timestamp", System.currentTimeMillis());
+            syncMessage.addPayload("autoDispense", true);
+            
+            // Solo mostrar el tópico, no el mensaje completo que puede ser muy largo
+            Log.d(TAG, "📱→🤖 SYNC: Enviando al tópico: " + AppConstants.MQTT_TOPIC_DEVICE_COMMANDS);
             
             // Publicar el mensaje
             mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, syncMessage.toString());
             
-            // Simular una respuesta después de un tiempo para demostración
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                isSyncingSchedules.postValue(false);
-            }, 3000);
+            // Confirmar envío exitoso
+            Log.d(TAG, "📱→🤖 SYNC: Mensaje de sincronización enviado exitosamente");
             
         } catch (JSONException | MqttException e) {
-            Log.e(TAG, "Error al sincronizar horarios", e);
+            Log.e(TAG, "❌ SYNC ERROR: " + e.getMessage(), e);
             errorMessage.postValue("Error al sincronizar: " + e.getMessage());
             isSyncingSchedules.postValue(false);
         }

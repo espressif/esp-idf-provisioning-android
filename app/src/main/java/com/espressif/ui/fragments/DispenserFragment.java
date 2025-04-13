@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -403,6 +404,17 @@ public class DispenserFragment extends Fragment implements
             
             Toast.makeText(requireContext(), "Medicamento actualizado", Toast.LENGTH_SHORT).show();
         }
+        
+        // Añadir esta sección para sincronizar después de guardar
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (isAdded() && !isDetached()) {
+                // Sincronizar con el dispensador
+                Log.d("DispenserFragment", "Sincronizando después de guardar medicamento...");
+                if (mqttViewModel != null && dispenserViewModel != null) {
+                    dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
+                }
+            }
+        }, 1500); // Retraso para dar tiempo a Firebase para guardar
     }
     
     @Override
@@ -497,8 +509,18 @@ public class DispenserFragment extends Fragment implements
     @Override
     public void onScheduleSaved(Schedule schedule) {
         if (schedule != null && schedule.getMedicationId() != null) {
+            // Guardar en la base de datos local
             viewModel.saveSchedule(schedule.getMedicationId(), schedule);
             Toast.makeText(requireContext(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
+            
+            // Retrasar la sincronización para dar tiempo a que Firebase guarde los datos
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (isAdded() && !isDetached()) {
+                    // FORZAR LA SINCRONIZACIÓN con el dispensador
+                    Log.d("DispenserFragment", "Iniciando sincronización con dispensador...");
+                    dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
+                }
+            }, 1500);
         }
     }
 

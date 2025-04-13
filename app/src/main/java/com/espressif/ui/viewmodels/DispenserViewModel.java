@@ -527,17 +527,38 @@ public class DispenserViewModel extends AndroidViewModel {
             });
         });
     }
-    
+
     /**
-     * Sincroniza los horarios con el dispensador
+     * Sincroniza los horarios con el dispensador consultando directamente el repositorio
      */
     public void syncSchedulesWithDispenser(MqttViewModel mqttViewModel) {
-        if (medications.getValue() == null) {
-            errorMessage.postValue("No hay medicamentos para sincronizar");
+        if (patientId == null || patientId.isEmpty()) {
+            errorMessage.postValue("ID del paciente no válido");
             return;
         }
         
-        mqttViewModel.syncSchedules(medications.getValue());
+        // Obtener los medicamentos directamente del repositorio
+        Log.d(TAG, "Solicitando medicamentos actualizados para sincronizar");
+        
+        medicationRepository.getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+            @Override
+            public void onSuccess(List<Medication> data) {
+                if (data == null || data.isEmpty()) {
+                    Log.e(TAG, "No hay medicamentos para sincronizar");
+                    errorMessage.postValue("No hay medicamentos para sincronizar");
+                    return;
+                }
+                
+                Log.d(TAG, "Enviando " + data.size() + " medicamentos para sincronización MQTT");
+                mqttViewModel.syncSchedules(data);
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                Log.e(TAG, "Error al obtener medicamentos para sincronizar: " + errorMessage);
+                DispenserViewModel.this.errorMessage.postValue("Error al sincronizar: " + errorMessage);
+            }
+        });
     }
 
     /**
