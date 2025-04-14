@@ -79,5 +79,6 @@ public class AppConstants {
     public static final String MQTT_TOPIC_DEVICE_STATUS = "/device/status";
     public static final String MQTT_TOPIC_DEVICE_TELEMETRY = "/device/telemetry";
     public static final String MQTT_TOPIC_DEVICE_RESPONSE = "/device/response";
+    public static final String MQTT_TOPIC_DEVICE_CONFIRMATION = "/device/med_confirmation";
     public static final int MQTT_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos de timeout
 }

@@ -126,6 +126,9 @@ public class MqttViewModel extends AndroidViewModel {
             mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
             mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TELEMETRY, 1);
             mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE, 1);
+            
+            // Añadir la suscripción al tópico de confirmación de medicamentos
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION, 1);
         } catch (MqttException e) {
             Log.e(TAG, "Error al suscribirse a tópicos", e);
             errorMessage.postValue("Error de suscripción: " + e.getMessage());
@@ -188,13 +191,20 @@ public class MqttViewModel extends AndroidViewModel {
         
         // Solo registrar mensajes relevantes para sincronización
         if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE) || 
-            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_STATUS)) {
+            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_STATUS) ||
+            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION)) {
             Log.d(TAG, "🤖→📱 RECIBIDO [" + topic + "]: " + payload);
         }
         
         try {
             // Intentar procesar como JSON
             JSONObject json = new JSONObject(payload);
+            
+            // Procesar mensaje de confirmación de medicamentos
+            if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION)) {
+                processMedConfirmation(json);
+                return;
+            }
             
             // Intentar interpretar como CustomMqttMessage si contiene un campo "type"
             if (json.has("type")) {
@@ -266,6 +276,22 @@ public class MqttViewModel extends AndroidViewModel {
                 errorMessage.postValue("Error de sincronización: " + errorMsg);
                 isSyncingSchedules.postValue(false);
             }
+        }
+    }
+    
+    /**
+     * Procesa mensajes de confirmación de sincronización de medicamentos
+     */
+    private void processMedConfirmation(JSONObject json) throws JSONException {
+        boolean success = json.optBoolean("success", false);
+        if (success) {
+            Log.d(TAG, "✅ SYNC: Sincronización confirmada por el dispensador: " + json.optString("message", ""));
+            isSyncingSchedules.postValue(false);
+        } else {
+            String errorMsg = json.optString("message", "Error desconocido");
+            Log.e(TAG, "❌ SYNC ERROR: " + errorMsg);
+            errorMessage.postValue("Error de sincronización: " + errorMsg);
+            isSyncingSchedules.postValue(false);
         }
     }
     
