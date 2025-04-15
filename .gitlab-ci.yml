@@ -45,7 +45,7 @@ trigger_wait_jenkins:
       done
 
   rules:
-      - if: '$CI_MERGE_REQUEST_TITLE =~ /^\\s*(WIP|Draft)/'
-        when: never
-      - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-        when: always
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /^\s*(WIP|Draft)/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
