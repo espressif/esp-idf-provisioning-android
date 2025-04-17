@@ -170,6 +170,9 @@ public class NotificationScheduler {
                                 pendingIntent);
                     }
                     
+                    // Después de programar la notificación principal, programar la anticipada
+                    scheduleAdvanceReminder(patientId, medication, schedule);
+                    
                     return true;
                 }
             } else {
@@ -180,6 +183,79 @@ public class NotificationScheduler {
         }
         
         return false;
+    }
+    
+    /**
+     * Programa un recordatorio anticipado 30 minutos antes
+     */
+    public boolean scheduleAdvanceReminder(String patientId, Medication medication, Schedule schedule) {
+        if (medication == null || schedule == null) {
+            return false;
+        }
+
+        try {
+            // Calcular tiempo 30 minutos antes
+            long advanceTime = schedule.getNextScheduled() - (REMINDER_TIME_MINUTES * 60 * 1000);
+            
+            // Si ya pasó el tiempo anticipado, no programar
+            if (advanceTime <= System.currentTimeMillis()) {
+                return false;
+            }
+
+            Log.d(TAG, "Programando notificación anticipada para " + medication.getName() + " 30 minutos antes");
+            
+            // Crear intent para la notificación anticipada
+            Intent intent = new Intent(context, MedicationAlarmReceiver.class);
+            intent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
+            intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_ID, medication.getId());
+            intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_NAME, medication.getName());
+            intent.putExtra(MedicationAlarmReceiver.EXTRA_SCHEDULE_ID, schedule.getId());
+            intent.putExtra(MedicationAlarmReceiver.EXTRA_PATIENT_ID, patientId);
+            intent.putExtra("IS_ADVANCE_REMINDER", true);
+            
+            // Crear ID único diferente al de la hora exacta
+            int requestCode = ("advance_" + medication.getId() + schedule.getId()).hashCode();
+            
+            // Crear PendingIntent
+            PendingIntent pendingIntent;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        requestCode,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            } else {
+                pendingIntent = PendingIntent.getBroadcast(
+                        context,
+                        requestCode,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT);
+            }
+            
+            // Programar la alarma
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        advanceTime,
+                        pendingIntent);
+                Log.d(TAG, "Alarma anticipada programada para: " + new java.util.Date(advanceTime));
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        advanceTime,
+                        pendingIntent);
+            } else {
+                alarmManager.set(
+                        AlarmManager.RTC_WAKEUP,
+                        advanceTime,
+                        pendingIntent);
+            }
+            
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Error al programar recordatorio anticipado: " + e.getMessage(), e);
+            return false;
+        }
     }
     
     /**
@@ -374,22 +450,6 @@ public class NotificationScheduler {
         } else {
             Log.e(TAG, "Error: No se pudo obtener AlarmManager");
         }
-    }
-
-    /**
-     * Programa una notificación para prueba inmediata (5 segundos)
-     */
-    public static void scheduleTestNotification(Context context) {
-        long testTime = System.currentTimeMillis() + 5000; // 5 segundos
-        scheduleMedicationReminder(context, "TEST NOTIFICATION", testTime);
-        Log.d(TAG, "🧪 Notificación de prueba programada para 5 segundos");
-        
-        // También enviar una transmisión inmediata para probar el receptor
-        Intent immediateIntent = new Intent(context, MedicationAlarmReceiver.class);
-        immediateIntent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
-        immediateIntent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_NAME, "PRUEBA INMEDIATA");
-        context.sendBroadcast(immediateIntent);
-        Log.d(TAG, "📢 Enviando broadcast inmediato de prueba");
     }
 
     /**
