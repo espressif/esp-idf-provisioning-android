@@ -11,7 +11,6 @@ public class MqttHandler {
     private final MqttClient client;
     private final MqttConnectOptions options;
     private final Context context;
-    private UltrasonicSensorHandler ultrasonicHandler;
     private final MqttCallback externalCallback;
 
     public MqttHandler(Context context, MqttCallback callback) {
@@ -22,7 +21,7 @@ public class MqttHandler {
             String clientId = MqttClient.generateClientId();
             this.client = new MqttClient(AppConstants.MQTT_BROKER_URL, clientId, null);
             
-            // Usamos un wrapper para procesar algunos mensajes internamente y reenviar otros
+            // Configuramos el callback para reenviar todos los mensajes al callback externo
             this.client.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
@@ -35,11 +34,6 @@ public class MqttHandler {
                 public void messageArrived(String topic, MqttMessage message) throws Exception {
                     String payload = new String(message.getPayload());
                     Log.d(TAG, "Mensaje recibido en tópico " + topic + ": " + payload);
-                    
-                    // Si el mensaje es del sensor ultrasónico, lo procesamos internamente
-                    if (ultrasonicHandler != null && (topic.contains("/ultrasonic") || topic.contains("/sensor"))) {
-                        ultrasonicHandler.processUltrasonicMessage(topic, message);
-                    }
                     
                     // Reenviar el mensaje al callback externo
                     if (externalCallback != null) {
@@ -67,8 +61,7 @@ public class MqttHandler {
     }
 
     public void initialize() {
-        // Inicializar el manejador de sensor ultrasónico
-        ultrasonicHandler = new UltrasonicSensorHandler(context);
+        // Ya no inicializamos el manejador de sensor ultrasónico
     }
 
     public void connect() throws MqttException {

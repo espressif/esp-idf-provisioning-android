@@ -461,4 +461,159 @@ public class MedicationRepository {
         void onSuccess(T data);
         void onError(String errorMessage);
     }
+
+    /**
+     * Interfaz de callback específica para obtener un solo medicamento
+     */
+    public interface MedicationCallback {
+        void onSuccess(Medication medication);
+        void onError(String errorMessage);
+    }
+
+    /**
+     * Interfaz de callback para verificar si un medicamento ha sido tomado
+     */
+    public interface MedicationTakenCallback {
+        void onResult(boolean isTaken, Medication medication, Schedule schedule);
+        void onError(String errorMessage);
+    }
+
+    /**
+     * Interfaz de callback para obtener múltiples medicamentos
+     */
+    public interface MedicationsCallback {
+        void onSuccess(List<Medication> medications);
+        void onError(String errorMessage);
+    }
+
+    /**
+     * Obtiene un medicamento por su ID
+     */
+    public void getMedicationById(String patientId, String medicationId, MedicationCallback callback) {
+        // Usar el método existente getMedication pero con un adaptador para el callback
+        getMedication(patientId, medicationId, new DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication data) {
+                callback.onSuccess(data);
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                callback.onError(errorMessage);
+            }
+        });
+    }
+
+    /**
+     * Verifica si un medicamento ha sido tomado
+     */
+    public void checkMedicationTaken(String patientId, String medicationId, String scheduleId, MedicationTakenCallback callback) {
+        // Primero obtenemos el medicamento
+        getMedication(patientId, medicationId, new DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication medication) {
+                // Buscar el horario específico
+                Schedule targetSchedule = null;
+                boolean isTaken = false;
+                
+                if (medication != null && medication.getScheduleList() != null) {
+                    for (Schedule schedule : medication.getScheduleList()) {
+                        if (schedule.getId().equals(scheduleId)) {
+                            targetSchedule = schedule;
+                            
+                            // Verificar si está marcado como tomado
+                            // Consideramos que está tomado si:
+                            // - Tiene la bandera takingConfirmed = true, o
+                            // - Ha sido detectado por el sensor (detectedBySensor = true)
+                            isTaken = schedule.isTakingConfirmed() || schedule.isDetectedBySensor();
+                            
+                            break;
+                        }
+                    }
+                }
+                
+                if (targetSchedule != null) {
+                    callback.onResult(isTaken, medication, targetSchedule);
+                } else {
+                    callback.onError("Horario no encontrado: " + scheduleId);
+                }
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                callback.onError(errorMessage);
+            }
+        });
+    }
+
+    /**
+     * Registra un evento de medicación no tomada
+     */
+    public void registerMissedMedication(String patientId, String medicationId, String scheduleId, DatabaseCallback callback) {
+        // Crear un registro en la tabla de eventos
+        if (patientId == null || medicationId == null || scheduleId == null) {
+            callback.onError("IDs no válidos");
+            return;
+        }
+        
+        // Crear un objeto para el evento
+        Map<String, Object> missedEvent = new HashMap<>();
+        missedEvent.put("patientId", patientId);
+        missedEvent.put("medicationId", medicationId);
+        missedEvent.put("scheduleId", scheduleId);
+        missedEvent.put("timestamp", ServerValue.TIMESTAMP);
+        missedEvent.put("eventType", "missed");
+        missedEvent.put("status", "not_taken");
+        
+        // Generar un ID único para el evento
+        String eventId = UUID.randomUUID().toString();
+        
+        // Guardar el evento en Firebase
+        FirebaseDatabase.getInstance().getReference("medicationEvents")
+                .child(eventId)
+                .setValue(missedEvent)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Evento de medicación perdida registrado con ID: " + eventId);
+                    
+                    // También marcar como no tomado en el horario
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("missed", true);
+                    updates.put("missedAt", ServerValue.TIMESTAMP);
+                    
+                    patientsRef.child(patientId)
+                            .child("medications")
+                            .child(medicationId)
+                            .child("schedules")
+                            .child(scheduleId)
+                            .updateChildren(updates)
+                            .addOnSuccessListener(innerVoid -> callback.onSuccess())
+                            .addOnFailureListener(e -> {
+                                Log.e(TAG, "Error al actualizar estado de medicación perdida", e);
+                                callback.onError("Error al actualizar estado: " + e.getMessage());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al registrar evento de medicación perdida", e);
+                    callback.onError("Error al registrar evento: " + e.getMessage());
+                });
+    }
+
+    /**
+     * Obtiene todos los medicamentos de un paciente
+     * Método para mantener compatibilidad con el callback específico para medicamentos
+     */
+    public void getAllMedications(String patientId, MedicationsCallback callback) {
+        // Reutiliza el método existente getMedications pero con el callback especializado
+        getMedications(patientId, new DataCallback<List<Medication>>() {
+            @Override
+            public void onSuccess(List<Medication> medications) {
+                callback.onSuccess(medications);
+            }
+            
+            @Override
+            public void onError(String errorMessage) {
+                callback.onError(errorMessage);
+            }
+        });
+    }
 }

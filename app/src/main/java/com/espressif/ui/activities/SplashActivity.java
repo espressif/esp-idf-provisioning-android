@@ -44,6 +44,29 @@ import java.util.List;
 
 import android.app.ProgressDialog;
 
+// Añadir estas importaciones al principio del archivo
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+
+// Añade estas importaciones adicionales donde están las otras importaciones
+import android.content.Intent;
+import android.net.Uri;
+import android.os.PowerManager;
+import android.provider.Settings;
+import android.content.DialogInterface;
+
+// Añadir esta importación
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.AlarmManager;
+import android.app.Notification;
+
 public class SplashActivity extends AppCompatActivity {
 
     private static final String TAG = "SplashActivity";
@@ -58,22 +81,18 @@ public class SplashActivity extends AppCompatActivity {
 
     private UserRepository userRepository;
 
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+
+    // Agrega una variable para el diálogo de optimización de batería
+    private AlertDialog batteryOptimizationDialog;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
         
-        // Verificar Google Play Services primero
-        if (!checkGooglePlayServices()) {
-            Toast.makeText(this, "Google Play Services no está disponible", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
-        
-        // Inicializar repositorio
+        // Inicializar repositorio y preferencias primero
         userRepository = UserRepository.getInstance(this);
-        
-        // Inicializar SharedPreferences
         preferences = getSharedPreferences(AppConstants.PREF_NAME_USER, MODE_PRIVATE);
         
         // Configurar Google Sign-In
@@ -83,7 +102,41 @@ public class SplashActivity extends AppCompatActivity {
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
         
-        // Registrar el ActivityResultLauncher
+        // Registrar TODOS los launchers al inicio
+        setupActivityResultLaunchers();
+        
+        // Verificar Google Play Services primero
+        if (!checkGooglePlayServices()) {
+            Toast.makeText(this, "Google Play Services no está disponible", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        
+        // Verificar permiso de notificaciones para Android 13+
+        checkNotificationPermission();
+        
+        // Configurar canal de notificación para Android 8.0+
+        setupNotificationChannel();
+    }
+
+    /**
+     * Configura todos los ActivityResultLaunchers necesarios
+     */
+    private void setupActivityResultLaunchers() {
+        // Launcher para permisos de notificación
+        requestPermissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (isGranted) {
+                        Log.d(TAG, "Permiso de notificaciones concedido");
+                    } else {
+                        Log.w(TAG, "Permiso de notificaciones denegado");
+                    }
+                    
+                    // Continuar con el flujo normal
+                    startUserFlow();
+                });
+        
+        // Launcher para Google Sign In
         googleSignInLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -95,9 +148,65 @@ public class SplashActivity extends AppCompatActivity {
                         showUserTypeDialog();
                     }
                 });
+    }
+
+    /**
+     * Verifica y solicita el permiso de notificaciones si es necesario
+     */
+    private void checkNotificationPermission() {
+        // Solo necesario para Android 13 (API 33) o superior
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "Solicitando permiso de notificaciones");
+                
+                // Solicitar permiso
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+                
+                // No continuamos con el flujo aquí, lo hacemos en el callback del launcher
+                return;
+            } else {
+                Log.d(TAG, "Permiso de notificaciones ya concedido");
+            }
+        }
         
-        // Verificar si el usuario ya está autenticado
-        checkUserStatus();
+        // Si no necesitamos permiso o ya está concedido, continuamos con el flujo
+        startUserFlow();
+    }
+
+    /**
+     * Inicia el flujo de usuario normal
+     */
+    private void startUserFlow() {
+        // Primero verificar optimización de batería
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            String packageName = getPackageName();
+            
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                checkBatteryOptimization();
+                
+                // Primero verificar batería, luego alarmas, finalmente continuar
+                new Handler().postDelayed(() -> {
+                    checkAlarmPermissions();
+                    
+                    // Y luego continuar con el flujo normal
+                    new Handler().postDelayed(() -> {
+                        checkUserStatus();
+                    }, 500);
+                }, 500);
+                
+                return;
+            }
+        }
+        
+        // Si no se necesitó verificar batería, verificar alarmas
+        checkAlarmPermissions();
+        
+        // Continuar con el flujo normal después de un breve delay
+        new Handler().postDelayed(() -> {
+            checkUserStatus();
+        }, 500);
     }
 
     /**
@@ -630,6 +739,16 @@ public class SplashActivity extends AppCompatActivity {
                 Log.e(TAG, "Error al cerrar diálogo: " + e.getMessage());
             }
         }
+        
+        // También cerrar el diálogo de optimización de batería si está abierto
+        if (batteryOptimizationDialog != null && batteryOptimizationDialog.isShowing()) {
+            try {
+                batteryOptimizationDialog.dismiss();
+                batteryOptimizationDialog = null;
+            } catch (Exception e) {
+                Log.e(TAG, "Error al cerrar diálogo de optimización de batería: " + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -662,5 +781,114 @@ public class SplashActivity extends AppCompatActivity {
     protected void onDestroy() {
         closeActiveDialog();
         super.onDestroy();
+    }
+
+    /**
+     * Verifica y solicita la exención de optimización de batería
+     */
+    private void checkBatteryOptimization() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+            String packageName = getPackageName();
+            
+            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
+                Log.d(TAG, "La app está sujeta a optimizaciones de batería, solicitando exención");
+                
+                // Verificar que la actividad sigue activa
+                if (isFinishing() || isDestroyed()) {
+                    Log.w(TAG, "No se muestra diálogo de optimización de batería, actividad terminando");
+                    return;
+                }
+                
+                // Mostrar un diálogo explicando por qué se necesita la exención
+                AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                    .setTitle("Optimización de batería")
+                    .setMessage("Para garantizar que recibas recordatorios de medicación a tiempo, necesitamos desactivar la optimización de batería para MEDIWATCH.\n\n¿Deseas continuar?")
+                    .setPositiveButton("Configurar", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Iniciar intent para solicitar la exención
+                            Intent intent = new Intent();
+                            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                            intent.setData(Uri.parse("package:" + packageName));
+                            startActivity(intent);
+                        }
+                    })
+                    .setNegativeButton("Más tarde", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Continuar sin exención
+                            Log.w(TAG, "Usuario optó por no desactivar optimizaciones de batería");
+                        }
+                    })
+                    .setCancelable(false);
+                
+                // Guardar referencia al diálogo
+                batteryOptimizationDialog = builder.create();
+                
+                // Mostrar el diálogo solo si la actividad sigue activa
+                if (!isFinishing() && !isDestroyed()) {
+                    batteryOptimizationDialog.show();
+                }
+            } else {
+                Log.d(TAG, "La app ya está exenta de optimizaciones de batería");
+            }
+        }
+    }
+
+    /**
+     * Configura el canal de notificaciones para Android 8.0+
+     */
+    private void setupNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            
+            // Canal para recordatorios de medicación
+            CharSequence name = "Recordatorios de medicación";
+            String description = "Notificaciones para recordar tomar medicamentos";
+            NotificationChannel channel = new NotificationChannel(
+                    "medication_reminders", 
+                    name, 
+                    NotificationManager.IMPORTANCE_HIGH); // Usar IMPORTANCE_HIGH para maximizar visibilidad
+            
+            channel.setDescription(description);
+            channel.enableLights(true);
+            channel.enableVibration(true);
+            channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            channel.setBypassDnd(true); // Bypassear modo No molestar
+            
+            // Registrar el canal
+            notificationManager.createNotificationChannel(channel);
+            
+            Log.d(TAG, "Canal de notificaciones configurado con prioridad alta");
+        }
+    }
+
+    private void checkAlarmPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Log.d(TAG, "La app no puede programar alarmas exactas, solicitando permiso");
+                
+                // Mostrar diálogo explicativo
+                AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                    .setTitle("Permisos de alarma")
+                    .setMessage("MEDIWATCH necesita programar recordatorios exactos para tus medicamentos. Por favor, concede este permiso en la siguiente pantalla.")
+                    .setPositiveButton("Configurar", (dialog, which) -> {
+                        Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                        startActivity(intent);
+                    })
+                    .setNegativeButton("Más tarde", (dialog, which) -> {
+                        Log.w(TAG, "Usuario optó por no conceder permiso de alarmas exactas");
+                    });
+                    
+                if (!isFinishing() && !isDestroyed()) {
+                    builder.show();
+                }
+            } else {
+                Log.d(TAG, "La app puede programar alarmas exactas");
+            }
+        }
     }
 }

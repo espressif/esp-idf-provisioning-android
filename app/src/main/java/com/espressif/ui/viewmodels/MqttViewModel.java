@@ -34,6 +34,11 @@ import com.espressif.ui.models.Schedule;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+// Añadir en las importaciones:
+import com.espressif.ui.notifications.NotificationHelper;
+import com.espressif.ui.notifications.NotificationScheduler;
+import com.espressif.data.repository.UserRepository;
+
 public class MqttViewModel extends AndroidViewModel {
     private static final String TAG = "MqttViewModel";
     
@@ -52,8 +57,16 @@ public class MqttViewModel extends AndroidViewModel {
     private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
     private final int RECONNECT_DELAY_MS = 10000; // 10 segundos
     
+    // Añadir como atributos de la clase:
+    private NotificationHelper notificationHelper;
+    private NotificationScheduler notificationScheduler;
+    private UserRepository userRepository;
+    
     public MqttViewModel(@NonNull Application application) {
         super(application);
+        this.notificationHelper = new NotificationHelper(application);
+        this.notificationScheduler = new NotificationScheduler(application);
+        this.userRepository = UserRepository.getInstance(application);
         initializeMqtt();
     }
     
@@ -280,13 +293,25 @@ public class MqttViewModel extends AndroidViewModel {
     }
     
     /**
-     * Procesa mensajes de confirmación de sincronización de medicamentos
+     * Procesa mensajes de confirmación de sincronización y dispensación de medicamentos
      */
     private void processMedConfirmation(JSONObject json) throws JSONException {
         boolean success = json.optBoolean("success", false);
         if (success) {
             Log.d(TAG, "✅ SYNC: Sincronización confirmada por el dispensador: " + json.optString("message", ""));
             isSyncingSchedules.postValue(false);
+            
+            // Si es una confirmación de medicamento tomado, cancelamos las notificaciones
+            if (json.has("medicationId") && json.has("scheduleId") && json.has("taken") && json.getBoolean("taken")) {
+                String medicationId = json.getString("medicationId");
+                String scheduleId = json.getString("scheduleId");
+                
+                // Cancelar notificaciones relacionadas con este medicamento
+                notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
+                notificationHelper.cancelMissedMedicationAlert(medicationId, scheduleId);
+                
+                Log.d(TAG, "Notificaciones canceladas para medicamento tomado: " + medicationId);
+            }
         } else {
             String errorMsg = json.optString("message", "Error desconocido");
             Log.e(TAG, "❌ SYNC ERROR: " + errorMsg);
@@ -314,7 +339,7 @@ public class MqttViewModel extends AndroidViewModel {
     }
     
     /**
-     * Sincroniza todos los horarios con el dispensador
+     * Sincroniza todos los horarios con el dispensador y programa notificaciones
      */
     public void syncSchedules(List<Medication> medications) {
         if (medications == null || medications.isEmpty()) {
@@ -407,6 +432,21 @@ public class MqttViewModel extends AndroidViewModel {
             Log.e(TAG, "❌ SYNC ERROR: " + e.getMessage(), e);
             errorMessage.postValue("Error al sincronizar: " + e.getMessage());
             isSyncingSchedules.postValue(false);
+        }
+        
+        // Programar notificaciones para cada medicamento
+        String patientId = userRepository.getConnectedPatientId();
+        if (patientId != null && !patientId.isEmpty()) {
+            for (Medication medication : medications) {
+                for (Schedule schedule : medication.getScheduleList()) {
+                    if (schedule.isActive()) {
+                        notificationScheduler.scheduleReminder(patientId, medication, schedule);
+                    } else {
+                        // Cancelar recordatorios para horarios desactivados
+                        notificationScheduler.cancelReminders(medication.getId(), schedule.getId());
+                    }
+                }
+            }
         }
     }
     

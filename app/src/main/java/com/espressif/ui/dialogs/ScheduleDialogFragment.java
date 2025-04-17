@@ -42,6 +42,10 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
 
+// Importar las clases necesarias para notificaciones
+import com.espressif.ui.notifications.NotificationHelper;
+import com.espressif.ui.notifications.NotificationScheduler;
+
 public class ScheduleDialogFragment extends DialogFragment {
 
     private static final String TAG = "ScheduleDialog";
@@ -635,6 +639,41 @@ public class ScheduleDialogFragment extends DialogFragment {
         // Notificar primero al listener (código existente)
         if (listener != null) {
             listener.onScheduleSaved(schedule);
+        }
+        
+        // AGREGAR ESTE CÓDIGO AQUÍ: Programar notificaciones para este horario
+        if (schedule.isActive()) {
+            try {
+                // Asegurarnos que el canal de notificación existe
+                NotificationHelper.createNotificationChannels(requireContext());
+                
+                // Obtener el medicamento actual para la notificación
+                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                    @Override
+                    public void onSuccess(Medication medication) {
+                        if (medication != null) {
+                            // Programar las notificaciones para este horario
+                            NotificationScheduler scheduler = new NotificationScheduler(requireContext());
+                            boolean scheduled = scheduler.scheduleReminder(patientId, medication, schedule);
+                            
+                            if (scheduled) {
+                                Log.d(TAG, "✅ Notificación programada correctamente para: " + medication.getName());
+                            } else {
+                                Log.e(TAG, "❌ No se pudo programar la notificación para: " + medication.getName());
+                            }
+                        }
+                    }
+                    
+                    @Override
+                    public void onError(String errorMessage) {
+                        Log.e(TAG, "Error al obtener medicamento para programar notificación: " + errorMessage);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error al programar notificación: " + e.getMessage(), e);
+            }
+        } else {
+            Log.d(TAG, "Horario guardado pero inactivo - no se programan notificaciones");
         }
         
         // Luego intentar guardar en Firebase (código existente)

@@ -19,4 +19,6 @@
     <color name="colorSuccess">#4CAF50</color>
     <color name="colorError">#FF0000</color>
     <color name="colorPending">#FF9800</color>
+    <color name="colorGreen">#4CAF50</color>
+    <color name="colorRed">#F44336</color>
 </resources>
