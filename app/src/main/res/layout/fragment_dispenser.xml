@@ -43,61 +43,6 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_dispenser_title" />
-
-            <!-- Estado de conexión del dispensador -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_device_status"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:layout_constraintTop_toBottomOf="@id/tv_dispenser_subtitle">
-                
-                <androidx.constraintlayout.widget.ConstraintLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="12dp">
-                    
-                    <ImageView
-                        android:id="@+id/iv_device_status"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_device_connected"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:tint="@color/colorSuccess" />
-                    
-                    <TextView
-                        android:id="@+id/tv_device_status"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Dispensador conectado"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-                        android:textStyle="bold"
-                        app:layout_constraintBottom_toTopOf="@+id/tv_device_details"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@id/iv_device_status"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintVertical_chainStyle="packed" />
-                    
-                    <TextView
-                        android:id="@+id/tv_device_details"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="Listo para dispensar medicamentos"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintStart_toEndOf="@id/iv_device_status"
-                        app:layout_constraintTop_toBottomOf="@+id/tv_device_status" />
-                
-                </androidx.constraintlayout.widget.ConstraintLayout>
-            
-            </com.google.android.material.card.MaterialCardView>
             
             <!-- Filtros y ordenación (opcional) -->
             <com.google.android.material.chip.ChipGroup
@@ -105,7 +50,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:layout_constraintTop_toBottomOf="@id/card_device_status"
+                app:layout_constraintTop_toBottomOf="@id/tv_dispenser_subtitle"
                 app:singleSelection="true">
                 
                 <com.google.android.material.chip.Chip

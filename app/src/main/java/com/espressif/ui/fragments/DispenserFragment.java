@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -25,7 +24,6 @@ import com.espressif.ui.dialogs.ProgressDialogFragment;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.Schedule;
 import com.espressif.mediwatch.R;
-import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.adapters.MedicationAdapter;
 import com.espressif.ui.adapters.ScheduleAdapter;
 import com.espressif.ui.viewmodels.DispenserViewModel;
@@ -43,7 +41,7 @@ import java.util.List;
 public class DispenserFragment extends Fragment implements 
         MedicationAdapter.MedicationListener,
         DialogMedication.MedicationDialogListener,
-        ScheduleDialogFragment.ScheduleDialogListener {  // Añadir esta interfaz
+        ScheduleDialogFragment.ScheduleDialogListener {
 
     private DispenserViewModel viewModel;
     private MedicationAdapter adapter;
@@ -61,16 +59,8 @@ public class DispenserFragment extends Fragment implements
     private Button btnRetry;
     private Button btnAddFirst;
     
-    // Estado de conexión del dispensador
-    private ImageView ivDeviceStatus;
-    private TextView tvDeviceStatus;
-    private TextView tvDeviceDetails;
-    
     // ID del paciente (en un caso real, esto vendría de la sesión del usuario)
     private final String patientId = "current_user_id";
-
-    // Agregar este campo a la clase
-    private DeviceConnectionChecker connectionChecker;
 
     private CompartmentManager compartmentManager;
 
@@ -128,75 +118,12 @@ public class DispenserFragment extends Fragment implements
         mqttViewModel.connect();
         
         // Cargar medicamentos
-        String patientId = getCurrentPatientId();  // Implementar este método según tu lógica
+        String patientId = getCurrentPatientId();
         dispenserViewModel.loadMedications(patientId);
     }
 
-    // Añadir este método:
     private String getCurrentPatientId() {
-        // Aquí podrías obtener el ID del paciente desde tus preferencias
-        return patientId; // Usar la variable patientId que ya existe en la clase
-    }
-
-    // Agregar este método después de onViewCreated
-    @Override
-    public void onStart() {
-        super.onStart();
-        // Iniciar verificación de conexión
-        initConnectionChecker();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        // Liberar recursos del checker
-        if (connectionChecker != null) {
-            connectionChecker.release();
-        }
-    }
-
-    private void initConnectionChecker() {
-        if (connectionChecker == null) {
-            connectionChecker = new DeviceConnectionChecker(requireContext());
-        }
-        
-        // Iniciar primera verificación de conexión
-        checkDeviceConnection();
-        
-        // Programar verificaciones periódicas (cada 30 segundos)
-        Handler handler = new Handler(Looper.getMainLooper());
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (isAdded() && !isDetached()) {
-                    checkDeviceConnection();
-                    handler.postDelayed(this, 30000); // 30 segundos
-                }
-            }
-        }, 30000); // Primera repetición en 30 segundos
-    }
-
-    private void checkDeviceConnection() {
-        if (connectionChecker != null) {
-            connectionChecker.checkConnection(new DeviceConnectionChecker.ConnectionCheckListener() {
-                @Override
-                public void onConnectionCheckResult(boolean isConnected) {
-                    if (isAdded() && viewModel != null) {
-                        viewModel.updateDispenserConnectionStatus(
-                            isConnected, 
-                            isConnected ? "Dispensador en línea" : "Dispensador desconectado"
-                        );
-                    }
-                }
-
-                @Override
-                public void onError(String errorMessage) {
-                    if (isAdded() && viewModel != null) {
-                        viewModel.updateDispenserConnectionStatus(false, "Error: " + errorMessage);
-                    }
-                }
-            });
-        }
+        return patientId;
     }
     
     private void setupViews(View view) {
@@ -212,11 +139,6 @@ public class DispenserFragment extends Fragment implements
         tvErrorMessage = view.findViewById(R.id.tv_error_message);
         btnRetry = view.findViewById(R.id.btn_retry);
         btnAddFirst = view.findViewById(R.id.btn_add_first);
-        
-        // Estado de conexión del dispensador
-        ivDeviceStatus = view.findViewById(R.id.iv_device_status);
-        tvDeviceStatus = view.findViewById(R.id.tv_device_status);
-        tvDeviceDetails = view.findViewById(R.id.tv_device_details);
     }
     
     private void setupRecyclerView() {
@@ -273,19 +195,8 @@ public class DispenserFragment extends Fragment implements
                 showErrorMessage(errorMsg);
             }
         });
-        
-        // Observar estado de conexión del dispensador
-        viewModel.getDispenserConnected().observe(getViewLifecycleOwner(), connected -> {
-            updateConnectionStatus(connected, viewModel.getDispenserStatus().getValue());
-        });
-        
-        // Observar status del dispensador
-        viewModel.getDispenserStatus().observe(getViewLifecycleOwner(), status -> {
-            updateConnectionStatus(viewModel.getDispenserConnected().getValue(), status);
-        });
     }
     
-    // Reemplazar el método loadData() (línea aprox 198) con esta versión:
     private void loadData() {
         // Empezar a escuchar cambios en los medicamentos
         viewModel.startListeningForMedications(patientId);
@@ -327,24 +238,6 @@ public class DispenserFragment extends Fragment implements
             case CONTENT:
                 recyclerMedications.setVisibility(View.VISIBLE);
                 break;
-        }
-    }
-    
-    private void updateConnectionStatus(Boolean connected, String status) {
-        if (connected == null || status == null) {
-            return;
-        }
-        
-        if (connected) {
-            ivDeviceStatus.setImageResource(R.drawable.ic_device_connected);
-            ivDeviceStatus.setColorFilter(getResources().getColor(R.color.colorSuccess, null));
-            tvDeviceStatus.setText("Dispensador conectado");
-            tvDeviceDetails.setText(status);
-        } else {
-            ivDeviceStatus.setImageResource(R.drawable.ic_device_disconnected);
-            ivDeviceStatus.setColorFilter(getResources().getColor(R.color.colorError, null));
-            tvDeviceStatus.setText("Dispensador desconectado");
-            tvDeviceDetails.setText("Verifica la conexión del dispositivo");
         }
     }
     
@@ -446,7 +339,6 @@ public class DispenserFragment extends Fragment implements
         dialogFragment.show(getChildFragmentManager(), "schedule_dialog");
     }
     
-    // Reemplazar el método confirmDeleteMedication() (línea aprox 491) con esta versión:
     private void confirmDeleteMedication(Medication medication) {
         if (medication != null && medication.getId() != null) {
             // Asegurarnos de liberar el compartimento correctamente
@@ -524,7 +416,6 @@ public class DispenserFragment extends Fragment implements
         }
     }
 
-    // Reemplazar el método refreshCompartmentStatus() (línea aprox 491) con esta versión:
     private void refreshCompartmentStatus() {
         // Utilizar el mismo método de repositorio que en loadData
         viewModel.getMedicationRepository().getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
