@@ -98,4 +98,6 @@ public class MedicationType {
             return 1; // Los compartimentos de pastillas empiezan en el #1
         }
     }
+
+    
 }

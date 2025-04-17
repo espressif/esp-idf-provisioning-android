@@ -35,11 +35,19 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
     private boolean autoUpdateEnabled = false;
     private static final long UPDATE_INTERVAL_MS = 60000; // Actualizar cada minuto
 
+    // Añadir esta propiedad a la clase principal
+    private ScheduleListenerProvider scheduleListenerProvider;
+
     public interface MedicationListener {
         void onMedicationClick(Medication medication);
         void onEditMedicationClick(Medication medication);
         void onDeleteMedicationClick(Medication medication);
         void onAddScheduleClick(Medication medication);
+    }
+
+    // Añadir esta interfaz para proporcionar listeners de Schedule
+    public interface ScheduleListenerProvider {
+        ScheduleAdapter.ScheduleListener provideScheduleListener(Medication medication);
     }
 
     public MedicationAdapter(Context context, MedicationListener listener) {
@@ -68,10 +76,17 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
         return new MedicationViewHolder(view);
     }
 
+    // Modificar el método onBindViewHolder para usar el provider
     @Override
     public void onBindViewHolder(@NonNull MedicationViewHolder holder, int position) {
         Medication medication = medications.get(position);
         holder.bind(medication);
+        
+        // Configurar el listener para los horarios si existe el provider
+        if (scheduleListenerProvider != null) {
+            ScheduleAdapter scheduleAdapter = holder.getScheduleAdapter();
+            scheduleAdapter.setListener(scheduleListenerProvider.provideScheduleListener(medication));
+        }
     }
 
     @Override
@@ -120,6 +135,11 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
     public void release() {
         stopAutoUpdate();
         autoUpdateHandler.removeCallbacksAndMessages(null);
+    }
+
+    // Añadir este método a la clase principal
+    public void setScheduleListenerProvider(ScheduleListenerProvider provider) {
+        this.scheduleListenerProvider = provider;
     }
 
     class MedicationViewHolder extends RecyclerView.ViewHolder {
@@ -248,6 +268,11 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
                     tvRemainingPills.setVisibility(View.GONE);
                 }
             }
+        }
+
+        // Añadir un getter para el adaptador de horarios en ViewHolder
+        public ScheduleAdapter getScheduleAdapter() {
+            return scheduleAdapter;
         }
     }
 }

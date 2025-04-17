@@ -1,5 +1,6 @@
 package com.espressif.ui.fragments;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,6 +18,15 @@ import androidx.lifecycle.ViewModelProvider;
 import com.espressif.mediwatch.R;
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.viewmodels.DispenserViewModel;
+import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Description;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.data.PieDataSet;
+import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.PercentFormatter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment {
     
@@ -24,6 +34,12 @@ public class HomeFragment extends Fragment {
     private ImageView ivDeviceStatus;
     private TextView tvDeviceStatus;
     private TextView tvDeviceDetails;
+    
+    // Gráficos de compartimentos
+    private PieChart chartCompartmentA;
+    private PieChart chartCompartmentB;
+    private PieChart chartCompartmentC;
+    private PieChart chartCompartmentLiquid;
     
     // Verificador de conexión
     private DeviceConnectionChecker connectionChecker;
@@ -47,8 +63,16 @@ public class HomeFragment extends Fragment {
         // Configurar vistas
         setupViews(view);
         
+        // Configurar gráficos
+        setupCharts();
+        
         // Observar cambios en los datos
         observeViewModel();
+        
+        // En su lugar, forzar una actualización inicial basada en los datos actuales
+        if (viewModel.getPatientId() != null) {
+            viewModel.loadMedications(viewModel.getPatientId());
+        }
     }
     
     @Override
@@ -67,11 +91,97 @@ public class HomeFragment extends Fragment {
         }
     }
     
+    @Override
+    public void onResume() {
+        super.onResume();
+        
+        // Forzar una actualización de los datos cuando el fragmento se vuelve visible
+        if (viewModel != null && viewModel.getPatientId() != null) {
+            viewModel.loadMedications(viewModel.getPatientId());
+        }
+        
+        // También podemos programar actualizaciones periódicas
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (isAdded() && !isDetached() && viewModel != null && viewModel.getPatientId() != null) {
+                    viewModel.loadMedications(viewModel.getPatientId());
+                    handler.postDelayed(this, 60000); // Actualizar cada minuto
+                }
+            }
+        }, 60000);
+    }
+    
     private void setupViews(View view) {
         // Estado de conexión del dispensador
         ivDeviceStatus = view.findViewById(R.id.iv_device_status);
         tvDeviceStatus = view.findViewById(R.id.tv_device_status);
         tvDeviceDetails = view.findViewById(R.id.tv_device_details);
+        
+        // Gráficos
+        chartCompartmentA = view.findViewById(R.id.chart_compartment_a);
+        chartCompartmentB = view.findViewById(R.id.chart_compartment_b);
+        chartCompartmentC = view.findViewById(R.id.chart_compartment_c);
+        chartCompartmentLiquid = view.findViewById(R.id.chart_compartment_liquid);
+    }
+    
+    private void setupCharts() {
+        setupPieChart(chartCompartmentA, "2/4");
+        setupPieChart(chartCompartmentB, "1/3");
+        setupPieChart(chartCompartmentC, "0/2");
+        setupPieChart(chartCompartmentLiquid, "150/300");
+    }
+    
+    private void setupPieChart(PieChart chart, String centerText) {
+        // Configuración básica
+        chart.setUsePercentValues(true);
+        chart.setCenterText(centerText);
+        chart.setCenterTextSize(16f);
+        
+        // Eliminar descripción y leyenda
+        Description desc = new Description();
+        desc.setText("");
+        chart.setDescription(desc);
+        chart.getLegend().setEnabled(false);
+        
+        // Configurar apariencia del gráfico
+        chart.setHoleRadius(70f);
+        chart.setTransparentCircleRadius(75f);
+        chart.setDrawEntryLabels(false);
+        chart.setRotationEnabled(false);
+        chart.setHighlightPerTapEnabled(false);
+    }
+    
+    private void updateChartData(PieChart chart, float taken, float remaining, String centerText) {
+        List<PieEntry> entries = new ArrayList<>();
+        
+        // Añadir entradas si hay valores positivos
+        if (taken > 0) entries.add(new PieEntry(taken, "Tomadas"));
+        if (remaining > 0) entries.add(new PieEntry(remaining, "Pendientes"));
+        
+        // Si ambos son cero, mostrar 100% pendientes
+        if (entries.isEmpty()) {
+            entries.add(new PieEntry(1, "Pendientes"));
+        }
+        
+        PieDataSet dataSet = new PieDataSet(entries, "");
+        
+        // Colores: azul para tomadas, gris claro para pendientes
+        ArrayList<Integer> colors = new ArrayList<>();
+        colors.add(Color.parseColor("#4285F4")); // Azul para tomadas
+        colors.add(Color.parseColor("#E0E0E0")); // Gris claro para pendientes
+        dataSet.setColors(colors);
+        
+        PieData data = new PieData(dataSet);
+        data.setValueFormatter(new PercentFormatter(chart));
+        data.setValueTextSize(12f);
+        data.setValueTextColor(Color.WHITE);
+        
+        // Actualizar datos y texto central
+        chart.setData(data);
+        chart.setCenterText(centerText);
+        chart.invalidate(); // Refrescar
     }
     
     private void observeViewModel() {
@@ -83,6 +193,27 @@ public class HomeFragment extends Fragment {
         // Observar status del dispensador
         viewModel.getDispenserStatus().observe(getViewLifecycleOwner(), status -> {
             updateConnectionStatus(viewModel.getDispenserConnected().getValue(), status);
+        });
+        
+        // Observar datos de los compartimentos
+        viewModel.getCompartmentA().observe(getViewLifecycleOwner(), data -> {
+            updateChartData(chartCompartmentA, data.getTaken(), data.getRemaining(), 
+                    data.getTaken() + "/" + data.getTotal());
+        });
+        
+        viewModel.getCompartmentB().observe(getViewLifecycleOwner(), data -> {
+            updateChartData(chartCompartmentB, data.getTaken(), data.getRemaining(), 
+                    data.getTaken() + "/" + data.getTotal());
+        });
+        
+        viewModel.getCompartmentC().observe(getViewLifecycleOwner(), data -> {
+            updateChartData(chartCompartmentC, data.getTaken(), data.getRemaining(), 
+                    data.getTaken() + "/" + data.getTotal());
+        });
+        
+        viewModel.getCompartmentLiquid().observe(getViewLifecycleOwner(), data -> {
+            updateChartData(chartCompartmentLiquid, data.getTaken(), data.getRemaining(), 
+                    data.getTaken() + "/" + data.getTotal());
         });
     }
     
@@ -102,6 +233,21 @@ public class HomeFragment extends Fragment {
             tvDeviceStatus.setText("Dispensador desconectado");
             tvDeviceDetails.setText("Verifica la conexión del dispositivo");
         }
+    }
+    
+    // Método temporal para simular datos de los gráficos
+    private void simulateChartData() {
+        // Compartimento A: 2 de 4 pastillas tomadas (50%)
+        updateChartData(chartCompartmentA, 2, 2, "2/4");
+        
+        // Compartimento B: 1 de 3 pastillas tomadas (33%)
+        updateChartData(chartCompartmentB, 1, 2, "1/3");
+        
+        // Compartimento C: 0 de 2 pastillas tomadas (0%)
+        updateChartData(chartCompartmentC, 0, 2, "0/2");
+        
+        // Compartimento Líquido: 150 de 300 ml consumidos (50%)
+        updateChartData(chartCompartmentLiquid, 150, 150, "150/300");
     }
     
     private void initConnectionChecker() {

@@ -120,6 +120,9 @@ public class DispenserFragment extends Fragment implements
         // Cargar medicamentos
         String patientId = getCurrentPatientId();
         dispenserViewModel.loadMedications(patientId);
+        
+        // Agregar nuestros nuevos manejadores de dispensación
+        setupDispenseHandlers();
     }
 
     private String getCurrentPatientId() {
@@ -144,6 +147,10 @@ public class DispenserFragment extends Fragment implements
     private void setupRecyclerView() {
         Context context = requireContext();
         adapter = new MedicationAdapter(context, this);
+        
+        // Configurar el listener para horarios de cada medicamento
+        adapter.setScheduleListenerProvider(this::createScheduleListener);
+        
         recyclerMedications.setAdapter(adapter);
         // El LayoutManager ya está definido en el XML con app:layoutManager
     }
@@ -395,6 +402,13 @@ public class DispenserFragment extends Fragment implements
                 schedule.setActive(active);
                 viewModel.saveSchedule(medication.getId(), schedule);
             }
+            
+            // Añadir un método para manejar la dispensación
+            @Override
+            public void onDispenseNowClick(Schedule schedule) {
+                // Usar nuestro nuevo método para dispensar con feedback
+                dispenseNowWithFeedback(medication, schedule);
+            }
         };
     }
 
@@ -506,5 +520,46 @@ public class DispenserFragment extends Fragment implements
         }
         
         dismissSyncingDialog();
+    }
+    
+    // Añade este método después de setupObservers()
+    private void setupDispenseHandlers() {
+        // Observar cambios en el conjunto de datos para actualizar la UI
+        viewModel.getMedications().observe(getViewLifecycleOwner(), medications -> {
+            adapter.setMedications(medications);
+            // Después de actualizar el adaptador, notificar cambios
+            adapter.notifyDataSetChanged();
+        });
+    }
+
+    // También necesitamos crear un método para manejar la dispensación
+    public void dispenseNowWithFeedback(Medication medication, Schedule schedule) {
+        // Mostrar un diálogo de progreso
+        ProgressDialogFragment progressDialog = ProgressDialogFragment.newInstance(
+            "Dispensando medicamento", 
+            "Dispensando " + medication.getName() + "...");
+        progressDialog.setCancelable(false);
+        progressDialog.show(getChildFragmentManager(), "dispensing_dialog");
+        
+        // Dispensar el medicamento
+        viewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
+        
+        // Cerrar el diálogo después de un tiempo y actualizar la UI
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (isAdded() && !isDetached()) {
+                progressDialog.dismiss();
+                
+                // Forzar una recarga de datos después de dispensar
+                viewModel.loadMedications(patientId);
+                
+                // Notificar al adaptador de cambios
+                adapter.notifyDataSetChanged();
+                
+                // Mostrar confirmación
+                Snackbar.make(recyclerMedications, 
+                    "Se ha dispensado " + medication.getName(), 
+                    Snackbar.LENGTH_SHORT).show();
+            }
+        }, 1500); // Esperar 1.5 segundos para darle tiempo a la DB
     }
 }

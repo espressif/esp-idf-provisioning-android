@@ -20,13 +20,18 @@ public class Medication {
     private String unit;            // Unidad: ml, mg, pastillas, etc.
     private String notes;           // Notas adicionales
     private String patientId;       // ID del paciente asociado
-    private Map<String, com.espressif.ui.models.Schedule> schedules; // Horarios programados por ID
+    private Map<String, Schedule> schedules; // Horarios programados por ID
     private long createdAt;         // Timestamp de creación
     private long updatedAt;         // Timestamp de última modificación
     private int compartmentNumber;  // Número de compartimento en el dispensador (1-6)
     private int remainingDoses;     // Dosis restantes en el dispensador
     private int totalPills;         // Número total de pastillas en el compartimento
     private int pillsPerDose;       // Número de pastillas por dosis
+    private String compartment;     // Compartimento asignado: "A", "B", "C" o "LIQUID"
+    private int dosesTaken;         // Dosis tomadas
+    private int volumeTaken;        // Volumen tomado (para líquidos)
+    private int totalVolume;        // Volumen total (para líquidos)
+    private int doseVolume;         // Volumen por dosis (para líquidos)
 
     // Constructor vacío requerido para Firebase
     public Medication() {
@@ -156,6 +161,84 @@ public class Medication {
     public void setPillsPerDose(int pillsPerDose) {
         this.pillsPerDose = pillsPerDose;
     }
+    
+    // Nuevos getters y setters para los campos adicionales
+    
+    public String getCompartment() {
+        // Si el compartment no está establecido pero el compartmentNumber sí,
+        // inferir el compartimento según el número
+        if (compartment == null && compartmentNumber > 0) {
+            switch (compartmentNumber) {
+                case 1: return "A";
+                case 2: return "B";
+                case 3: return "C";
+                case 4: return "LIQUID";
+                default: return null;
+            }
+        }
+        return compartment;
+    }
+
+    public void setCompartment(String compartment) {
+        this.compartment = compartment;
+        
+        // Actualizar también el compartmentNumber para mantener consistencia
+        if (compartment != null) {
+            switch (compartment) {
+                case "A": this.compartmentNumber = 1; break;
+                case "B": this.compartmentNumber = 2; break;
+                case "C": this.compartmentNumber = 3; break;
+                case "LIQUID": this.compartmentNumber = 4; break;
+            }
+        }
+    }
+    
+    public int getDosesTaken() {
+        return dosesTaken;
+    }
+    
+    public void setDosesTaken(int dosesTaken) {
+        this.dosesTaken = dosesTaken;
+    }
+    
+    public int getVolumeTaken() {
+        return volumeTaken;
+    }
+    
+    public void setVolumeTaken(int volumeTaken) {
+        this.volumeTaken = volumeTaken;
+    }
+    
+    public int getTotalVolume() {
+        return totalVolume;
+    }
+    
+    public void setTotalVolume(int totalVolume) {
+        this.totalVolume = totalVolume;
+    }
+    
+    public int getDoseVolume() {
+        return doseVolume;
+    }
+    
+    public void setDoseVolume(int doseVolume) {
+        this.doseVolume = doseVolume;
+    }
+
+    /**
+     * Obtiene el número total de dosis programadas para el día
+     * @return Total de dosis programadas
+     */
+    @Exclude
+    public int getTotalDoses() {
+        int count = 0;
+        for (Schedule schedule : getScheduleList()) {
+            if (schedule.isActive() && schedule.isForToday()) {
+                count++;
+            }
+        }
+        return count;
+    }
 
     // Métodos de ayuda para trabajar con horarios
     @Exclude
@@ -189,7 +272,12 @@ public class Medication {
      */
     @Exclude
     public boolean canAssignToCompartment(int compartment) {
-        return MedicationType.isCompatibleWithCompartment(this.type, compartment);
+        String typeStr = (type != null) ? type : (MedicationType.PILL); // Default a PILL
+        if ("liquid".equalsIgnoreCase(typeStr) || MedicationType.LIQUID.equals(typeStr)) {
+            return compartment == 4; // Compartimento líquido
+        } else {
+            return compartment >= 1 && compartment <= 3; // Compartimentos para pastillas
+        }
     }
 
     /**
@@ -199,6 +287,15 @@ public class Medication {
     public boolean assignToCompatibleCompartment(int compartment) {
         if (canAssignToCompartment(compartment)) {
             this.compartmentNumber = compartment;
+            
+            // Actualizar también la propiedad compartment
+            switch (compartment) {
+                case 1: this.compartment = "A"; break;
+                case 2: this.compartment = "B"; break;
+                case 3: this.compartment = "C"; break;
+                case 4: this.compartment = "LIQUID"; break;
+            }
+            
             return true;
         }
         return false;
@@ -208,7 +305,6 @@ public class Medication {
      * Convierte esta instancia a un Map para guardarlo en Firebase
      */
     @Exclude
-    // Eliminar la anotación @Override que causa el error
     public Map<String, Object> toMap() {
         HashMap<String, Object> result = new HashMap<>();
         result.put("id", id);
@@ -225,6 +321,11 @@ public class Medication {
         result.put("remainingDoses", remainingDoses);
         result.put("totalPills", totalPills);
         result.put("pillsPerDose", pillsPerDose);
+        result.put("compartment", compartment);
+        result.put("dosesTaken", dosesTaken);
+        result.put("volumeTaken", volumeTaken);
+        result.put("totalVolume", totalVolume);
+        result.put("doseVolume", doseVolume);
         
         return result;
     }
@@ -256,13 +357,32 @@ public class Medication {
     @Exclude
     public void dispenseDose() {
         if (MedicationType.PILL.equals(type)) {
-            totalPills -= pillsPerDose;
-            if (totalPills < 0) totalPills = 0;
+            // Verificar que pillsPerDose sea positivo
+            int pillsToDispense = Math.max(1, pillsPerDose);
+            
+            // Disminuir el total de pastillas, pero no menos de 0
+            totalPills = Math.max(0, totalPills - pillsToDispense);
+            
+            // Incrementar el contador de dosis tomadas
+            dosesTaken++;
+            
+            // Actualizar dosis restantes
             updateRemainingDoses();
-        } else {
-            // Para medicamentos líquidos, simplemente restar una dosis
-            remainingDoses--;
-            if (remainingDoses < 0) remainingDoses = 0;
+        } else if (MedicationType.LIQUID.equals(type)) {
+            // Para medicamentos líquidos
+            // Asegurar que doseVolume sea positivo
+            int volumeToDispense = Math.max(1, doseVolume);
+            
+            // Disminuir el volumen total, pero no menos de 0
+            totalVolume = Math.max(0, totalVolume - volumeToDispense);
+            
+            // Incrementar el volumen tomado
+            volumeTaken += volumeToDispense;
+            
+            // Actualizar dosis restantes
+            remainingDoses = Math.max(0, remainingDoses - 1);
         }
+        
+        this.updatedAt = System.currentTimeMillis();
     }
 }
