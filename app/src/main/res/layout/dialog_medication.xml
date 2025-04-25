@@ -104,6 +104,23 @@
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Añadir después del campo til_total_pills -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_total_volume"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            android:hint="Volumen total disponible (ml)">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_total_volume"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- Notas adicionales -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_notes"

@@ -122,7 +122,7 @@ public class NotificationScheduler {
                 
                 // Crear intent para la notificación
                 Intent intent = new Intent(context, MedicationAlarmReceiver.class);
-                intent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
+                intent.setAction(MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER);
                 intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_ID, medication.getId());
                 intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_NAME, medication.getName());
                 intent.putExtra(MedicationAlarmReceiver.EXTRA_SCHEDULE_ID, schedule.getId());
@@ -206,7 +206,7 @@ public class NotificationScheduler {
             
             // Crear intent para la notificación anticipada
             Intent intent = new Intent(context, MedicationAlarmReceiver.class);
-            intent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
+            intent.setAction(MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER);
             intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_ID, medication.getId());
             intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_NAME, medication.getName());
             intent.putExtra(MedicationAlarmReceiver.EXTRA_SCHEDULE_ID, schedule.getId());
@@ -349,11 +349,11 @@ public class NotificationScheduler {
     public void cancelReminders(String medicationId, String scheduleId) {
         // Cancelar recordatorio
         Intent reminderIntent = new Intent(context, MedicationAlarmReceiver.class);
-        reminderIntent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
+        reminderIntent.setAction(MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER);
         
         PendingIntent reminderPendingIntent = PendingIntent.getBroadcast(
                 context, 
-                generateRequestCode(medicationId, scheduleId, MedicationAlarmReceiver.ACTION_REMINDER), 
+                generateRequestCode(medicationId, scheduleId, MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER),
                 reminderIntent, 
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         
@@ -378,7 +378,7 @@ public class NotificationScheduler {
      * Genera un código de solicitud único para PendingIntents
      */
     private int generateRequestCode(String medicationId, String scheduleId, String action) {
-        int baseCode = MedicationAlarmReceiver.ACTION_REMINDER.equals(action) ? 10000 : 20000;
+        int baseCode = MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER.equals(action) ? 10000 : 20000;
         int medHash = medicationId.hashCode();
         int schedHash = scheduleId.hashCode();
         
@@ -395,7 +395,7 @@ public class NotificationScheduler {
         
         // Crear intent para el receptor
         Intent intent = new Intent(context, MedicationAlarmReceiver.class);
-        intent.setAction(MedicationAlarmReceiver.ACTION_REMINDER);
+        intent.setAction(MedicationAlarmReceiver.ACTION_MEDICATION_REMINDER);
         intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_NAME, medicationName);
         
         // Crear un ID único basado en nombre+tiempo

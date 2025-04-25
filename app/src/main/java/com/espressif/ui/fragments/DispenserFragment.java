@@ -34,6 +34,8 @@ import com.google.android.material.snackbar.Snackbar;
 import com.espressif.ui.dialogs.DialogMedication;
 import com.espressif.ui.dialogs.ScheduleDialogFragment;
 import com.espressif.ui.utils.CompartmentManager;
+import com.espressif.ui.utils.ErrorHandler;
+import com.espressif.ui.utils.ObserverManager;
 import com.espressif.ui.viewmodels.MqttViewModel;
 
 import java.util.List;
@@ -43,6 +45,8 @@ public class DispenserFragment extends Fragment implements
         DialogMedication.MedicationDialogListener,
         ScheduleDialogFragment.ScheduleDialogListener {
 
+    private static final String TAG = "DispenserFragment";
+    
     private DispenserViewModel viewModel;
     private MedicationAdapter adapter;
     
@@ -64,9 +68,20 @@ public class DispenserFragment extends Fragment implements
 
     private CompartmentManager compartmentManager;
 
-    // Añade las siguientes declaraciones de variables en la clase DispenserFragment
+    // ViewModels y gestión de observadores
     private DispenserViewModel dispenserViewModel;
     private MqttViewModel mqttViewModel;
+    private ObserverManager observerManager;
+
+    // Mostrar diálogo durante la sincronización
+    private ProgressDialogFragment syncProgressDialog;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // Inicializar el ObserverManager
+        observerManager = new ObserverManager();
+    }
 
     @Nullable
     @Override
@@ -78,50 +93,33 @@ public class DispenserFragment extends Fragment implements
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         
-        // Inicializar ViewModel
+        // Inicializar ViewModels
         viewModel = new ViewModelProvider(this).get(DispenserViewModel.class);
+        dispenserViewModel = new ViewModelProvider(requireActivity()).get(DispenserViewModel.class);
+        mqttViewModel = new ViewModelProvider(requireActivity()).get(MqttViewModel.class);
         
         // Inicializar el gestor de compartimentos
         compartmentManager = CompartmentManager.getInstance();
         
         // Configurar vistas
         setupViews(view);
-        
-        // Configurar RecyclerView y adaptador
         setupRecyclerView();
-        
-        // Configurar filtros
         setupFilters();
-        
-        // Configurar listeners para acciones de UI
         setupListeners();
         
-        // Observar cambios en los datos
-        observeViewModel();
-        
-        // Cargar datos
-        loadData();
-        
-        // Configurar el DispenserViewModel
-        dispenserViewModel = new ViewModelProvider(requireActivity()).get(DispenserViewModel.class);
-        
-        // Configurar el MqttViewModel
-        mqttViewModel = new ViewModelProvider(requireActivity()).get(MqttViewModel.class);
+        // Configurar observadores (método unificado)
+        setupObservers();
         
         // Conectar los ViewModels
         dispenserViewModel.connectWithMqttViewModel(mqttViewModel);
-        
-        // Configurar observadores para la interfaz de usuario
-        setupObservers();
         
         // Iniciar la conexión MQTT
         mqttViewModel.connect();
         
         // Cargar medicamentos
-        String patientId = getCurrentPatientId();
-        dispenserViewModel.loadMedications(patientId);
+        loadData();
         
-        // Agregar nuestros nuevos manejadores de dispensación
+        // Configurar manejadores de dispensación
         setupDispenseHandlers();
     }
 
@@ -185,26 +183,98 @@ public class DispenserFragment extends Fragment implements
         });
     }
     
-    private void observeViewModel() {
-        // Observar cambios en la lista de medicamentos
-        viewModel.getMedications().observe(getViewLifecycleOwner(), medications -> {
-            adapter.setMedications(medications);
-        });
+    private void setupObservers() {
+        // 1. Observadores de DispenserViewModel
+        observerManager.observe(getViewLifecycleOwner(), 
+            viewModel.getMedications(), 
+            medications -> {
+                adapter.setMedications(medications);
+                adapter.notifyDataSetChanged();
+            }, 
+            "medications_list");
         
-        // Observar cambios en el estado de la UI
-        viewModel.getUiState().observe(getViewLifecycleOwner(), state -> {
-            updateUiState(state);
-        });
+        observerManager.observe(getViewLifecycleOwner(), 
+            viewModel.getUiState(), 
+            this::updateUiState, 
+            "ui_state");
         
-        // Observar mensajes de error
-        viewModel.getErrorMessage().observe(getViewLifecycleOwner(), errorMsg -> {
-            if (errorMsg != null && !errorMsg.isEmpty()) {
-                showErrorMessage(errorMsg);
+        observerManager.observe(getViewLifecycleOwner(), 
+            viewModel.getErrorMessage(), 
+            errorMsg -> {
+                if (errorMsg != null && !errorMsg.isEmpty()) {
+                    showErrorMessage(errorMsg);
+                }
+            }, 
+            "dispenser_errors");
+        
+        // 2. Observadores de MqttViewModel
+        observerManager.observe(getViewLifecycleOwner(), 
+            mqttViewModel.getIsSyncingSchedules(), 
+            isSyncing -> {
+                if (isSyncing) {
+                    showSyncingDialog();
+                } else {
+                    dismissSyncingDialog();
+                }
+            }, 
+            "sync_progress");
+        
+        observerManager.observe(getViewLifecycleOwner(), 
+            mqttViewModel.getErrorMessage(), 
+            errorMsg -> {
+                if (errorMsg != null && !errorMsg.isEmpty()) {
+                    showErrorMessage("Error de conexión: " + errorMsg);
+                }
+            }, 
+            "mqtt_errors");
+        
+        // 3. Observador para dispensación completada
+        observerManager.observe(getViewLifecycleOwner(), 
+            mqttViewModel.getMedicationDispensedEvent(), 
+            medicationId -> {
+                if (medicationId != null && !medicationId.isEmpty()) {
+                    // Refrescar inmediatamente después de una dispensación exitosa
+                    viewModel.loadMedications(patientId);
+                }
+            }, 
+            "medication_dispensed");
+        
+        // 4. Status de conexión
+        observerManager.observe(getViewLifecycleOwner(), 
+            mqttViewModel.getStatusMessage(), 
+            status -> {
+                updateConnectionStatus(status);
+            }, 
+            "connection_status");
+        
+        mqttViewModel.getMedicationDispensedEvent().observe(getViewLifecycleOwner(), medicationId -> {
+            if (medicationId != null && !medicationId.isEmpty()) {
+                // Actualizar la UI usando tu propio DispenserViewModel
+                dispenserViewModel.loadMedications(patientId);
             }
         });
     }
     
+    // Método auxiliar para actualizar indicador de conexión
+    private void updateConnectionStatus(String status) {
+        // Podríamos usar un TextView o un icono para mostrar el estado
+        // Este ejemplo es simplificado, adáptalo a tu UI real
+        if (status != null && status.equals("Conectado")) {
+            Log.d(TAG, "Dispensador conectado");
+            // Por ejemplo, cambiar color de un icono a verde
+        } else {
+            Log.d(TAG, "Dispensador desconectado o no disponible: " + status);
+            // Por ejemplo, cambiar color de un icono a rojo
+        }
+    }
+    
     private void loadData() {
+        if (patientId == null || patientId.isEmpty()) {
+            ErrorHandler.handleError(TAG, ErrorHandler.ERROR_VALIDATION, 
+                "ID de paciente no válido", null);
+            return;
+        }
+        
         // Empezar a escuchar cambios en los medicamentos
         viewModel.startListeningForMedications(patientId);
         
@@ -218,8 +288,9 @@ public class DispenserFragment extends Fragment implements
             
             @Override
             public void onError(String errorMessage) {
-                // Manejar error si es necesario
-                showErrorMessage("Error al cargar medicamentos: " + errorMessage);
+                String formattedError = ErrorHandler.handleDatabaseError(
+                    TAG, "loadData", errorMessage);
+                showErrorMessage(formattedError);
             }
         });
     }
@@ -248,9 +319,35 @@ public class DispenserFragment extends Fragment implements
         }
     }
     
+    /**
+     * Muestra un mensaje de error en la interfaz de usuario
+     */
     private void showErrorMessage(String errorMsg) {
-        tvErrorMessage.setText(errorMsg);
-        Snackbar.make(recyclerMedications, errorMsg, Snackbar.LENGTH_LONG).show();
+        if (errorMsg == null || errorMsg.isEmpty()) return;
+        
+        // Actualizar el texto de error en la vista de error
+        if (tvErrorMessage != null) {
+            tvErrorMessage.setText(errorMsg);
+        }
+        
+        // Mostrar snackbar con el error
+        View rootView = getView();
+        if (rootView != null) {
+            Snackbar snackbar = Snackbar.make(rootView, errorMsg, Snackbar.LENGTH_LONG);
+            
+            // Personalizar el snackbar para errores
+            View snackbarView = snackbar.getView();
+            snackbarView.setBackgroundColor(requireContext().getResources().getColor(R.color.colorError));
+            
+            // Mostrar el snackbar
+            snackbar.show();
+        } else {
+            // Fallback a Toast si la vista no está disponible
+            Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show();
+        }
+        
+        // Registrar el error
+        Log.e(TAG, errorMsg);
     }
     
     private void showAddMedicationDialog() {
@@ -264,52 +361,78 @@ public class DispenserFragment extends Fragment implements
     }
     
     // Implementación de MedicationDialogListener
-    
     @Override
     public void onMedicationSaved(Medication medication) {
-        if (medication.getId() == null || medication.getId().isEmpty()) {
-            // Es un nuevo medicamento
-            viewModel.createMedication(medication);
-            
-            // Marcar el compartimento como ocupado
-            compartmentManager.occupyCompartment(medication.getCompartmentNumber(), medication.getId());
-            
-            Toast.makeText(requireContext(), "Medicamento añadido", Toast.LENGTH_SHORT).show();
-        } else {
-            // Es una actualización
-            // Verificar si cambió el compartimento
-            viewModel.getMedicationRepository().getMedication(patientId, medication.getId(), 
-                new MedicationRepository.DataCallback<Medication>() {
-                    @Override
-                    public void onSuccess(Medication oldMedication) {
-                        if (oldMedication != null && 
-                            oldMedication.getCompartmentNumber() != medication.getCompartmentNumber()) {
-                            // Liberar el compartimento anterior
-                            compartmentManager.freeCompartment(oldMedication.getCompartmentNumber());
-                            // Ocupar el nuevo compartimento
-                            compartmentManager.occupyCompartment(medication.getCompartmentNumber(), 
-                                                                medication.getId());
-                        }
-                        // Actualizar el medicamento
-                        viewModel.updateMedication(medication);
-                    }
-                    
-                    @Override
-                    public void onError(String errorMessage) {
-                        // Si hay error al obtener el medicamento anterior, 
-                        // simplemente actualizamos el nuevo
-                        viewModel.updateMedication(medication);
-                    }
-                });
-            
-            Toast.makeText(requireContext(), "Medicamento actualizado", Toast.LENGTH_SHORT).show();
+        if (medication == null) {
+            ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_VALIDATION, 
+                "Medicamento no válido para guardar", null);
+            return;
         }
         
-        // Añadir esta sección para sincronizar después de guardar
+        try {
+            if (medication.getId() == null || medication.getId().isEmpty()) {
+                // Es un nuevo medicamento
+                viewModel.createMedication(medication);
+                
+                // Marcar el compartimento como ocupado
+                compartmentManager.occupyCompartment(medication.getCompartmentNumber(), medication.getId());
+                
+                Toast.makeText(requireContext(), "Medicamento añadido correctamente", Toast.LENGTH_SHORT).show();
+            } else {
+                // Es una actualización - Verificar si cambió el compartimento
+                viewModel.getMedicationRepository().getMedication(patientId, medication.getId(), 
+                    new MedicationRepository.DataCallback<Medication>() {
+                        @Override
+                        public void onSuccess(Medication oldMedication) {
+                            updateMedicationWithCompartmentCheck(oldMedication, medication);
+                        }
+                        
+                        @Override
+                        public void onError(String errorMessage) {
+                            String formattedError = ErrorHandler.handleDatabaseError(
+                                TAG, "onMedicationSaved", errorMessage);
+                            Log.w(TAG, formattedError);
+                            
+                            // Si hay error al obtener el medicamento anterior, 
+                            // simplemente actualizamos el nuevo
+                            viewModel.updateMedication(medication);
+                        }
+                    });
+            }
+            
+            // Sincronizar después de guardar
+            synchronizeAfterSave();
+            
+        } catch (Exception e) {
+            String errorMsg = ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_UNKNOWN, 
+                "Error al guardar medicamento", e);
+            showErrorMessage(errorMsg);
+        }
+    }
+    
+    // Método auxiliar para actualizar medicamento con verificación de compartimento
+    private void updateMedicationWithCompartmentCheck(Medication oldMedication, Medication newMedication) {
+        if (oldMedication != null && 
+            oldMedication.getCompartmentNumber() != newMedication.getCompartmentNumber()) {
+            // Liberar el compartimento anterior
+            compartmentManager.freeCompartment(oldMedication.getCompartmentNumber());
+            // Ocupar el nuevo compartimento
+            compartmentManager.occupyCompartment(newMedication.getCompartmentNumber(), 
+                                               newMedication.getId());
+        }
+        // Actualizar el medicamento
+        viewModel.updateMedication(newMedication);
+        Toast.makeText(requireContext(), "Medicamento actualizado", Toast.LENGTH_SHORT).show();
+    }
+    
+    // Método auxiliar para sincronizar después de guardar
+    private void synchronizeAfterSave() {
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (isAdded() && !isDetached()) {
                 // Sincronizar con el dispensador
-                Log.d("DispenserFragment", "Sincronizando después de guardar medicamento...");
+                Log.d(TAG, "Sincronizando después de guardar medicamento...");
                 if (mqttViewModel != null && dispenserViewModel != null) {
                     dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
                 }
@@ -324,6 +447,7 @@ public class DispenserFragment extends Fragment implements
     
     private void showAddScheduleDialog(Medication medication) {
         if (medication == null || medication.getId() == null) {
+            ErrorHandler.handleValidationError(TAG, "medication", "Medicamento no válido para horario");
             Toast.makeText(requireContext(), "Error: medicamento no válido", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -336,6 +460,7 @@ public class DispenserFragment extends Fragment implements
     
     private void showEditScheduleDialog(Medication medication, Schedule schedule) {
         if (medication == null || medication.getId() == null || schedule == null || schedule.getId() == null) {
+            ErrorHandler.handleValidationError(TAG, "schedule", "Datos de horario no válidos");
             Toast.makeText(requireContext(), "Error: datos no válidos", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -365,7 +490,6 @@ public class DispenserFragment extends Fragment implements
     }
     
     // Implementación de MedicationListener para manejar clicks en los medicamentos
-    
     @Override
     public void onMedicationClick(Medication medication) {
         // Esto podría mostrar detalles o realizar otra acción
@@ -387,7 +511,7 @@ public class DispenserFragment extends Fragment implements
         showAddScheduleDialog(medication);
     }
     
-    // Método adicional para crear un listener de Schedule (si decides implementarlo en el fragmento)
+    // Método adicional para crear un listener de Schedule
     private ScheduleAdapter.ScheduleListener createScheduleListener(Medication medication) {
         return new ScheduleAdapter.ScheduleListener() {
             @Override
@@ -403,8 +527,6 @@ public class DispenserFragment extends Fragment implements
                 viewModel.saveSchedule(medication.getId(), schedule);
             }
             
-            // Añadir un método para manejar la dispensación
-            @Override
             public void onDispenseNowClick(Schedule schedule) {
                 // Usar nuestro nuevo método para dispensar con feedback
                 dispenseNowWithFeedback(medication, schedule);
@@ -415,18 +537,22 @@ public class DispenserFragment extends Fragment implements
     @Override
     public void onScheduleSaved(Schedule schedule) {
         if (schedule != null && schedule.getMedicationId() != null) {
-            // Guardar en la base de datos local
-            viewModel.saveSchedule(schedule.getMedicationId(), schedule);
-            Toast.makeText(requireContext(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
-            
-            // Retrasar la sincronización para dar tiempo a que Firebase guarde los datos
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (isAdded() && !isDetached()) {
-                    // FORZAR LA SINCRONIZACIÓN con el dispensador
-                    Log.d("DispenserFragment", "Iniciando sincronización con dispensador...");
-                    dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
-                }
-            }, 1500);
+            try {
+                // Guardar en la base de datos local
+                viewModel.saveSchedule(schedule.getMedicationId(), schedule);
+                Toast.makeText(requireContext(), "Horario guardado correctamente", Toast.LENGTH_SHORT).show();
+                
+                // Retrasar la sincronización para dar tiempo a que Firebase guarde los datos
+                synchronizeAfterSave();
+            } catch (Exception e) {
+                String errorMsg = ErrorHandler.handleError(TAG, 
+                    ErrorHandler.ERROR_DATABASE, 
+                    "Error al guardar horario", e);
+                showErrorMessage(errorMsg);
+            }
+        } else {
+            ErrorHandler.handleValidationError(TAG, "schedule", 
+                "Datos de horario incompletos");
         }
     }
 
@@ -440,37 +566,57 @@ public class DispenserFragment extends Fragment implements
             
             @Override
             public void onError(String errorMessage) {
-                // Opcional: manejar error
-                showErrorMessage("Error al actualizar estado de compartimentos: " + errorMessage);
+                String formattedError = ErrorHandler.handleDatabaseError(
+                    TAG, "refreshCompartmentStatus", errorMessage);
+                showErrorMessage(formattedError);
             }
         });
     }
     
-    private void setupObservers() {
-        // Configurar los observadores existentes de dispenserViewModel...
-        
-        // Añadir observadores para MqttViewModel
-        mqttViewModel.getIsSyncingSchedules().observe(getViewLifecycleOwner(), isSyncing -> {
-            if (isSyncing) {
-                showSyncingDialog();
-            } else {
-                dismissSyncingDialog();
-            }
-        });
-    }
-
     // Manejar botón de dispensar
     private void handleDispenseClick(Medication medication, Schedule schedule) {
-        dispenserViewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
+        try {
+            dispenserViewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
+        } catch (Exception e) {
+            String errorMsg = ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_UNKNOWN, 
+                "Error al dispensar medicación", e);
+            showErrorMessage(errorMsg);
+        }
     }
 
     // Manejar botón de sincronizar
     private void handleSyncClick() {
-        dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
+        try {
+            // Verificar conexión antes de sincronizar
+            if (mqttViewModel.getIsConnected().getValue() != null && 
+                mqttViewModel.getIsConnected().getValue()) {
+                
+                // Mostrar diálogo de progreso
+                showSyncingDialog();
+                
+                // Realizar la sincronización
+                dispenserViewModel.syncSchedulesWithDispenser(mqttViewModel);
+                
+                // Mostrar confirmación después de un tiempo
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (isAdded() && !isDetached()) {
+                        Snackbar.make(recyclerMedications, 
+                            "Sincronización enviada al dispensador", 
+                            Snackbar.LENGTH_SHORT).show();
+                    }
+                }, 1000);
+            } else {
+                // Mostrar error si no hay conexión
+                showErrorMessage("No hay conexión con el dispensador. Compruebe que el dispositivo esté encendido.");
+            }
+        } catch (Exception e) {
+            String errorMsg = ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_UNKNOWN, 
+                "Error al sincronizar con el dispensador", e);
+            showErrorMessage(errorMsg);
+        }
     }
-
-    // Mostrar diálogo durante la sincronización
-    private ProgressDialogFragment syncProgressDialog;
 
     private void showSyncingDialog() {
         if (syncProgressDialog == null) {
@@ -511,6 +657,22 @@ public class DispenserFragment extends Fragment implements
     }
     
     @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        
+        // Remover observadores asociados a la vista
+        if (observerManager != null) {
+            observerManager.removeObservers("medications_list");
+            observerManager.removeObservers("ui_state");
+            observerManager.removeObservers("dispenser_errors");
+            observerManager.removeObservers("sync_progress");
+            observerManager.removeObservers("mqtt_errors");
+            observerManager.removeObservers("medication_dispensed");
+            observerManager.removeObservers("connection_status");
+        }
+    }
+    
+    @Override
     public void onDestroy() {
         super.onDestroy();
         
@@ -520,20 +682,28 @@ public class DispenserFragment extends Fragment implements
         }
         
         dismissSyncingDialog();
+        
+        // Limpiar todos los observadores restantes
+        if (observerManager != null) {
+            observerManager.removeAllObservers();
+        }
     }
     
     // Añade este método después de setupObservers()
     private void setupDispenseHandlers() {
-        // Observar cambios en el conjunto de datos para actualizar la UI
-        viewModel.getMedications().observe(getViewLifecycleOwner(), medications -> {
-            adapter.setMedications(medications);
-            // Después de actualizar el adaptador, notificar cambios
-            adapter.notifyDataSetChanged();
-        });
+        // Ya no es necesario este método porque los observadores se configuran en setupObservers()
+        // Mantenemos el método para compatibilidad, pero podríamos eliminarlo o fusionarlo con setupObservers
     }
 
     // También necesitamos crear un método para manejar la dispensación
     public void dispenseNowWithFeedback(Medication medication, Schedule schedule) {
+        if (medication == null || schedule == null) {
+            ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_VALIDATION, 
+                "Medicamento o horario no válidos para dispensación", null);
+            return;
+        }
+        
         // Mostrar un diálogo de progreso
         ProgressDialogFragment progressDialog = ProgressDialogFragment.newInstance(
             "Dispensando medicamento", 
@@ -541,25 +711,31 @@ public class DispenserFragment extends Fragment implements
         progressDialog.setCancelable(false);
         progressDialog.show(getChildFragmentManager(), "dispensing_dialog");
         
-        // Dispensar el medicamento
-        viewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
-        
-        // Cerrar el diálogo después de un tiempo y actualizar la UI
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (isAdded() && !isDetached()) {
-                progressDialog.dismiss();
-                
-                // Forzar una recarga de datos después de dispensar
-                viewModel.loadMedications(patientId);
-                
-                // Notificar al adaptador de cambios
-                adapter.notifyDataSetChanged();
-                
-                // Mostrar confirmación
-                Snackbar.make(recyclerMedications, 
-                    "Se ha dispensado " + medication.getName(), 
-                    Snackbar.LENGTH_SHORT).show();
-            }
-        }, 1500); // Esperar 1.5 segundos para darle tiempo a la DB
+        try {
+            // Dispensar el medicamento
+            viewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
+            
+            // Cerrar el diálogo después de un tiempo y actualizar la UI
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (isAdded() && !isDetached()) {
+                    progressDialog.dismiss();
+                    
+                    // Forzar una recarga de datos después de dispensar
+                    viewModel.loadMedications(patientId);
+                    
+                    // Mostrar confirmación
+                    Snackbar.make(recyclerMedications, 
+                        "Se ha dispensado " + medication.getName(), 
+                        Snackbar.LENGTH_SHORT).show();
+                }
+            }, 1500); // Esperar 1.5 segundos para darle tiempo a la DB
+        } catch (Exception e) {
+            // Manejar errores inesperados
+            progressDialog.dismiss();
+            String errorMsg = ErrorHandler.handleError(TAG, 
+                ErrorHandler.ERROR_UNKNOWN, 
+                "Error al dispensar medicación", e);
+            showErrorMessage(errorMsg);
+        }
     }
 }

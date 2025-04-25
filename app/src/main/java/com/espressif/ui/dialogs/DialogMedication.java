@@ -58,6 +58,10 @@ public class DialogMedication extends DialogFragment {
     private TextInputLayout tilTotalPills;
     private TextInputEditText etTotalPills;
 
+    // Añadir estas variables de clase junto a las otras vistas
+    private TextInputLayout tilTotalVolume;
+    private TextInputEditText etTotalVolume;
+
     // Constantes para el número total de compartimentos por tipo
     private static final int MAX_PILL_COMPARTMENTS = 3;
     private static final int MAX_LIQUID_COMPARTMENTS = 1;
@@ -145,6 +149,10 @@ public class DialogMedication extends DialogFragment {
         tilTotalPills = view.findViewById(R.id.til_total_pills);
         etTotalPills = view.findViewById(R.id.et_total_pills);
 
+        // Inicializar campos de total de pastillas y volumen
+        tilTotalVolume = view.findViewById(R.id.til_total_volume);
+        etTotalVolume = view.findViewById(R.id.et_total_volume);
+
         // Configurar título según modo
         tvDialogTitle.setText(isEditMode ? R.string.edit_medication : R.string.add_medication);
         
@@ -164,9 +172,11 @@ public class DialogMedication extends DialogFragment {
         if (rbPill.isChecked()) {
             tilAmount.setHint("Número de pastillas/cápsulas por dosis");
             tilTotalPills.setVisibility(View.VISIBLE);
+            tilTotalVolume.setVisibility(View.GONE);
         } else {
             tilAmount.setHint("Cantidad por dosis (ml)");
             tilTotalPills.setVisibility(View.GONE);
+            tilTotalVolume.setVisibility(View.VISIBLE);
         }
     }
 
@@ -358,6 +368,27 @@ public class DialogMedication extends DialogFragment {
                 }
             }
         }
+        // Validar volumen total (solo para tipo LIQUID)
+        else if (rbLiquid.isChecked()) {
+            String totalVolumeStr = etTotalVolume.getText().toString().trim();
+            if (TextUtils.isEmpty(totalVolumeStr)) {
+                tilTotalVolume.setError("El volumen total es obligatorio");
+                isValid = false;
+            } else {
+                try {
+                    int totalVolume = Integer.parseInt(totalVolumeStr);
+                    if (totalVolume <= 0) {
+                        tilTotalVolume.setError("Debe ser mayor que 0");
+                        isValid = false;
+                    } else {
+                        tilTotalVolume.setError(null);
+                    }
+                } catch (NumberFormatException e) {
+                    tilTotalVolume.setError("Valor no válido");
+                    isValid = false;
+                }
+            }
+        }
 
         return isValid;
     }
@@ -385,6 +416,8 @@ public class DialogMedication extends DialogFragment {
         // En fillDataForEdit, añadir:
         if (MedicationType.PILL.equals(editingMedication.getType())) {
             etTotalPills.setText(String.valueOf(editingMedication.getTotalPills()));
+        } else {
+            etTotalVolume.setText(String.valueOf(editingMedication.getTotalVolume()));
         }
     }
 
@@ -472,6 +505,19 @@ public class DialogMedication extends DialogFragment {
             medication.setTotalPills(totalPills);
             medication.setPillsPerDose(pillsPerDose);
             medication.updateRemainingDoses();
+        }
+        // Para líquidos, guardar totalVolume y doseVolume
+        else if (type.equals(MedicationType.LIQUID)) {
+            int totalVolume = Integer.parseInt(etTotalVolume.getText().toString().trim());
+            int doseVolume = (int) amount;
+            
+            medication.setTotalVolume(totalVolume);
+            medication.setDoseVolume(doseVolume);
+            
+            // Calcular dosis restantes para líquidos
+            if (doseVolume > 0) {
+                medication.setRemainingDoses(totalVolume / doseVolume);
+            }
         }
         
         // Si estamos editando, liberar el compartimento anterior si cambió

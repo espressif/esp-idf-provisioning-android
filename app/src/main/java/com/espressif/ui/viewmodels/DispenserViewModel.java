@@ -17,6 +17,8 @@ import com.espressif.data.repository.MedicationRepository;
 import com.espressif.ui.activities.mqtt_activities.MqttHandler;
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.utils.CompartmentManager;
+import com.espressif.ui.utils.ErrorHandler;
+import com.espressif.ui.utils.ObserverManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,6 +51,9 @@ public class DispenserViewModel extends AndroidViewModel {
     private final MutableLiveData<String> dispenserStatus = new MutableLiveData<>("Desconectado");
     
     private CompartmentManager compartmentManager;
+    
+    // Gestor de observadores
+    private ObserverManager observerManager = new ObserverManager();
 
     // Datos de compartimentos para los gráficos
     public static class CompartmentData {
@@ -96,11 +101,10 @@ public class DispenserViewModel extends AndroidViewModel {
 
     /**
      * Actualiza los datos de compartimentos basándose en los medicamentos
-     * Esta versión mejorada hace log de lo que está procesando
      */
     public void updateCompartmentStatus(List<Medication> medications) {
         if (medications == null || medications.isEmpty()) {
-            Log.d(TAG, "updateCompartmentStatus: lista de medicamentos vacía o nula");
+            Log.d(TAG, "updateCompartmentStatus: no hay medicamentos disponibles");
             // Valores por defecto para evitar nulls
             updateCompartmentA(0, 1);
             updateCompartmentB(0, 1);
@@ -109,120 +113,110 @@ public class DispenserViewModel extends AndroidViewModel {
             return;
         }
         
-        int takenA = 0, totalA = 0;
-        int takenB = 0, totalB = 0;
-        int takenC = 0, totalC = 0;
-        int takenLiquid = 0, totalLiquid = 0;
+        int[] takenA = {0}, totalA = {0};
+        int[] takenB = {0}, totalB = {0};
+        int[] takenC = {0}, totalC = {0};
+        int[] takenLiquid = {0}, totalLiquid = {0};
         
+        // Un solo log resumido al inicio
         Log.d(TAG, "Procesando " + medications.size() + " medicamentos para actualizar compartimentos");
-        
+
         for (Medication medication : medications) {
-            // Filtrar solo los de hoy para el conteo
-            if (!hasTodaySchedule(medication)) {
-                continue;
-            }
-            
             String compartment = medication.getCompartment();
             if (compartment == null) {
-                Log.d(TAG, "Medicamento sin compartimento asignado: " + medication.getName());
+                Log.d(TAG, "Medicamento sin compartimento: " + medication.getName());
                 continue;
             }
             
-            // Contabilizar según el compartimento asignado
+            // Contabilizar según el compartimento asignado utilizando el método helper
             switch (compartment) {
-                case "A":
-                    if (medication.getType() == MedicationType.PILL) {
-                        takenA += medication.getDosesTaken();
-                        totalA += medication.getTotalDoses();
-                        Log.d(TAG, "Compartimento A: " + medication.getName() + ", tomadas: " + 
-                               medication.getDosesTaken() + ", total: " + medication.getTotalDoses() +
-                               ", total pastillas: " + medication.getTotalPills());
-                    }
-                    break;
-                case "B":
-                    if (medication.getType() == MedicationType.PILL) {
-                        takenB += medication.getDosesTaken();
-                        totalB += medication.getTotalDoses();
-                        Log.d(TAG, "Compartimento B: " + medication.getName() + ", tomadas: " + 
-                               medication.getDosesTaken() + ", total: " + medication.getTotalDoses() +
-                               ", total pastillas: " + medication.getTotalPills());
-                    }
-                    break;
-                case "C":
-                    if (medication.getType() == MedicationType.PILL) {
-                        takenC += medication.getDosesTaken();
-                        totalC += medication.getTotalDoses();
-                        Log.d(TAG, "Compartimento C: " + medication.getName() + ", tomadas: " + 
-                               medication.getDosesTaken() + ", total: " + medication.getTotalDoses() +
-                               ", total pastillas: " + medication.getTotalPills());
-                    }
-                    break;
-                case "LIQUID":
-                    if (medication.getType() == MedicationType.LIQUID) {
-                        takenLiquid += medication.getVolumeTaken();
-                        totalLiquid += medication.getTotalVolume();
-                        Log.d(TAG, "Compartimento LIQUID: " + medication.getName() + ", tomado: " + 
-                               medication.getVolumeTaken() + ", total: " + medication.getTotalVolume());
-                    }
-                    break;
+                case "A": updateCompartmentForMedication(compartment, medication, takenA, totalA); break;
+                case "B": updateCompartmentForMedication(compartment, medication, takenB, totalB); break;
+                case "C": updateCompartmentForMedication(compartment, medication, takenC, totalC); break;
+                case "LIQUID": updateCompartmentForMedication(compartment, medication, takenLiquid, totalLiquid); break;
             }
         }
         
         // Establecer valores mínimos para evitar divisiones por cero
-        totalA = Math.max(totalA, 1);
-        totalB = Math.max(totalB, 1);
-        totalC = Math.max(totalC, 1);
-        totalLiquid = Math.max(totalLiquid, 1);
+        totalA[0] = Math.max(totalA[0], 1);
+        totalB[0] = Math.max(totalB[0], 1);
+        totalC[0] = Math.max(totalC[0], 1);
+        totalLiquid[0] = Math.max(totalLiquid[0], 1);
         
-        // Actualizar los LiveData
-        Log.d(TAG, "Actualizando compartimento A: " + takenA + "/" + totalA);
-        updateCompartmentA(takenA, totalA);
+        // Actualizar los LiveData con un único patrón de log
+        updateCompartmentA(takenA[0], totalA[0]);
+        updateCompartmentB(takenB[0], totalB[0]);
+        updateCompartmentC(takenC[0], totalC[0]);
+        updateCompartmentLiquid(takenLiquid[0], totalLiquid[0]);
         
-        Log.d(TAG, "Actualizando compartimento B: " + takenB + "/" + totalB);
-        updateCompartmentB(takenB, totalB);
-        
-        Log.d(TAG, "Actualizando compartimento C: " + takenC + "/" + totalC);
-        updateCompartmentC(takenC, totalC);
-        
-        Log.d(TAG, "Actualizando compartimento LIQUID: " + takenLiquid + "/" + totalLiquid);
-        updateCompartmentLiquid(takenLiquid, totalLiquid);
+        // Log final resumiendo todo el proceso
+        Log.d(TAG, String.format("Compartimentos actualizados: A=%d/%d, B=%d/%d, C=%d/%d, L=%d/%d", 
+              takenA[0], totalA[0], takenB[0], totalB[0], takenC[0], totalC[0], takenLiquid[0], totalLiquid[0]));
     }
-    
+
     /**
      * Actualiza los datos de un compartimento específico cuando se toma una medicación
      */
     public void updateCompartmentAfterDispense(Medication medication) {
-        if (medication == null) return;
+        if (medication == null || medication.getCompartment() == null) return;
         
         String compartment = medication.getCompartment();
-        if (compartment == null) return;
         
+        // Un solo log resumido para la operación
+        Log.d(TAG, "Actualizando compartimento " + compartment + " tras dispensar " + medication.getName());
+        
+        MutableLiveData<CompartmentData> compartmentLiveData = null;
+        
+        // Determinar qué compartimento actualizar
         switch (compartment) {
-            case "A":
-                CompartmentData dataA = compartmentA.getValue();
-                if (dataA != null) {
-                    updateCompartmentA(dataA.getTaken() + 1, dataA.getTotal());
-                }
-                break;
-            case "B":
-                CompartmentData dataB = compartmentB.getValue();
-                if (dataB != null) {
-                    updateCompartmentB(dataB.getTaken() + 1, dataB.getTotal());
-                }
-                break;
-            case "C":
-                CompartmentData dataC = compartmentC.getValue();
-                if (dataC != null) {
-                    updateCompartmentC(dataC.getTaken() + 1, dataC.getTotal());
-                }
-                break;
-            case "LIQUID":
-                CompartmentData dataL = compartmentLiquid.getValue();
-                if (dataL != null && medication.getType() == MedicationType.LIQUID) {
-                    int doseVolume = medication.getDoseVolume();
-                    updateCompartmentLiquid(dataL.getTaken() + doseVolume, dataL.getTotal());
-                }
-                break;
+            case "A": compartmentLiveData = compartmentA; break;
+            case "B": compartmentLiveData = compartmentB; break;
+            case "C": compartmentLiveData = compartmentC; break;
+            case "LIQUID": compartmentLiveData = compartmentLiquid; break;
+            default:
+                Log.w(TAG, "Compartimento desconocido: " + compartment);
+                return;
+        }
+        
+        // Si encontramos el compartimento, actualizarlo
+        if (compartmentLiveData != null) {
+            CompartmentData currentData = compartmentLiveData.getValue();
+            if (currentData != null) {
+                CompartmentData newData = new CompartmentData(
+                    currentData.getTaken() + 1, 
+                    Math.max(0, currentData.getTotal() - 1)
+                );
+                compartmentLiveData.setValue(newData);
+            }
+        }
+        
+        // Después de actualizar, validar consistencia
+        validateCompartmentData();
+    }
+
+    /**
+     * Asegura que los datos de los compartimentos sean consistentes
+     */
+    private void validateCompartmentData() {
+        // Asegurar que taken nunca exceda total
+        CompartmentData dataA = compartmentA.getValue();
+        if (dataA != null && dataA.getTaken() > dataA.getTotal()) {
+            updateCompartmentA(dataA.getTotal(), dataA.getTotal());
+        }
+        
+        CompartmentData dataB = compartmentB.getValue();
+        if (dataB != null && dataB.getTaken() > dataB.getTotal()) {
+            updateCompartmentB(dataB.getTotal(), dataB.getTotal());
+        }
+        
+        CompartmentData dataC = compartmentC.getValue();
+        if (dataC != null && dataC.getTaken() > dataC.getTotal()) {
+            updateCompartmentC(dataC.getTotal(), dataC.getTotal());
+        }
+        
+        CompartmentData dataLiquid = compartmentLiquid.getValue();
+        if (dataLiquid != null && dataLiquid.getTaken() > dataLiquid.getTotal()) {
+            updateCompartmentLiquid(dataLiquid.getTotal(), dataLiquid.getTotal());
         }
     }
 
@@ -240,7 +234,8 @@ public class DispenserViewModel extends AndroidViewModel {
         this.patientId = patientId;
         
         if (patientId == null || patientId.isEmpty()) {
-            setErrorState("ID del paciente no válido");
+            String errorMsg = ErrorHandler.handleValidationError(TAG, "patientId", "ID del paciente no válido");
+            setErrorState(errorMsg);
             return;
         }
         
@@ -254,8 +249,9 @@ public class DispenserViewModel extends AndroidViewModel {
             }
 
             @Override
-            public void onError(String errorMessage) {
-                setErrorState(errorMessage);
+            public void onError(String errorMsg) {
+                String formattedError = ErrorHandler.handleDatabaseError(TAG, "loadMedications", errorMsg);
+                setErrorState(formattedError);
             }
         });
     }
@@ -559,15 +555,12 @@ public class DispenserViewModel extends AndroidViewModel {
     }
     
     /**
-     * Simula una dispensación manual
-     * Esto sería reemplazado por una comunicación real con el dispensador vía MQTT
-     */
-    /**
-     * Simula una dispensación manual - Optimización
+     * Envía solicitud de dispensación y actualiza inventario local
      */
     public void dispenseNow(String medicationId, String scheduleId, MqttViewModel mqttViewModel) {
         if (patientId == null || medicationId == null || scheduleId == null) {
-            errorMessage.postValue("ID no válido");
+            ErrorHandler.publishError(errorMessage, TAG, ErrorHandler.ERROR_VALIDATION, 
+                                 "ID no válido para dispensación", null);
             return;
         }
         
@@ -576,69 +569,71 @@ public class DispenserViewModel extends AndroidViewModel {
             mqttViewModel.dispenseNow(medicationId, scheduleId);
         }
         
+        Handler mainHandler = new Handler(Looper.getMainLooper());
+        
         executor.execute(() -> {
-            // Primero obtener el medicamento actual
-            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-                @Override
-                public void onSuccess(Medication medication) {
-                    if (medication != null) {
-                        // Guardar la referencia al medicamento
-                        final Medication medicationRef = medication;
+            try {
+                // Obtener el medicamento actual
+                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                    @Override
+                    public void onSuccess(Medication medication) {
+                        if (medication == null) {
+                            errorMessage.postValue("Medicamento no encontrado: " + medicationId);
+                            return;
+                        }
                         
-                        Log.d(TAG, "Antes de dispensar: " + medication.getName() + 
-                              ", Pills: " + medication.getTotalPills() + 
-                              ", Doses taken: " + medication.getDosesTaken());
+                        // Un solo log antes de dispensar
+                        Log.d(TAG, String.format("DISPENSANDO %s: %d pastillas, %d/dosis", 
+                              medication.getName(), medication.getTotalPills(), medication.getPillsPerDose()));
                         
-                        // Actualizar el conteo de pastillas
-                        medication.dispenseDose();
+                        // Actualizar cantidades con el método centralizado
+                        boolean dispensed = medication.dispenseDose();
                         
-                        Log.d(TAG, "Después de dispensar: " + medication.getName() + 
-                              ", Pills: " + medication.getTotalPills() + 
-                              ", Doses taken: " + medication.getDosesTaken());
-                        
-                        // Actualizar en la base de datos - IMPORTANTE: Hacerlo en la DB ANTES de actualizar la UI
-                        medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
-                            @Override
-                            public void onSuccess() {
-                                Log.d(TAG, "Pastillas actualizadas para " + medicationRef.getName() + 
-                                      ". Quedan: " + medicationRef.getTotalPills() + " pastillas, " +
-                                      medicationRef.calculateRemainingDoses() + " dosis.");
-                                
-                                // Actualizar el compartimento correspondiente
-                                updateCompartmentAfterDispense(medicationRef);
-                                
-                                // Marcar como dispensado en el horario
-                                medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, new MedicationRepository.DatabaseCallback() {
-                                    @Override
-                                    public void onSuccess() {
-                                        Log.d(TAG, "Estado de dispensación actualizado correctamente");
-                                        
-                                        // FORZAR una recarga completa para actualizar la UI
-                                        loadMedications(patientId);
-                                    }
-                                    
-                                    @Override
-                                    public void onError(String errorMsg) {
-                                        errorMessage.postValue("Error al actualizar estado de dispensación: " + errorMsg);
-                                    }
-                                });
-                            }
+                        // Solo un log después de la dispensación exitosa
+                        if (dispensed) {
+                            Log.d(TAG, String.format("DISPENSADO %s: quedan %d pastillas", 
+                                  medication.getName(), medication.getTotalPills()));
                             
-                            @Override
-                            public void onError(String errorMsg) {
-                                errorMessage.postValue("Error al actualizar medicamento: " + errorMsg);
-                            }
-                        });
-                    } else {
-                        errorMessage.postValue("No se encontró el medicamento con ID: " + medicationId);
+                            // Actualizar base de datos
+                            medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    // Actualizar UI y marcar como dispensado
+                                    mainHandler.post(() -> updateCompartmentAfterDispense(medication));
+                                    
+                                    medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, 
+                                        new MedicationRepository.DatabaseCallback() {
+                                            @Override
+                                            public void onSuccess() {
+                                                mainHandler.post(() -> loadMedications(patientId));
+                                            }
+                                            
+                                            @Override
+                                            public void onError(String errorMsg) {
+                                                errorMessage.postValue("Error al marcar dispensación: " + errorMsg);
+                                            }
+                                        });
+                                }
+                                
+                                @Override
+                                public void onError(String errorMsg) {
+                                    errorMessage.postValue("Error al actualizar base de datos: " + errorMsg);
+                                }
+                            });
+                        } else {
+                            errorMessage.postValue("No hay suficientes unidades disponibles");
+                        }
                     }
-                }
-                
-                @Override
-                public void onError(String errorMsg) {
-                    errorMessage.postValue("Error al obtener medicamento: " + errorMsg);
-                }
-            });
+                    
+                    @Override
+                    public void onError(String errorMsg) {
+                        errorMessage.postValue("Error al obtener medicamento: " + errorMsg);
+                    }
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "Error en dispensación: " + e.getMessage(), e);
+                errorMessage.postValue("Error inesperado: " + e.getMessage());
+            }
         });
     }
 
@@ -698,7 +693,7 @@ public class DispenserViewModel extends AndroidViewModel {
         TODAY
     }
 
-    // 1. AÑADIR un método para obtener el repositorio (si no existe ya):
+    // Obtener el repositorio
     public MedicationRepository getMedicationRepository() {
         return medicationRepository;
     }
@@ -707,33 +702,187 @@ public class DispenserViewModel extends AndroidViewModel {
     public String getPatientId() {
         return patientId;
     }
+    
+    /**
+     * Actualiza la cantidad total de pastillas para un medicamento (recarga)
+     */
+    public void refillMedication(String medicationId, int newTotalPills) {
+        if (patientId == null || medicationId == null) {
+            ErrorHandler.publishError(errorMessage, TAG, ErrorHandler.ERROR_VALIDATION, 
+                                 "ID no válido para recarga", null);
+            return;
+        }
+        
+        if (newTotalPills < 0) {
+            ErrorHandler.publishError(errorMessage, TAG, ErrorHandler.ERROR_VALIDATION, 
+                                 "La cantidad a recargar debe ser mayor o igual a cero", null);
+            return;
+        }
+        
+        executor.execute(() -> {
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication != null) {
+                        // Registrar valores originales para el log
+                        int originalPills = medication.getTotalPills();
+                        
+                        // Actualizar el total de pastillas
+                        medication.setTotalPills(newTotalPills);
+                        medication.updateRemainingDoses();
+                        
+                        // Guardar los cambios
+                        medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                            @Override
+                            public void onSuccess() {
+                                Log.d(TAG, String.format("Compartimento rellenado para %s: %d → %d pastillas", 
+                                      medication.getName(), originalPills, newTotalPills));
+                                
+                                // Actualizar UI en el hilo principal
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    // Actualizar datos visuales de los compartimentos
+                                    loadMedications(patientId);
+                                });
+                            }
+                            
+                            @Override
+                            public void onError(String errorMsg) {
+                                ErrorHandler.publishError(errorMessage, TAG, ErrorHandler.ERROR_DATABASE, 
+                                                     "Error al guardar recarga: " + errorMsg, null);
+                            }
+                        });
+                    } else {
+                        ErrorHandler.publishError(errorMessage, TAG, ErrorHandler.ERROR_DATABASE, 
+                                             "Medicamento no encontrado para recarga", null);
+                    }
+                }
+                
+                @Override
+                public void onError(String errorMessage) {
+                    ErrorHandler.publishError(DispenserViewModel.this.errorMessage, TAG, ErrorHandler.ERROR_DATABASE,
+                                         "Error al obtener medicamento para rellenar: " + errorMessage, null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Actualiza el medicamento cuando se recibe una dispensación remota desde MQTT
+     */
+    public void updateMedicationFromRemote(String medicationId, int newTotalPills, int newDosesTaken) {
+        if (patientId == null || medicationId == null) {
+            Log.e(TAG, "No se puede actualizar medicamento: ID faltante");
+            return;
+        }
+        
+        Log.d(TAG, "⬇️ Actualizando medicamento desde dispensador remoto: " + medicationId);
+        
+        executor.execute(() -> {
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication == null) {
+                        Log.e(TAG, "Medicamento no encontrado: " + medicationId);
+                        return;
+                    }
+                    
+                    // Registrar valores originales
+                    int originalPills = medication.getTotalPills();
+                    int originalDoses = medication.getDosesTaken();
+                    
+                    // Actualizar con los nuevos valores
+                    medication.setTotalPills(newTotalPills);
+                    medication.setDosesTaken(newDosesTaken);
+                    
+                    // Guardar cambios
+                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Log.d(TAG, "✅ Medicamento actualizado desde dispensador: " + medication.getName() + 
+                                  " - Pills: " + newTotalPills + 
+                                  " - Cambio: " + (originalPills - newTotalPills) + " pastillas");
+                            
+                            // Actualizar UI en el hilo principal
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                updateCompartmentAfterDispense(medication);
+                                loadMedications(patientId);
+                            });
+                        }
+                        
+                        @Override
+                        public void onError(String errorMsg) {
+                            Log.e(TAG, "Error al actualizar medicamento desde dispensador: " + errorMsg);
+                        }
+                    });
+                }
+                
+                @Override
+                public void onError(String errorMsg) {
+                    Log.e(TAG, "Error al obtener medicamento para actualización remota: " + errorMsg);
+                }
+            });
+        });
+    }
+
+    /**
+     * Método helper para actualizar los datos de un compartimento
+     */
+    private void updateCompartmentForMedication(String compartment, Medication medication, 
+                                      int[] takenRef, int[] totalRef) {
+        if (medication == null || compartment == null) return;
+        
+        // Verificar compatibilidad tipo-compartimento
+        boolean isPill = medication.getType().equals(MedicationType.PILL);
+        boolean isLiquid = medication.getType().equals(MedicationType.LIQUID);
+        
+        if ((isLiquid && !compartment.equals("LIQUID")) || 
+            (isPill && compartment.equals("LIQUID"))) {
+            return;
+        }
+        
+        // Incrementar contador de dosis tomadas
+        if (isPill) {
+            takenRef[0] += medication.getDosesTaken();
+        } else if (isLiquid) {
+            takenRef[0] += medication.getVolumeTaken();
+        }
+        
+        // Calcular dosis disponibles
+        int dosesAvailable = medication.calculateRemainingDoses();
+        
+        // Actualizar máximo de dosis totales
+        totalRef[0] = Math.max(totalRef[0], dosesAvailable);
+    }
 
     /**
      * Sincroniza el estado entre MqttViewModel y DispenserViewModel
-     * Esto debe ser llamado desde el Fragment o Activity principal
+     * usando administración centralizada de observadores
      */
     public void connectWithMqttViewModel(MqttViewModel mqttViewModel) {
+        // Crear un ID único para este grupo de observers
+        String connectionObserverId = "dispenser_mqtt_connection_" + System.currentTimeMillis();
+        
         // Observar el estado de conexión
-        mqttViewModel.getIsConnected().observeForever(connected -> {
+        observerManager.observeForever(mqttViewModel.getIsConnected(), connected -> {
             updateDispenserConnectionStatus(connected, 
                     connected ? "Conectado" : "Desconectado");
-        });
+        }, connectionObserverId);
         
         // Observar el mensaje de estado
-        mqttViewModel.getStatusMessage().observeForever(status -> {
+        observerManager.observeForever(mqttViewModel.getStatusMessage(), status -> {
             updateDispenserConnectionStatus(
                     mqttViewModel.getIsConnected().getValue() != null && 
                     mqttViewModel.getIsConnected().getValue(),
                     status
             );
-        });
+        }, connectionObserverId);
         
         // Observar mensajes de error
-        mqttViewModel.getErrorMessage().observeForever(error -> {
+        observerManager.observeForever(mqttViewModel.getErrorMessage(), error -> {
             if (error != null && !error.isEmpty()) {
                 errorMessage.setValue(error);
             }
-        });
+        }, connectionObserverId);
     }
     
     /**
@@ -769,74 +918,10 @@ public class DispenserViewModel extends AndroidViewModel {
         });
     }
 
-    /**
-     * Actualiza el conteo de pastillas después de dispensar
-     */
-    private void updatePillCount(String medicationId) {
-        if (patientId == null || medicationId == null) {
-            return;
-        }
-        
-        // Obtener el medicamento actual
-        executor.execute(() -> {
-            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-                @Override
-                public void onSuccess(Medication medication) {
-                    if (medication != null) {
-                        // Llamar al método dispenseDose que disminuye los contadores
-                        medication.dispenseDose();
-                        
-                        // Guardar los cambios en la base de datos
-                        updateMedication(medication);
-                        
-                        Log.d(TAG, "Pastillas actualizadas para " + medication.getName() + 
-                              ". Quedan: " + medication.getTotalPills() + " pastillas, " +
-                              medication.calculateRemainingDoses() + " dosis.");
-                    }
-                }
-                
-                @Override
-                public void onError(String errorMsg) {
-                    Log.e(TAG, "Error al obtener medicamento para actualizar conteo: " + errorMsg);
-                    // Notificar al usuario - usar la variable de la clase, no el parámetro
-                    DispenserViewModel.this.errorMessage.postValue("Error al actualizar conteo de pastillas: " + errorMsg);
-                }
-            });
-        });
-    }
-
-    /**
-     * Actualiza la cantidad total de pastillas para un medicamento (recarga)
-     */
-    public void refillMedication(String medicationId, int newTotalPills) {
-        if (patientId == null || medicationId == null) {
-            errorMessage.postValue("ID no válido");
-            return;
-        }
-        
-        executor.execute(() -> {
-            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-                @Override
-                public void onSuccess(Medication medication) {
-                    if (medication != null) {
-                        // Actualizar el total de pastillas
-                        medication.setTotalPills(newTotalPills);
-                        medication.updateRemainingDoses();
-                        
-                        // Guardar los cambios
-                        updateMedication(medication);
-                        
-                        Log.d(TAG, "Compartimento rellenado para " + medication.getName() + 
-                              ". Nuevo total: " + newTotalPills);
-                    }
-                }
-                
-                @Override
-                public void onError(String errorMessage) {
-                    Log.e(TAG, "Error al obtener medicamento para rellenar: " + errorMessage);
-                    DispenserViewModel.this.errorMessage.postValue("Error al rellenar: " + errorMessage);
-                }
-            });
-        });
+    // Sobrescribir onCleared para limpiar todos los observadores
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        observerManager.removeAllObservers();
     }
 }

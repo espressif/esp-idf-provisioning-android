@@ -1,5 +1,7 @@
 package com.espressif.ui.models;
 
+import android.util.Log;
+
 import com.google.firebase.database.Exclude;
 import com.google.firebase.database.IgnoreExtraProperties;
 
@@ -335,54 +337,115 @@ public class Medication {
      */
     @Exclude
     public int calculateRemainingDoses() {
-        if (MedicationType.PILL.equals(type) && pillsPerDose > 0) {
-            return totalPills / pillsPerDose;
+        if (MedicationType.PILL.equals(type)) {
+            int safePerDose = Math.max(1, pillsPerDose);
+            return totalPills / safePerDose;
+        } else if (MedicationType.LIQUID.equals(type)) {
+            int safeDoseVolume = Math.max(1, doseVolume);
+            return totalVolume / safeDoseVolume;
         }
         return remainingDoses;
     }
 
     /**
-     * Actualiza las dosis restantes basado en el número de pastillas
+     * Actualiza las dosis restantes basado en el número de pastillas o volumen
      */
     @Exclude
     public void updateRemainingDoses() {
-        if (MedicationType.PILL.equals(type) && pillsPerDose > 0) {
-            this.remainingDoses = totalPills / pillsPerDose;
-        }
+        // Usar el método centralizado calculateRemainingDoses() en vez de duplicar la lógica
+        this.remainingDoses = calculateRemainingDoses();
     }
 
     /**
-     * Disminuye el número de pastillas cuando se dispensa una dosis
+     * Disminuye el número de pastillas/volumen cuando se dispensa una dosis
+     * Maneja la verificación de cambios, actualización de contadores y registros
+     * @return boolean - true si la dispensación fue exitosa
      */
     @Exclude
-    public void dispenseDose() {
+    public boolean dispenseDose() {
+        boolean dispensed = false;
+        
         if (MedicationType.PILL.equals(type)) {
-            // Verificar que pillsPerDose sea positivo
             int pillsToDispense = Math.max(1, pillsPerDose);
             
-            // Disminuir el total de pastillas, pero no menos de 0
-            totalPills = Math.max(0, totalPills - pillsToDispense);
-            
-            // Incrementar el contador de dosis tomadas
-            dosesTaken++;
-            
-            // Actualizar dosis restantes
-            updateRemainingDoses();
+            if (totalPills >= pillsToDispense) {
+                int originalPills = totalPills;
+                totalPills = Math.max(0, totalPills - pillsToDispense);
+                dosesTaken++;
+                dispensed = true;
+                
+                // Solo un log para pastillas
+                Log.d("Medication", String.format("Dispensado %s: %d → %d pastillas", 
+                      name, originalPills, totalPills));
+            }
         } else if (MedicationType.LIQUID.equals(type)) {
-            // Para medicamentos líquidos
-            // Asegurar que doseVolume sea positivo
             int volumeToDispense = Math.max(1, doseVolume);
             
-            // Disminuir el volumen total, pero no menos de 0
-            totalVolume = Math.max(0, totalVolume - volumeToDispense);
-            
-            // Incrementar el volumen tomado
-            volumeTaken += volumeToDispense;
-            
-            // Actualizar dosis restantes
-            remainingDoses = Math.max(0, remainingDoses - 1);
+            if (totalVolume >= volumeToDispense) {
+                int originalVolume = totalVolume;
+                totalVolume = Math.max(0, totalVolume - volumeToDispense);
+                volumeTaken += volumeToDispense;
+                dosesTaken++;
+                dispensed = true;
+                
+                // Solo un log para líquidos
+                Log.d("Medication", String.format("Dispensado %s: %d → %d ml", 
+                      name, originalVolume, totalVolume));
+            }
         }
         
-        this.updatedAt = System.currentTimeMillis();
+        // Si se dispensó correctamente, actualizar
+        if (dispensed) {
+            updateRemainingDoses();
+            this.updatedAt = System.currentTimeMillis();
+        }
+        
+        return dispensed;
+    }
+
+    /**
+     * Verifica la consistencia de los datos y corrige cualquier problema
+     */
+    @Exclude
+    public void validateConsistency() {
+        // Validar que pillsPerDose sea positivo
+        if (pillsPerDose <= 0) {
+            pillsPerDose = 1;
+        }
+        
+        // Validar totalPills y dosesTaken
+        if (totalPills < 0) {
+            totalPills = 0;
+        }
+        
+        if (dosesTaken < 0) {
+            dosesTaken = 0;
+        }
+        
+        // Actualizar las dosis restantes
+        updateRemainingDoses();
+        
+        // Asegurar que el compartimento es consistente con el número
+        if (compartment == null && compartmentNumber > 0) {
+            switch (compartmentNumber) {
+                case 1: compartment = "A"; break;
+                case 2: compartment = "B"; break;
+                case 3: compartment = "C"; break;
+                case 4: compartment = "LIQUID"; break;
+            }
+        } else if (compartment != null && compartmentNumber <= 0) {
+            switch (compartment) {
+                case "A": compartmentNumber = 1; break;
+                case "B": compartmentNumber = 2; break;
+                case "C": compartmentNumber = 3; break;
+                case "LIQUID": compartmentNumber = 4; break;
+            }
+        }
+        
+        // Validar consistencia de tipo y compartimento
+        if (MedicationType.LIQUID.equals(type) && compartmentNumber != 4) {
+            compartmentNumber = 4;
+            compartment = "LIQUID";
+        }
     }
 }

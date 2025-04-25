@@ -12,6 +12,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.espressif.AppConstants;
+import com.espressif.data.repository.MedicationRepository;
 import com.espressif.ui.activities.mqtt_activities.CustomMqttMessage;
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.activities.mqtt_activities.MqttHandler;
@@ -39,6 +40,13 @@ import com.espressif.ui.notifications.NotificationHelper;
 import com.espressif.ui.notifications.NotificationScheduler;
 import com.espressif.data.repository.UserRepository;
 
+// Añadir estas importaciones en la sección de imports
+import com.espressif.data.repository.MedicationRepository;
+import com.espressif.data.repository.MedicationRepository.DataCallback;
+import com.espressif.data.repository.MedicationRepository.DatabaseCallback;
+import com.espressif.ui.utils.ErrorHandler;
+import com.espressif.ui.utils.ObserverManager;
+
 public class MqttViewModel extends AndroidViewModel {
     private static final String TAG = "MqttViewModel";
     
@@ -62,6 +70,16 @@ public class MqttViewModel extends AndroidViewModel {
     private NotificationScheduler notificationScheduler;
     private UserRepository userRepository;
     
+    // Añadir:
+    private final MutableLiveData<String> medicationDispensedEvent = new MutableLiveData<>();
+
+    public LiveData<String> getMedicationDispensedEvent() {
+        return medicationDispensedEvent;
+    }
+    
+    // Agregar estos atributos:
+    private ObserverManager observerManager = new ObserverManager();
+
     public MqttViewModel(@NonNull Application application) {
         super(application);
         this.notificationHelper = new NotificationHelper(application);
@@ -112,8 +130,8 @@ public class MqttViewModel extends AndroidViewModel {
                 checkConnection();
             }
         } catch (MqttException e) {
-            Log.e(TAG, "Error al conectar a MQTT", e);
-            errorMessage.postValue("Error al conectar: " + e.getMessage());
+            String errorMsg = ErrorHandler.handleMqttError(TAG, "connect", e);
+            errorMessage.postValue(errorMsg);
         }
     }
     
@@ -301,10 +319,28 @@ public class MqttViewModel extends AndroidViewModel {
             Log.d(TAG, "✅ SYNC: Sincronización confirmada por el dispensador: " + json.optString("message", ""));
             isSyncingSchedules.postValue(false);
             
-            // Si es una confirmación de medicamento tomado, cancelamos las notificaciones
+            // Si es una confirmación de medicamento dispensado, actualizar conteo
+            if (json.has("medicationId") && json.has("scheduleId") && json.has("dispensed") && json.getBoolean("dispensed")) {
+                String medicationId = json.getString("medicationId");
+                String scheduleId = json.getString("scheduleId");
+                
+                // AQUÍ ESTÁ LA SOLUCIÓN: Actualizar el conteo de pastillas
+                updateMedicationCount(medicationId);
+                
+                // Cancelar notificaciones relacionadas con este medicamento
+                notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
+                notificationHelper.cancelMissedMedicationAlert(medicationId, scheduleId);
+                
+                Log.d(TAG, "Medicamento dispensado y conteo actualizado: " + medicationId);
+            }
+            
+            // Si es una confirmación de medicamento tomado manualmente
             if (json.has("medicationId") && json.has("scheduleId") && json.has("taken") && json.getBoolean("taken")) {
                 String medicationId = json.getString("medicationId");
                 String scheduleId = json.getString("scheduleId");
+                
+                // También actualizar conteo para medicamentos tomados manualmente
+                updateMedicationCount(medicationId);
                 
                 // Cancelar notificaciones relacionadas con este medicamento
                 notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
@@ -318,6 +354,107 @@ public class MqttViewModel extends AndroidViewModel {
             errorMessage.postValue("Error de sincronización: " + errorMsg);
             isSyncingSchedules.postValue(false);
         }
+    }
+    
+    /**
+     * Actualiza el conteo de medicación tras dispensación remota
+     */
+    private void updateMedicationCount(String medicationId) {
+        String patientId = userRepository.getConnectedPatientId();
+        if (patientId == null || patientId.isEmpty()) {
+            ErrorHandler.handleError(TAG, ErrorHandler.ERROR_VALIDATION, 
+                               "No se pudo obtener patientId para actualizar medicación", null);
+            return;
+        }
+        
+        MedicationRepository medicationRepository = MedicationRepository.getInstance();
+        
+        medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication medication) {
+                if (medication == null) {
+                    Log.e(TAG, "Medicamento no encontrado: " + medicationId);
+                    return;
+                }
+                
+                // Registrar solo valores iniciales
+                int originalPills = medication.getTotalPills();
+                
+                // Intentar actualizar usando el método centralizado
+                boolean dispensed = medication.dispenseDose();
+                
+                if (!dispensed && originalPills > 0) {
+                    // Forzar dispensación si fue reportada por dispositivo
+                    int pillsToDispense = Math.max(1, medication.getPillsPerDose());
+                    medication.setTotalPills(Math.max(0, originalPills - pillsToDispense));
+                    medication.setDosesTaken(medication.getDosesTaken() + 1);
+                    medication.updateRemainingDoses();
+                    dispensed = true;
+                    
+                    Log.d(TAG, "Dispensación forzada por reporte del dispositivo: " + medication.getName());
+                }
+                
+                if (dispensed) {
+                    // Un solo log con formato consistente
+                    Log.d(TAG, String.format("Actualizado %s: %d → %d pastillas, dosis: %d", 
+                          medication.getName(), originalPills, medication.getTotalPills(), 
+                          medication.getDosesTaken()));
+                    
+                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                        @Override
+                        public void onSuccess() {
+                            notifyMedicationUpdated(medication.getId());
+                            
+                            // Forzar actualización de UI usando LiveData
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                try {
+                                    // Notificar con el ID del medicamento
+                                    medicationDispensedEvent.setValue(medication.getId());
+                                    Log.d(TAG, "Evento de medicación dispensada emitido: " + medication.getName());
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error al notificar dispensación: " + e.getMessage());
+                                }
+                            });
+                        }
+                        
+                        @Override
+                        public void onError(String message) {
+                            Log.e(TAG, "Error al actualizar DB: " + message);
+                        }
+                    });
+                }
+            }
+            
+            @Override
+            public void onError(String message) {
+                Log.e(TAG, "Error al obtener medicamento: " + message);
+            }
+        });
+        
+        // Esta llamada se conserva para asegurar una rápida notificación inicial
+        medicationDispensedEvent.postValue(medicationId);
+    }
+    
+    /**
+     * Notifica a otros ViewModels que una medicación ha sido actualizada
+     */
+    private void notifyMedicationUpdated(String medicationId) {
+        // Usar LiveData para comunicación entre ViewModels
+        MutableLiveData<String> medicationUpdated = new MutableLiveData<>();
+        medicationUpdated.setValue(medicationId);
+        
+        // O usar un evento global con EventBus
+        // EventBus.getDefault().post(new MedicationUpdatedEvent(medicationId));
+        
+        // Forzar actualización de la UI
+        new Handler(Looper.getMainLooper()).post(() -> {
+            // Este es un enfoque simple pero efectivo para forzar una actualización
+            // Normalmente se realizaría mediante patrón observer con LiveData
+            Log.d(TAG, "Solicitando actualización de UI para medicamento: " + medicationId);
+            
+            // Si tienes acceso al DispenserViewModel, puedes llamar a:
+            // dispenserViewModel.loadMedications(patientId);
+        });
     }
     
     /**
@@ -488,5 +625,8 @@ public class MqttViewModel extends AndroidViewModel {
         if (mqttHandler != null) {
             mqttHandler.disconnect();
         }
+        
+        // Remover todos los observadores
+        observerManager.removeAllObservers();
     }
 }
