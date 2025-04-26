@@ -30,6 +30,8 @@ import java.util.List;
 
 // Añadir estas importaciones
 import org.json.JSONArray;
+
+import com.espressif.ui.fragments.DispenserFragment;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.Schedule;
 
@@ -319,19 +321,19 @@ public class MqttViewModel extends AndroidViewModel {
             Log.d(TAG, "✅ SYNC: Sincronización confirmada por el dispensador: " + json.optString("message", ""));
             isSyncingSchedules.postValue(false);
             
-            // Si es una confirmación de medicamento dispensado, actualizar conteo
+            // Si es una confirmación de medicamento dispensado, emitir evento
             if (json.has("medicationId") && json.has("scheduleId") && json.has("dispensed") && json.getBoolean("dispensed")) {
                 String medicationId = json.getString("medicationId");
                 String scheduleId = json.getString("scheduleId");
                 
-                // AQUÍ ESTÁ LA SOLUCIÓN: Actualizar el conteo de pastillas
-                updateMedicationCount(medicationId);
+                // Emitir evento de dispensación sin cálculos de pastillas
+                notifyMedicationDispensed(medicationId);
                 
                 // Cancelar notificaciones relacionadas con este medicamento
                 notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
                 notificationHelper.cancelMissedMedicationAlert(medicationId, scheduleId);
                 
-                Log.d(TAG, "Medicamento dispensado y conteo actualizado: " + medicationId);
+                Log.d(TAG, "Medicamento dispensado: " + medicationId);
             }
             
             // Si es una confirmación de medicamento tomado manualmente
@@ -339,8 +341,8 @@ public class MqttViewModel extends AndroidViewModel {
                 String medicationId = json.getString("medicationId");
                 String scheduleId = json.getString("scheduleId");
                 
-                // También actualizar conteo para medicamentos tomados manualmente
-                updateMedicationCount(medicationId);
+                // Emitir evento de dispensación sin cálculos de pastillas
+                notifyMedicationDispensed(medicationId);
                 
                 // Cancelar notificaciones relacionadas con este medicamento
                 notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
@@ -363,98 +365,26 @@ public class MqttViewModel extends AndroidViewModel {
         String patientId = userRepository.getConnectedPatientId();
         if (patientId == null || patientId.isEmpty()) {
             ErrorHandler.handleError(TAG, ErrorHandler.ERROR_VALIDATION, 
-                               "No se pudo obtener patientId para actualizar medicación", null);
+                              "No se pudo obtener patientId para actualizar medicación", null);
             return;
         }
         
-        MedicationRepository medicationRepository = MedicationRepository.getInstance();
-        
-        medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-            @Override
-            public void onSuccess(Medication medication) {
-                if (medication == null) {
-                    Log.e(TAG, "Medicamento no encontrado: " + medicationId);
-                    return;
-                }
-                
-                // Registrar solo valores iniciales
-                int originalPills = medication.getTotalPills();
-                
-                // Intentar actualizar usando el método centralizado
-                boolean dispensed = medication.dispenseDose();
-                
-                if (!dispensed && originalPills > 0) {
-                    // Forzar dispensación si fue reportada por dispositivo
-                    int pillsToDispense = Math.max(1, medication.getPillsPerDose());
-                    medication.setTotalPills(Math.max(0, originalPills - pillsToDispense));
-                    medication.setDosesTaken(medication.getDosesTaken() + 1);
-                    medication.updateRemainingDoses();
-                    dispensed = true;
-                    
-                    Log.d(TAG, "Dispensación forzada por reporte del dispositivo: " + medication.getName());
-                }
-                
-                if (dispensed) {
-                    // Un solo log con formato consistente
-                    Log.d(TAG, String.format("Actualizado %s: %d → %d pastillas, dosis: %d", 
-                          medication.getName(), originalPills, medication.getTotalPills(), 
-                          medication.getDosesTaken()));
-                    
-                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
-                        @Override
-                        public void onSuccess() {
-                            notifyMedicationUpdated(medication.getId());
-                            
-                            // Forzar actualización de UI usando LiveData
-                            new Handler(Looper.getMainLooper()).post(() -> {
-                                try {
-                                    // Notificar con el ID del medicamento
-                                    medicationDispensedEvent.setValue(medication.getId());
-                                    Log.d(TAG, "Evento de medicación dispensada emitido: " + medication.getName());
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Error al notificar dispensación: " + e.getMessage());
-                                }
-                            });
-                        }
-                        
-                        @Override
-                        public void onError(String message) {
-                            Log.e(TAG, "Error al actualizar DB: " + message);
-                        }
-                    });
-                }
-            }
-            
-            @Override
-            public void onError(String message) {
-                Log.e(TAG, "Error al obtener medicamento: " + message);
-            }
-        });
-        
-        // Esta llamada se conserva para asegurar una rápida notificación inicial
+        // IMPORTANTE: Emitir evento directamente sin actualizar conteos
+        Log.d(TAG, "🚀 Emitiendo evento de dispensación para: " + medicationId);
         medicationDispensedEvent.postValue(medicationId);
-    }
-    
-    /**
-     * Notifica a otros ViewModels que una medicación ha sido actualizada
-     */
-    private void notifyMedicationUpdated(String medicationId) {
-        // Usar LiveData para comunicación entre ViewModels
-        MutableLiveData<String> medicationUpdated = new MutableLiveData<>();
-        medicationUpdated.setValue(medicationId);
         
-        // O usar un evento global con EventBus
-        // EventBus.getDefault().post(new MedicationUpdatedEvent(medicationId));
-        
-        // Forzar actualización de la UI
-        new Handler(Looper.getMainLooper()).post(() -> {
-            // Este es un enfoque simple pero efectivo para forzar una actualización
-            // Normalmente se realizaría mediante patrón observer con LiveData
-            Log.d(TAG, "Solicitando actualización de UI para medicamento: " + medicationId);
-            
-            // Si tienes acceso al DispenserViewModel, puedes llamar a:
-            // dispenserViewModel.loadMedications(patientId);
-        });
+        // Notificar directamente sin actualizar conteo
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                DispenserFragment fragment = DispenserFragment.getInstance();
+                if (fragment != null) {
+                    Log.d(TAG, "💥 FORZANDO actualización directa vía fragment");
+                    fragment.actualizarMedicamento(medicationId);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error al llamar actualizarMedicamento: " + e.getMessage());
+            }
+        }, 250);
     }
     
     /**
@@ -628,5 +558,59 @@ public class MqttViewModel extends AndroidViewModel {
         
         // Remover todos los observadores
         observerManager.removeAllObservers();
+    }
+
+    // Reemplazar el método sendDispenseCommand con esta versión que no usa publishMessage:
+    public void sendDispenseCommand(String medicationId, String scheduleId) {
+        if (medicationId == null || scheduleId == null) {
+            Log.e(TAG, "No se puede enviar comando de dispensación: ID nulo");
+            return;
+        }
+        
+        Log.d(TAG, "📡 Enviando comando para dispensar medicación: " + medicationId);
+        
+        // Construir el topic y payload
+        String patientId = userRepository.getConnectedPatientId();
+        if (patientId == null || patientId.isEmpty()) {
+            Log.e(TAG, "No se puede enviar comando: patientId no disponible");
+            return;
+        }
+        
+        try {
+            // Topic para el comando de dispensar
+            String topic = "devices/dispenser/" + patientId + "/command";
+            
+            // Crear payload JSON con información de dispensación
+            JSONObject payload = new JSONObject();
+            payload.put("action", "dispense");
+            payload.put("medicationId", medicationId);
+            payload.put("scheduleId", scheduleId);
+            payload.put("timestamp", System.currentTimeMillis());
+            
+            // Usar el método existente para publicar un mensaje
+            // (Asumiendo que hay un método disponible en MqttViewModel o MqttHandler)
+            if (mqttHandler != null) {
+                mqttHandler.publishMessage(topic, payload.toString());
+                Log.d(TAG, "✅ Comando de dispensación enviado correctamente para: " + medicationId);
+            } else {
+                Log.e(TAG, "❌ No se pudo enviar comando MQTT: mqttHandler es null");
+            }
+            
+            // Notificar sobre dispensación para actualizar UI
+            notifyMedicationDispensed(medicationId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error al enviar comando de dispensación: " + e.getMessage());
+        }
+    }
+
+    // Añadir este método público a MqttViewModel
+    public void notifyMedicationDispensed(String medicationId) {
+        if (medicationId == null || medicationId.isEmpty()) {
+            return;
+        }
+        
+        // Aquí usamos setValue porque estamos en el hilo principal
+        medicationDispensedEvent.setValue(medicationId);
+        Log.d(TAG, "🔔 Evento de dispensación emitido para: " + medicationId);
     }
 }

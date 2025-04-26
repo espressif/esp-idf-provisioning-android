@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -142,6 +143,26 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
         this.scheduleListenerProvider = provider;
     }
 
+    // Añadir este método al MedicationAdapter para actualizar un medicamento específico
+    public void updateMedication(Medication updatedMedication) {
+        if (updatedMedication == null || updatedMedication.getId() == null) {
+            return;
+        }
+        
+        // Buscar y actualizar este medicamento específico
+        for (int i = 0; i < medications.size(); i++) {
+            Medication medication = medications.get(i);
+            if (medication.getId() != null && medication.getId().equals(updatedMedication.getId())) {
+                // Reemplazar el medicamento con la versión actualizada
+                medications.set(i, updatedMedication);
+                
+                // Notificar cambios solo en este elemento
+                notifyItemChanged(i);
+                return;
+            }
+        }
+    }
+
     class MedicationViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvName;
         private final TextView tvDosage;
@@ -205,7 +226,12 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             });
         }
 
+        // Reemplazar TODO el método bind() con esta versión corregida:
         public void bind(Medication medication) {
+            // Agregar log al inicio para diagnóstico - sin mencionar cantidad de pastillas
+            Log.d("MedicationAdapter", "📌 bind() llamado para: " + medication.getName() + 
+                  " | ID: " + medication.getId());
+            
             tvName.setText(medication.getName());
             
             // Formatear texto de dosificación
@@ -216,8 +242,6 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             // Configurar indicador de compartimento
             if (medication.getCompartmentNumber() > 0) {
                 tvCompartment.setVisibility(View.VISIBLE);
-                
-                // Código corregido - Asegurar que siempre muestre el número de compartimento correcto
                 String compartmentText = "C" + medication.getCompartmentNumber();
                 tvCompartment.setText(compartmentText);
                 
@@ -245,29 +269,11 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             // Configurar horarios
             scheduleAdapter.setSchedules(medication.getScheduleList());
 
-            // Mostrar información de pastillas/dosis restantes
-            if (MedicationType.PILL.equals(medication.getType())) {
-                int totalPills = medication.getTotalPills();
-                int pillsPerDose = medication.getPillsPerDose();
-                
-                if (pillsPerDose > 0) {
-                    int doses = totalPills / pillsPerDose;
-                    String remainingText = String.format("Quedan %d pastillas (%d dosis)", 
-                                                        totalPills, doses);
-                    tvRemainingPills.setText(remainingText);
-                    tvRemainingPills.setVisibility(View.VISIBLE);
-                } else {
-                    tvRemainingPills.setVisibility(View.GONE);
-                }
-            } else {
-                int doses = medication.getRemainingDoses();
-                if (doses > 0) {
-                    tvRemainingPills.setText("Quedan " + doses + " dosis");
-                    tvRemainingPills.setVisibility(View.VISIBLE);
-                } else {
-                    tvRemainingPills.setVisibility(View.GONE);
-                }
-            }
+            // ELIMINAR toda lógica de pastillas/dosis y simplemente ocultar el elemento UI
+            tvRemainingPills.setVisibility(View.GONE);
+            
+            // Log simple sin detalles de conteo
+            Log.d("MedicationAdapter", "✅ UI actualizada para: " + medication.getName());
         }
 
         // Añadir un getter para el adaptador de horarios en ViewHolder

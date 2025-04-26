@@ -76,6 +76,9 @@ public class DispenserFragment extends Fragment implements
     // Mostrar diálogo durante la sincronización
     private ProgressDialogFragment syncProgressDialog;
 
+    // Añadir variable estática para guardar la instancia activa
+    private static DispenserFragment activeInstance;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -183,13 +186,17 @@ public class DispenserFragment extends Fragment implements
         });
     }
     
+    // Reemplazar el método setupObservers() con esta implementación mejorada:
     private void setupObservers() {
         // 1. Observadores de DispenserViewModel
         observerManager.observe(getViewLifecycleOwner(), 
             viewModel.getMedications(), 
             medications -> {
-                adapter.setMedications(medications);
-                adapter.notifyDataSetChanged();
+                if (adapter != null) {
+                    adapter.setMedications(medications);
+                    adapter.notifyDataSetChanged();
+                    Log.d(TAG, "📋 Adaptador actualizado con " + medications.size() + " medicamentos");
+                }
             }, 
             "medications_list");
         
@@ -228,13 +235,18 @@ public class DispenserFragment extends Fragment implements
             }, 
             "mqtt_errors");
         
-        // 3. Observador para dispensación completada
+        // 3. Observador para dispensación completada - MEJORADO
         observerManager.observe(getViewLifecycleOwner(), 
             mqttViewModel.getMedicationDispensedEvent(), 
             medicationId -> {
                 if (medicationId != null && !medicationId.isEmpty()) {
-                    // Refrescar inmediatamente después de una dispensación exitosa
+                    Log.d(TAG, "🔔 Evento de dispensación recibido para: " + medicationId);
+                    
+                    // 1. Forzar recarga completa de datos
                     viewModel.loadMedications(patientId);
+                    
+                    // 2. Actualizar adaptador con los datos más recientes
+                    actualizarAdaptadorConDatosFrescos(medicationId);
                 }
             }, 
             "medication_dispensed");
@@ -247,12 +259,66 @@ public class DispenserFragment extends Fragment implements
             }, 
             "connection_status");
         
-        mqttViewModel.getMedicationDispensedEvent().observe(getViewLifecycleOwner(), medicationId -> {
-            if (medicationId != null && !medicationId.isEmpty()) {
-                // Actualizar la UI usando tu propio DispenserViewModel
-                dispenserViewModel.loadMedications(patientId);
-            }
-        });
+        // PRIMERO: Limpiamos cualquier observador existente para evitar duplicados
+        observerManager.removeObservers("medication_dispensed");
+        
+        // Ahora configuramos el observador
+        observerManager.observe(getViewLifecycleOwner(), 
+            mqttViewModel.getMedicationDispensedEvent(), 
+            medicationId -> {
+                if (medicationId != null && !medicationId.isEmpty()) {
+                    Log.d(TAG, "🚨 EVENTO DISPENSACIÓN recibido: " + medicationId);
+                    
+                    // Llamar directamente al método de actualización forzada
+                    actualizarMedicamento(medicationId);
+                }
+            }, 
+            "medication_dispensed");
+        
+    }
+    
+    // Añadir este nuevo método para forzar actualización con datos frescos
+    private void actualizarAdaptadorConDatosFrescos(String medicationId) {
+        // 1. Obtener datos frescos directamente del repositorio
+        viewModel.getMedicationRepository().getMedication(patientId, medicationId, 
+            new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medicationActualizado) {
+                    if (medicationActualizado != null && adapter != null) {
+                        // 2. Encontrar el medicamento en la lista actual y actualizarlo
+                        List<Medication> medicamentosActuales = adapter.getMedications();
+                        boolean encontrado = false;
+                        
+                        for (int i = 0; i < medicamentosActuales.size(); i++) {
+                            Medication med = medicamentosActuales.get(i);
+                            if (med.getId() != null && med.getId().equals(medicationId)) {
+                                // Reemplazar con datos actualizados
+                                medicamentosActuales.set(i, medicationActualizado);
+                                encontrado = true;
+                                
+                                // Actualizar solo esta posición
+                                adapter.notifyItemChanged(i);
+                                
+                                Log.d(TAG, "✅ Actualización específica para " + 
+                                      medicationActualizado.getName() + ": " + 
+                                      medicationActualizado.getTotalPills() + " pastillas restantes");
+                                break;
+                            }
+                        }
+                        
+                        if (!encontrado) {
+                            // Si no se encontró, actualizar toda la lista
+                            adapter.notifyDataSetChanged();
+                            Log.d(TAG, "⚠️ Medicamento no encontrado en adaptador, actualizando toda la lista");
+                        }
+                    }
+                }
+                
+                @Override
+                public void onError(String message) {
+                    Log.e(TAG, "Error al obtener medicamento actualizado: " + message);
+                }
+            });
     }
     
     // Método auxiliar para actualizar indicador de conexión
@@ -639,6 +705,7 @@ public class DispenserFragment extends Fragment implements
     @Override
     public void onResume() {
         super.onResume();
+        activeInstance = this;
         
         // Iniciar actualización automática
         if (adapter != null) {
@@ -649,6 +716,9 @@ public class DispenserFragment extends Fragment implements
     @Override
     public void onPause() {
         super.onPause();
+        if (activeInstance == this) {
+            activeInstance = null;
+        }
         
         // Detener actualización automática cuando el fragmento no está visible
         if (adapter != null) {
@@ -704,6 +774,10 @@ public class DispenserFragment extends Fragment implements
             return;
         }
         
+        // LOG 1: Al inicio de la dispensación
+        Log.d(TAG, "⚡ INICIO DISPENSACIÓN: " + medication.getName() + 
+              " | Pills antes: " + medication.getTotalPills());
+        
         // Mostrar un diálogo de progreso
         ProgressDialogFragment progressDialog = ProgressDialogFragment.newInstance(
             "Dispensando medicamento", 
@@ -713,22 +787,34 @@ public class DispenserFragment extends Fragment implements
         
         try {
             // Dispensar el medicamento
-            viewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel);
-            
-            // Cerrar el diálogo después de un tiempo y actualizar la UI
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (isAdded() && !isDetached()) {
+            viewModel.dispenseNow(medication.getId(), schedule.getId(), mqttViewModel, new DispenserViewModel.DispenseCallback() {
+                @Override
+                public void onSuccess() {
+                    // LOG 2: Dispensación exitosa en DB
+                    Log.d(TAG, "✅ DISPENSACIÓN EXITOSA en DB para: " + medication.getName());
+                    
+                    // Cerrar diálogo y mostrar mensaje de éxito
                     progressDialog.dismiss();
-                    
-                    // Forzar una recarga de datos después de dispensar
-                    viewModel.loadMedications(patientId);
-                    
-                    // Mostrar confirmación
                     Snackbar.make(recyclerMedications, 
                         "Se ha dispensado " + medication.getName(), 
                         Snackbar.LENGTH_SHORT).show();
+                        
+                    // LOG 3: Forzar actualización de UI
+                    Log.d(TAG, "🔄 Forzando actualización de UI después de dispensar");
+                    
+                    // Forzar recarga desde DB
+                    viewModel.loadMedications(patientId);
                 }
-            }, 1500); // Esperar 1.5 segundos para darle tiempo a la DB
+                
+                @Override
+                public void onError(String message) {
+                    // LOG 4: Error en dispensación
+                    Log.e(TAG, "❌ ERROR en dispensación: " + message);
+                    
+                    progressDialog.dismiss();
+                    showErrorMessage(message);
+                }
+            });
         } catch (Exception e) {
             // Manejar errores inesperados
             progressDialog.dismiss();
@@ -737,5 +823,87 @@ public class DispenserFragment extends Fragment implements
                 "Error al dispensar medicación", e);
             showErrorMessage(errorMsg);
         }
+    }
+
+    // Añade este método al DispenserFragment:
+    public void actualizarMedicamento(String medicationId) {
+        // Forzar carga directamente desde la base de datos
+        viewModel.getMedicationRepository().getMedication(patientId, medicationId,
+            new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medicamentoActualizado) {
+                    try {
+                        // Actualización FORZADA a nivel de UI
+                        if (adapter != null && medicamentoActualizado != null) {
+                            // 1. Guardar en la lista del adaptador
+                            List<Medication> listaActual = adapter.getMedications();
+                            boolean encontrado = false;
+                            
+                            for (int i = 0; i < listaActual.size(); i++) {
+                                if (listaActual.get(i).getId().equals(medicationId)) {
+                                    listaActual.set(i, medicamentoActualizado);
+                                    encontrado = true;
+                                    
+                                    // 2. Forzar actualización con handler
+                                    final int finalI = i;
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        try {
+                                            adapter.notifyItemChanged(finalI);
+                                            Log.d(TAG, "FORZADO [notifyItemChanged]: " + 
+                                                  medicamentoActualizado.getName() + " -> " + 
+                                                  medicamentoActualizado.getTotalPills() + " pills");
+                                        } catch (Exception e) {
+                                            Log.e(TAG, "Error en notifyItemChanged: " + e.getMessage());
+                                        }
+                                    });
+                                    
+                                    // 3. También forzar actualización completa después de un retraso
+                                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                                        if (getActivity() != null && !isDetached()) {
+                                            try {
+                                                adapter.notifyDataSetChanged();
+                                                Log.d(TAG, "FORZADO [notifyDataSetChanged]: después de 500ms");
+                                            } catch (Exception e) {
+                                                Log.e(TAG, "Error en notifyDataSetChanged: " + e.getMessage());
+                                            }
+                                        }
+                                    }, 500);
+                                    
+                                    break;
+                                }
+                            }
+                            
+                            if (!encontrado) {
+                                // Si no encontró el medicamento, forzar recarga completa
+                                viewModel.loadMedications(patientId);
+                                Log.d(TAG, "FORZADO [loadMedications]: no se encontró medicamento");
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error crítico en actualización forzada: " + e.getMessage());
+                        
+                        // Último recurso: actualización total
+                        try {
+                            if (adapter != null) {
+                                adapter.notifyDataSetChanged();
+                                Log.d(TAG, "FORZADO [notifyDataSetChanged]: intento final");
+                            }
+                        } catch (Exception ex) {
+                            Log.e(TAG, "Error fatal: " + ex.getMessage());
+                        }
+                    }
+                }
+                
+                @Override
+                public void onError(String message) {
+                    Log.e(TAG, "Error al cargar medicamento para actualización: " + message);
+                }
+            });
+    }
+
+    // MODIFICACIÓN CRÍTICA - Hacer DispenserFragment público para que otras clases puedan acceder
+    // Añadir este método estático
+    public static DispenserFragment getInstance() {
+        return activeInstance;
     }
 }
