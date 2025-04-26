@@ -155,13 +155,13 @@ public class MqttViewModel extends AndroidViewModel {
     private void subscribeToTopics() {
         try {
             // Usar tópicos definidos en AppConstants
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TELEMETRY, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE, 1);
-            
-            // Añadir la suscripción al tópico de confirmación de medicamentos
             mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TELEMETRY, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
+            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TAKEN, 1);
+
         } catch (MqttException e) {
             Log.e(TAG, "Error al suscribirse a tópicos", e);
             errorMessage.postValue("Error de suscripción: " + e.getMessage());
@@ -222,10 +222,11 @@ public class MqttViewModel extends AndroidViewModel {
     private void processIncomingMessage(String topic, MqttMessage mqttMessage) {
         String payload = new String(mqttMessage.getPayload());
         
-        // Solo registrar mensajes relevantes para sincronización
+        // Solo registrar mensajes relevantes
         if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE) || 
             topic.equals(AppConstants.MQTT_TOPIC_DEVICE_STATUS) ||
-            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION)) {
+            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION) ||
+            topic.equals(AppConstants.MQTT_TOPIC_DEVICE_TAKEN)) {  // Añadir este tópico
             Log.d(TAG, "🤖→📱 RECIBIDO [" + topic + "]: " + payload);
         }
         
@@ -236,6 +237,12 @@ public class MqttViewModel extends AndroidViewModel {
             // Procesar mensaje de confirmación de medicamentos
             if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION)) {
                 processMedConfirmation(json);
+                return;
+            }
+            
+            // AÑADIR ESTA CONDICIÓN para mensajes de medicamentos tomados
+            if (topic.equals(AppConstants.MQTT_TOPIC_DEVICE_TAKEN)) {
+                processMedicationTaken(json);
                 return;
             }
             
@@ -355,6 +362,129 @@ public class MqttViewModel extends AndroidViewModel {
             Log.e(TAG, "❌ SYNC ERROR: " + errorMsg);
             errorMessage.postValue("Error de sincronización: " + errorMsg);
             isSyncingSchedules.postValue(false);
+        }
+        
+        // Añadir esta nueva sección para confirmación de medicamento tomado
+        if (json.has("medicationId") && json.has("scheduleId") && json.has("taken") && json.getBoolean("taken")) {
+            String medicationId = json.getString("medicationId");
+            String scheduleId = json.getString("scheduleId");
+            
+            Log.d(TAG, "🔔 Confirmación de medicamento tomado recibida: " + medicationId);
+            
+            // Actualizar el estado del medicamento en la base de datos
+            String patientId = userRepository.getConnectedPatientId();
+            if (patientId != null && !patientId.isEmpty()) {
+                // Obtener el repositorio de medicamentos
+                MedicationRepository medicationRepository = MedicationRepository.getInstance();
+                
+                // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
+                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                    @Override
+                    public void onSuccess(Medication medication) {
+                        if (medication != null) {
+                            // Buscar el horario específico
+                            for (Schedule schedule : medication.getScheduleList()) {
+                                if (schedule.getId().equals(scheduleId)) {
+                                    // Actualizar el estado
+                                    schedule.setTakingConfirmed(true);
+                                    schedule.setLastTaken(System.currentTimeMillis());
+                                    
+                                    // Guardar en base de datos
+                                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                                        @Override
+                                        public void onSuccess() {
+                                            Log.d(TAG, "✅ Estado de toma actualizado para: " + medication.getName());
+                                            
+                                            // Notificar para actualización de UI
+                                            notifyMedicationDispensed(medicationId);
+                                            
+                                            // Cancelar notificaciones relacionadas
+                                            notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
+                                            notificationHelper.cancelMissedMedicationAlert(medicationId, scheduleId);
+                                        }
+                                        
+                                        @Override
+                                        public void onError(String message) {
+                                            Log.e(TAG, "Error al actualizar estado de toma: " + message);
+                                        }
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    @Override
+                    public void onError(String message) {
+                        Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
+                    }
+                });
+            }
+        }
+    }
+    
+    /**
+     * Procesa mensajes de confirmación de medicamento tomado
+     */
+    private void processMedicationTaken(JSONObject json) throws JSONException {
+        // Verificar si el mensaje tiene la información necesaria
+        if (json.has("medicationId") && json.has("scheduleId")) {
+            String medicationId = json.getString("medicationId");
+            String scheduleId = json.getString("scheduleId");
+            
+            Log.d(TAG, "🔔 Confirmación de medicamento tomado recibida: " + medicationId);
+            
+            // Actualizar el estado del medicamento en la base de datos
+            String patientId = userRepository.getConnectedPatientId();
+            if (patientId != null && !patientId.isEmpty()) {
+                // Obtener el repositorio de medicamentos
+                MedicationRepository medicationRepository = MedicationRepository.getInstance();
+                
+                // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
+                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                    @Override
+                    public void onSuccess(Medication medication) {
+                        if (medication != null) {
+                            // Buscar el horario específico
+                            for (Schedule schedule : medication.getScheduleList()) {
+                                if (schedule.getId().equals(scheduleId)) {
+                                    // Actualizar el estado
+                                    schedule.setTakingConfirmed(true);
+                                    schedule.setLastTaken(System.currentTimeMillis());
+                                    
+                                    // Guardar en base de datos
+                                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                                        @Override
+                                        public void onSuccess() {
+                                            Log.d(TAG, "✅ Estado de toma actualizado para: " + medication.getName());
+                                            
+                                            // Notificar para actualización de UI
+                                            notifyMedicationDispensed(medicationId);
+                                            
+                                            // Cancelar notificaciones relacionadas
+                                            notificationHelper.cancelUpcomingReminder(medicationId, scheduleId);
+                                            notificationHelper.cancelMissedMedicationAlert(medicationId, scheduleId);
+                                        }
+                                        
+                                        @Override
+                                        public void onError(String message) {
+                                            Log.e(TAG, "Error al actualizar estado de toma: " + message);
+                                        }
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    @Override
+                    public void onError(String message) {
+                        Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
+                    }
+                });
+            }
+        } else {
+            Log.e(TAG, "❌ Mensaje de confirmación de toma incompleto: falta medicationId o scheduleId");
         }
     }
     

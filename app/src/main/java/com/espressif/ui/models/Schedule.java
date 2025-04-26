@@ -387,6 +387,18 @@ public class Schedule {
     }
 
     /**
+     * Verifica si el medicamento fue dispensado recientemente (en los últimos 5 minutos)
+     * @return true si el medicamento fue dispensado recientemente
+     */
+    @Exclude
+    public boolean wasRecentlyDispensed() {
+        // Si está dispensado y la dispensación fue hace menos de 5 minutos
+        return dispensed && 
+               dispensedAt > 0 && 
+               System.currentTimeMillis() - dispensedAt < 300000; // 5 minutos en milisegundos
+    }
+
+    /**
      * Convierte esta instancia a un Map para guardarlo en Firebase
      */
     @Exclude
