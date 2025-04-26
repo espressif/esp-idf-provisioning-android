@@ -22,14 +22,17 @@ public class BootCompletedReceiver extends BroadcastReceiver {
         if (Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             Log.d(TAG, "Boot completed, reprogramando notificaciones");
             
-            // Obtener el ID del paciente conectado
+            // Obtener el ID del paciente usando el método seguro
             UserRepository userRepository = UserRepository.getInstance(context);
-            String patientId = userRepository.getConnectedPatientId();
+            String patientId = userRepository.getSelectedPatientId();
             
             if (patientId == null || patientId.isEmpty()) {
-                Log.d(TAG, "No hay paciente conectado, no se reprograman notificaciones");
+                Log.d(TAG, "No hay paciente conectado o ID válido, no se reprograman notificaciones");
                 return;
             }
+            
+            // Registrar el ID del paciente obtenido para depuración
+            Log.d(TAG, "Reprogramando notificaciones para paciente ID: " + patientId);
             
             // Obtener todos los medicamentos y programar sus notificaciones
             MedicationRepository medicationRepository = MedicationRepository.getInstance();

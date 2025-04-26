@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.data.repository.MedicationRepository;
+import com.espressif.data.repository.UserRepository;
 import com.espressif.ui.dialogs.ProgressDialogFragment;
 import com.espressif.ui.models.Medication;
 import com.espressif.ui.models.Schedule;
@@ -64,7 +65,7 @@ public class DispenserFragment extends Fragment implements
     private Button btnAddFirst;
     
     // ID del paciente (en un caso real, esto vendría de la sesión del usuario)
-    private final String patientId = "current_user_id";
+    private String patientId;
 
     private CompartmentManager compartmentManager;
 
@@ -127,6 +128,24 @@ public class DispenserFragment extends Fragment implements
     }
 
     private String getCurrentPatientId() {
+        if (patientId == null || patientId.isEmpty()) {
+            UserRepository userRepo = UserRepository.getInstance(requireContext());
+            patientId = userRepo.getConnectedPatientId();
+            
+            // Verificar si pudimos obtener un ID válido
+            if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+                Log.e(TAG, "No se pudo obtener un ID de paciente válido");
+                showErrorMessage("Error: No se puede determinar el paciente");
+                
+                // Como fallback, intentamos obtener el ID seleccionado
+                String fallbackId = userRepo.getSelectedPatientId();
+                if (fallbackId != null && !fallbackId.isEmpty() && !"current_user_id".equals(fallbackId)) {
+                    patientId = fallbackId;
+                    Log.d(TAG, "Usando ID fallback: " + patientId);
+                }
+            }
+        }
+        
         return patientId;
     }
     
@@ -243,7 +262,7 @@ public class DispenserFragment extends Fragment implements
                     Log.d(TAG, "🔔 Evento de dispensación recibido para: " + medicationId);
                     
                     // 1. Forzar recarga completa de datos
-                    viewModel.loadMedications(patientId);
+                    viewModel.loadMedications(getCurrentPatientId());
                     
                     // 2. Actualizar adaptador con los datos más recientes
                     actualizarAdaptadorConDatosFrescos(medicationId);
@@ -280,7 +299,7 @@ public class DispenserFragment extends Fragment implements
     // Añadir este nuevo método para forzar actualización con datos frescos
     private void actualizarAdaptadorConDatosFrescos(String medicationId) {
         // 1. Obtener datos frescos directamente del repositorio
-        viewModel.getMedicationRepository().getMedication(patientId, medicationId, 
+        viewModel.getMedicationRepository().getMedication(getCurrentPatientId(), medicationId, 
             new MedicationRepository.DataCallback<Medication>() {
                 @Override
                 public void onSuccess(Medication medicationActualizado) {
@@ -335,17 +354,19 @@ public class DispenserFragment extends Fragment implements
     }
     
     private void loadData() {
-        if (patientId == null || patientId.isEmpty()) {
+        String currentPatientId = getCurrentPatientId();
+        
+        if (currentPatientId == null || currentPatientId.isEmpty()) {
             ErrorHandler.handleError(TAG, ErrorHandler.ERROR_VALIDATION, 
-                "ID de paciente no válido", null);
+                "ID de paciente no disponible", null);
             return;
         }
         
         // Empezar a escuchar cambios en los medicamentos
-        viewModel.startListeningForMedications(patientId);
+        viewModel.startListeningForMedications(currentPatientId);
         
         // Utilizar el método correcto del repositorio
-        viewModel.getMedicationRepository().getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+        viewModel.getMedicationRepository().getMedications(currentPatientId, new MedicationRepository.DataCallback<List<Medication>>() {
             @Override
             public void onSuccess(List<Medication> medications) {
                 // Actualizar el estado de ocupación de los compartimentos
@@ -624,7 +645,7 @@ public class DispenserFragment extends Fragment implements
 
     private void refreshCompartmentStatus() {
         // Utilizar el mismo método de repositorio que en loadData
-        viewModel.getMedicationRepository().getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+        viewModel.getMedicationRepository().getMedications(getCurrentPatientId(), new MedicationRepository.DataCallback<List<Medication>>() {
             @Override
             public void onSuccess(List<Medication> medications) {
                 compartmentManager.refreshOccupation(medications);
@@ -803,7 +824,7 @@ public class DispenserFragment extends Fragment implements
                     Log.d(TAG, "🔄 Forzando actualización de UI después de dispensar");
                     
                     // Forzar recarga desde DB
-                    viewModel.loadMedications(patientId);
+                    viewModel.loadMedications(getCurrentPatientId());
                 }
                 
                 @Override
@@ -828,7 +849,7 @@ public class DispenserFragment extends Fragment implements
     // Añade este método al DispenserFragment:
     public void actualizarMedicamento(String medicationId) {
         // Forzar carga directamente desde la base de datos
-        viewModel.getMedicationRepository().getMedication(patientId, medicationId,
+        viewModel.getMedicationRepository().getMedication(getCurrentPatientId(), medicationId,
             new MedicationRepository.DataCallback<Medication>() {
                 @Override
                 public void onSuccess(Medication medicamentoActualizado) {
@@ -875,7 +896,7 @@ public class DispenserFragment extends Fragment implements
                             
                             if (!encontrado) {
                                 // Si no encontró el medicamento, forzar recarga completa
-                                viewModel.loadMedications(patientId);
+                                viewModel.loadMedications(getCurrentPatientId());
                                 Log.d(TAG, "FORZADO [loadMedications]: no se encontró medicamento");
                             }
                         }

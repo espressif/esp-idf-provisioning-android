@@ -56,8 +56,9 @@ public class MedicationRepository {
         }
         
         String patientId = medication.getPatientId();
-        if (patientId == null || patientId.isEmpty()) {
-            callback.onError("El ID del paciente es requerido");
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para nuevo medicamento: " + patientId);
+            callback.onError("El ID del paciente no es válido");
             return;
         }
         
@@ -97,8 +98,9 @@ public class MedicationRepository {
         }
         
         String patientId = medication.getPatientId();
-        if (patientId == null || patientId.isEmpty()) {
-            callback.onError("El ID del paciente es requerido");
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para actualizar medicamento: " + patientId);
+            callback.onError("El ID del paciente no es válido");
             return;
         }
         
@@ -132,8 +134,14 @@ public class MedicationRepository {
      * Elimina un medicamento
      */
     public void deleteMedication(String patientId, String medicationId, DatabaseCallback callback) {
-        if (medicationId == null || patientId == null) {
-            callback.onError("IDs no válidos");
+        if (medicationId == null || medicationId.isEmpty()) {
+            callback.onError("ID de medicamento no válido");
+            return;
+        }
+        
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para eliminar medicamento: " + patientId);
+            callback.onError("ID del paciente no válido");
             return;
         }
         
@@ -156,7 +164,8 @@ public class MedicationRepository {
      * Obtiene todos los medicamentos de un paciente
      */
     public void getMedications(String patientId, DataCallback<List<Medication>> callback) {
-        if (patientId == null || patientId.isEmpty()) {
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para obtener medicamentos: " + patientId);
             callback.onError("ID del paciente no válido");
             return;
         }
@@ -207,8 +216,14 @@ public class MedicationRepository {
      * Obtiene un medicamento específico
      */
     public void getMedication(String patientId, String medicationId, DataCallback<Medication> callback) {
-        if (patientId == null || medicationId == null) {
-            callback.onError("IDs no válidos");
+        if (medicationId == null || medicationId.isEmpty()) {
+            callback.onError("ID de medicamento no válido");
+            return;
+        }
+        
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para obtener medicamento: " + patientId);
+            callback.onError("ID del paciente no válido");
             return;
         }
         
@@ -246,8 +261,14 @@ public class MedicationRepository {
      * Añade o actualiza un horario para un medicamento
      */
     public void saveSchedule(String patientId, String medicationId, Schedule schedule, DatabaseCallback callback) {
-        if (patientId == null || medicationId == null) {
-            callback.onError("IDs no válidos");
+        if (medicationId == null || medicationId.isEmpty()) {
+            callback.onError("ID de medicamento no válido");
+            return;
+        }
+        
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para guardar horario: " + patientId);
+            callback.onError("ID del paciente no válido");
             return;
         }
         
@@ -278,8 +299,14 @@ public class MedicationRepository {
      * Elimina un horario
      */
     public void deleteSchedule(String patientId, String medicationId, String scheduleId, DatabaseCallback callback) {
-        if (patientId == null || medicationId == null || scheduleId == null) {
-            callback.onError("IDs no válidos");
+        if (medicationId == null || medicationId.isEmpty() || scheduleId == null || scheduleId.isEmpty()) {
+            callback.onError("IDs no válidos para horario o medicamento");
+            return;
+        }
+        
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para eliminar horario: " + patientId);
+            callback.onError("ID del paciente no válido");
             return;
         }
         
@@ -304,40 +331,15 @@ public class MedicationRepository {
      * Actualiza la confirmación de toma de un medicamento
      */
     public void updateMedicationTaken(String patientId, String medicationId, String scheduleId, boolean taken, DatabaseCallback callback) {
-        if (patientId == null || medicationId == null || scheduleId == null) {
-            callback.onError("IDs no válidos");
-            return;
-        }
-        
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("takingConfirmed", taken);
-        
-        if (taken) {
-            updates.put("lastTaken", System.currentTimeMillis());
-        }
-        
-        // Actualizar en patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
-        patientsRef.child(patientId)
-                .child("medications")
-                .child(medicationId)
-                .child("schedules")
-                .child(scheduleId)
-                .updateChildren(updates)
-                .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Estado de toma actualizado para horario: " + scheduleId);
-                    callback.onSuccess();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al actualizar estado de toma", e);
-                    callback.onError("Error al actualizar estado: " + e.getMessage());
-                });
+        updateScheduleStatus(patientId, medicationId, scheduleId, taken ? "taken" : "scheduled", callback);
     }
     
     /**
      * Escucha cambios en los medicamentos de un paciente en tiempo real
      */
     public ValueEventListener listenForMedications(String patientId, final DataCallback<List<Medication>> callback) {
-        if (patientId == null || patientId.isEmpty()) {
+        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            Log.e(TAG, "Error: ID de paciente inválido para escuchar cambios: " + patientId);
             callback.onError("ID del paciente no válido");
             return null;
         }
@@ -443,7 +445,7 @@ public class MedicationRepository {
      * Marca un horario como dispensado pero aún no detectado
      */
     public void markAsDispensed(String patientId, String medicationId, String scheduleId, DatabaseCallback callback) {
-        updateDispensationStatus(patientId, medicationId, scheduleId, true, false, callback);
+        updateScheduleStatus(patientId, medicationId, scheduleId, "dispensed", callback);
     }
     
     /**
@@ -550,51 +552,31 @@ public class MedicationRepository {
      * Registra un evento de medicación no tomada
      */
     public void registerMissedMedication(String patientId, String medicationId, String scheduleId, DatabaseCallback callback) {
-        // Crear un registro en la tabla de eventos
         if (patientId == null || medicationId == null || scheduleId == null) {
             callback.onError("IDs no válidos");
             return;
         }
         
-        // Crear un objeto para el evento
-        Map<String, Object> missedEvent = new HashMap<>();
-        missedEvent.put("patientId", patientId);
-        missedEvent.put("medicationId", medicationId);
-        missedEvent.put("scheduleId", scheduleId);
-        missedEvent.put("timestamp", ServerValue.TIMESTAMP);
-        missedEvent.put("eventType", "missed");
-        missedEvent.put("status", "not_taken");
+        // Actualizar estado a "missed" en el schedule
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", "missed");
+        updates.put("missed", true);
+        updates.put("missedAt", ServerValue.TIMESTAMP);
+        updates.put("statusUpdatedAt", ServerValue.TIMESTAMP);
         
-        // Generar un ID único para el evento
-        String eventId = UUID.randomUUID().toString();
-        
-        // Guardar el evento en Firebase
-        FirebaseDatabase.getInstance().getReference("medicationEvents")
-                .child(eventId)
-                .setValue(missedEvent)
+        patientsRef.child(patientId)
+                .child("medications")
+                .child(medicationId)
+                .child("schedules")
+                .child(scheduleId)
+                .updateChildren(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Evento de medicación perdida registrado con ID: " + eventId);
-                    
-                    // También marcar como no tomado en el horario
-                    Map<String, Object> updates = new HashMap<>();
-                    updates.put("missed", true);
-                    updates.put("missedAt", ServerValue.TIMESTAMP);
-                    
-                    patientsRef.child(patientId)
-                            .child("medications")
-                            .child(medicationId)
-                            .child("schedules")
-                            .child(scheduleId)
-                            .updateChildren(updates)
-                            .addOnSuccessListener(innerVoid -> callback.onSuccess())
-                            .addOnFailureListener(e -> {
-                                Log.e(TAG, "Error al actualizar estado de medicación perdida", e);
-                                callback.onError("Error al actualizar estado: " + e.getMessage());
-                            });
+                    Log.d(TAG, "Estado de horario actualizado a 'missed' para: " + scheduleId);
+                    callback.onSuccess();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al registrar evento de medicación perdida", e);
-                    callback.onError("Error al registrar evento: " + e.getMessage());
+                    Log.e(TAG, "Error al actualizar estado de medicación perdida", e);
+                    callback.onError("Error al actualizar estado: " + e.getMessage());
                 });
     }
 
@@ -615,5 +597,55 @@ public class MedicationRepository {
                 callback.onError(errorMessage);
             }
         });
+    }
+
+    /**
+     * Actualiza el estado de un horario de medicamento
+     */
+    public void updateScheduleStatus(String patientId, String medicationId, String scheduleId, 
+                              String status, DatabaseCallback callback) {
+        if (patientId == null || medicationId == null || scheduleId == null) {
+            callback.onError("IDs no válidos");
+            return;
+        }
+        
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", status);
+        updates.put("statusUpdatedAt", ServerValue.TIMESTAMP);
+        
+        // Añadir campos adicionales según el estado
+        switch (status) {
+            case "dispensed":
+                updates.put("dispensed", true);
+                updates.put("dispensedAt", ServerValue.TIMESTAMP);
+                break;
+            case "taken":
+                updates.put("takingConfirmed", true);
+                updates.put("lastTaken", ServerValue.TIMESTAMP);
+                break;
+            case "missed":
+                updates.put("missed", true);
+                updates.put("missedAt", ServerValue.TIMESTAMP);
+                break;
+            case "scheduled":
+                // Estado por defecto, no necesita campos adicionales
+                break;
+        }
+        
+        // Actualizar en patients/[patientId]/medications/[medicationId]/schedules/[scheduleId]
+        patientsRef.child(patientId)
+                .child("medications")
+                .child(medicationId)
+                .child("schedules")
+                .child(scheduleId)
+                .updateChildren(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Estado de horario actualizado a " + status + " para: " + scheduleId);
+                    callback.onSuccess();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al actualizar estado de horario", e);
+                    callback.onError("Error al actualizar estado: " + e.getMessage());
+                });
     }
 }

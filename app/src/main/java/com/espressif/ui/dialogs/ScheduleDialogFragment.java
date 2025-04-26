@@ -133,25 +133,22 @@ public class ScheduleDialogFragment extends DialogFragment {
             medicationRepository = MedicationRepository.getInstance();
             userRepository = UserRepository.getInstance(requireContext());
             
-            // Obtener el patientId con manejo de errores mejorado
-            patientId = null;
-            try {
-                patientId = userRepository.getConnectedPatientId();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // Enfoque mejorado para obtener un ID de paciente válido
+            patientId = obtainValidPatientId();
             
             if (patientId == null || patientId.isEmpty()) {
-                // Usar ID hardcodeado para pruebas
-                patientId = "current_user_id";
-                
-                // Mostrar advertencia en log
-                Log.w(TAG, "Usando ID de paciente predeterminado para pruebas: " + patientId);
+                Log.e(TAG, "ID de paciente no válido. No se pueden guardar horarios.");
+                Toast.makeText(requireContext(), "Error: No se puede determinar el paciente", Toast.LENGTH_LONG).show();
+                dismiss();
+            } else {
+                Log.d(TAG, "ID de paciente obtenido correctamente: " + patientId);
             }
             
-            // Resto del código...
         } catch (Exception e) {
+            Log.e(TAG, "Error al inicializar repositorios", e);
             e.printStackTrace();
+            Toast.makeText(requireContext(), "Error al inicializar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            dismiss();
         }
         
         // Obtener argumentos
@@ -804,5 +801,65 @@ public class ScheduleDialogFragment extends DialogFragment {
      */
     private void updateFormatDisplay() {
         tvHourFormat.setText(use24HourFormat ? "24h" : "AM/PM");
+    }
+
+    /**
+     * Método que intenta obtener un ID de paciente válido usando múltiples estrategias
+     * @return Un ID de paciente válido o null si no se puede obtener
+     */
+    private String obtainValidPatientId() {
+        String id = null;
+        
+        // Estrategia 1: Intentar obtener el ID seleccionado (la mejor fuente)
+        try {
+            id = userRepository.getSelectedPatientId();
+            Log.d(TAG, "Estrategia 1: ID de paciente seleccionado: " + id);
+            
+            if (isValidPatientId(id)) {
+                Log.d(TAG, "✅ Usando ID seleccionado: " + id);
+                return id;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al obtener ID seleccionado", e);
+        }
+        
+        // Estrategia 2: Intentar obtener ID conectado
+        try {
+            id = userRepository.getConnectedPatientId();
+            Log.d(TAG, "Estrategia 2: ID de paciente conectado: " + id);
+            
+            if (isValidPatientId(id)) {
+                Log.d(TAG, "✅ Usando ID conectado: " + id);
+                return id;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al obtener ID conectado", e);
+        }
+        
+        // Estrategia 3: Intentar obtener directamente de las preferencias
+        try {
+            id = userRepository.getPreferencesHelper().getPatientId();
+            
+            Log.d(TAG, "Estrategia 3: ID de paciente desde preferencias: " + id);
+            
+            if (isValidPatientId(id)) {
+                Log.d(TAG, "✅ Usando ID de preferencias: " + id);
+                return id;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al obtener ID desde preferencias", e);
+        }
+        
+        Log.e(TAG, "❌ No se pudo obtener un ID de paciente válido mediante ninguna estrategia");
+        return null;
+    }
+    
+    /**
+     * Valida si un ID de paciente es válido
+     * @param id ID a validar
+     * @return true si es válido, false en caso contrario
+     */
+    private boolean isValidPatientId(String id) {
+        return id != null && !id.isEmpty() && !"current_user_id".equals(id);
     }
 }

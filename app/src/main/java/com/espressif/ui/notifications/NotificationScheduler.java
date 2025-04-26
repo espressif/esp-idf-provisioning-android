@@ -49,11 +49,27 @@ public class NotificationScheduler {
     }
     
     /**
+     * Valida un ID de paciente
+     * @param patientId ID a validar
+     * @return true si el ID es válido, false si es nulo, vacío o "current_user_id"
+     */
+    private boolean isValidPatientId(String patientId) {
+        return patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId);
+    }
+
+    /**
      * Programa un recordatorio para un medicamento
      */
     public boolean scheduleReminder(String patientId, Medication medication, Schedule schedule) {
+        // Validar datos necesarios
         if (medication == null || schedule == null) {
             Log.e(TAG, "No se puede programar recordatorio: datos nulos");
+            return false;
+        }
+        
+        // Validar ID de paciente
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "No se puede programar recordatorio: ID de paciente inválido: " + patientId);
             return false;
         }
 
@@ -189,7 +205,14 @@ public class NotificationScheduler {
      * Programa un recordatorio anticipado 30 minutos antes
      */
     public boolean scheduleAdvanceReminder(String patientId, Medication medication, Schedule schedule) {
+        // Validar datos necesarios
         if (medication == null || schedule == null) {
+            return false;
+        }
+        
+        // Validar ID de paciente
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "No se puede programar recordatorio anticipado: ID de paciente inválido: " + patientId);
             return false;
         }
 
@@ -262,7 +285,14 @@ public class NotificationScheduler {
      * Programa una verificación automática para detectar medicación no tomada
      */
     public void scheduleMissedMedicationCheck(String patientId, Medication medication, Schedule schedule) {
+        // Validar datos necesarios
         if (medication == null || schedule == null || !schedule.isActive()) {
+            return;
+        }
+        
+        // Validar ID de paciente
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "No se puede programar verificación de medicación perdida: ID de paciente inválido: " + patientId);
             return;
         }
         
@@ -292,6 +322,12 @@ public class NotificationScheduler {
      */
     private void scheduleAlarm(String patientId, Medication medication, Schedule schedule,
                               long triggerAtMillis, String action) {
+        // Validar ID de paciente
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "No se puede programar alarma: ID de paciente inválido: " + patientId);
+            return;
+        }
+        
         Intent intent = new Intent(context, MedicationAlarmReceiver.class);
         intent.setAction(action);
         intent.putExtra(MedicationAlarmReceiver.EXTRA_MEDICATION_ID, medication.getId());
@@ -324,11 +360,18 @@ public class NotificationScheduler {
      * Reprograma todos los recordatorios para una lista de medicamentos
      */
     public void rescheduleMedicationReminders(String patientId, List<Medication> medications) {
+        // Validar datos necesarios
         if (medications == null || medications.isEmpty()) {
             return;
         }
         
-        Log.d(TAG, "Reprogramando recordatorios para " + medications.size() + " medicamentos");
+        // Validar ID de paciente
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "No se puede reprogramar recordatorios: ID de paciente inválido: " + patientId);
+            return;
+        }
+        
+        Log.d(TAG, "Reprogramando recordatorios para " + medications.size() + " medicamentos de paciente ID: " + patientId);
         
         for (Medication medication : medications) {
             if (medication.getScheduleList() != null) {

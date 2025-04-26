@@ -104,7 +104,16 @@ public class Medication {
         return patientId;
     }
 
+    /**
+     * Establece el ID del paciente al que pertenece este medicamento
+     * @param patientId ID único del paciente
+     */
     public void setPatientId(String patientId) {
+        // Validar que no se use un ID problemático
+        if ("current_user_id".equals(patientId)) {
+            Log.w("Medication", "Intento de asignar ID de paciente inválido: current_user_id");
+            return; // No asignar el valor problemático
+        }
         this.patientId = patientId;
     }
 
@@ -315,7 +324,14 @@ public class Medication {
         result.put("amount", amount);
         result.put("unit", unit);
         result.put("notes", notes);
-        result.put("patientId", patientId);
+        
+        // Verificar que el ID de paciente no sea el valor problemático
+        if (!"current_user_id".equals(patientId)) {
+            result.put("patientId", patientId);
+        } else {
+            Log.w("Medication", "Se evitó guardar ID de paciente inválido en toMap()");
+        }
+        
         result.put("schedules", schedules);
         result.put("createdAt", createdAt);
         result.put("updatedAt", updatedAt);
@@ -330,6 +346,15 @@ public class Medication {
         result.put("doseVolume", doseVolume);
         
         return result;
+    }
+
+    /**
+     * Verifica si el ID de paciente es válido
+     * @return true si el ID de paciente es válido, false en caso contrario
+     */
+    @Exclude
+    public boolean hasValidPatientId() {
+        return patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId);
     }
 
     /**
@@ -411,6 +436,13 @@ public class Medication {
      */
     @Exclude
     public void validateConsistency() {
+        // Validar el ID de paciente
+        if ("current_user_id".equals(patientId)) {
+            Log.w("Medication", "ID de paciente inválido detectado durante validación");
+            patientId = null; // Limpiar el valor problemático
+        }
+        
+        // Resto del método original sin cambios
         // Validar que pillsPerDose sea positivo para pastillas
         if (MedicationType.PILL.equals(type) && pillsPerDose <= 0) {
             pillsPerDose = 1;

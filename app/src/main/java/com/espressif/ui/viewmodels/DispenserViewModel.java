@@ -220,17 +220,30 @@ public class DispenserViewModel extends AndroidViewModel {
         }
     }
 
+    // Agregar al principio de la clase
+    private com.espressif.data.repository.UserRepository userRepository;
+
+    // Modificar el constructor para inicializar userRepository
     public DispenserViewModel(@NonNull Application application) {
         super(application);
         medicationRepository = MedicationRepository.getInstance();
         executor = Executors.newSingleThreadExecutor();
         compartmentManager = CompartmentManager.getInstance();
+        userRepository = com.espressif.data.repository.UserRepository.getInstance(application);
     }
     
     /**
      * Carga los medicamentos del paciente
      */
     public void loadMedications(String patientId) {
+        // Validar que no se use el valor problemático
+        if ("current_user_id".equals(patientId)) {
+            String errorMsg = "ID de paciente inválido (current_user_id)";
+            Log.e(TAG, "⛔ " + errorMsg);
+            setErrorState(errorMsg);
+            return;
+        }
+        
         this.patientId = patientId;
         
         if (patientId == null || patientId.isEmpty()) {
@@ -260,6 +273,14 @@ public class DispenserViewModel extends AndroidViewModel {
      * Inicia la escucha de cambios en los medicamentos
      */
     public void startListeningForMedications(String patientId) {
+        // Añadir esta validación
+        if ("current_user_id".equals(patientId)) {
+            String errorMsg = "ID de paciente inválido (current_user_id)";
+            Log.e(TAG, "⛔ " + errorMsg);
+            setErrorState(errorMsg);
+            return;
+        }
+        
         this.patientId = patientId;
         
         if (patientId == null || patientId.isEmpty()) {
@@ -784,8 +805,30 @@ public class DispenserViewModel extends AndroidViewModel {
         return medicationRepository;
     }
 
-    // Añadir getter para patientId
+    /**
+     * Obtiene el ID del paciente seleccionado de manera segura
+     * @return ID del paciente válido o null si no hay ninguno seleccionado
+     */
+    public String getSelectedPatientId() {
+        String id = userRepository.getSelectedPatientId();
+        if (!isValidPatientId(id)) {
+            Log.e(TAG, "⛔ ID de paciente inválido obtenido del repositorio: " + id);
+            return null;
+        }
+        return id;
+    }
+
+    /**
+     * Método obsoleto, usar getSelectedPatientId() en su lugar
+     * @deprecated Este método podría devolver un ID no válido como "current_user_id"
+     */
+    @Deprecated
     public String getPatientId() {
+        Log.w(TAG, "⚠️ Llamada a método getPatientId() obsoleto, usar getSelectedPatientId() en su lugar");
+        if ("current_user_id".equals(patientId)) {
+            Log.e(TAG, "⛔ Intento de acceder a ID de paciente problemático: current_user_id");
+            return null;
+        }
         return patientId;
     }
     
@@ -969,15 +1012,15 @@ public class DispenserViewModel extends AndroidViewModel {
      * Sincroniza los horarios con el dispensador consultando directamente el repositorio
      */
     public void syncSchedulesWithDispenser(MqttViewModel mqttViewModel) {
-        if (patientId == null || patientId.isEmpty()) {
+        // Usar getSelectedPatientId() en lugar de patientId directamente
+        String safePatientId = getSelectedPatientId();
+        if (safePatientId == null) {
             errorMessage.postValue("ID del paciente no válido");
             return;
         }
         
-        // Obtener los medicamentos directamente del repositorio
-        Log.d(TAG, "Solicitando medicamentos actualizados para sincronizar");
-        
-        medicationRepository.getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+        // Usar safePatientId en lugar de patientId
+        medicationRepository.getMedications(safePatientId, new MedicationRepository.DataCallback<List<Medication>>() {
             @Override
             public void onSuccess(List<Medication> data) {
                 if (data == null || data.isEmpty()) {
@@ -1009,12 +1052,13 @@ public class DispenserViewModel extends AndroidViewModel {
      * Fuerza recarga y actualización completa tras dispensación
      */
     public void forceUpdateAfterDispense(String medicationId) {
-        if (patientId == null || patientId.isEmpty()) return;
+        String safePatientId = getSelectedPatientId();
+        if (safePatientId == null) return;
         
         Log.d(TAG, "⚡ Forzando actualización tras dispensación: " + medicationId);
         
-        // Recargar todo de la DB
-        medicationRepository.getMedications(patientId, new MedicationRepository.DataCallback<List<Medication>>() {
+        // Recargar todo de la DB con ID seguro
+        medicationRepository.getMedications(safePatientId, new MedicationRepository.DataCallback<List<Medication>>() {
             @Override
             public void onSuccess(List<Medication> medications) {
                 updateMedicationsList(medications);
@@ -1044,5 +1088,14 @@ public class DispenserViewModel extends AndroidViewModel {
     // Añadir este método getter
     public LiveData<String> getMedicationDispensedEvent() {
         return medicationDispensedEvent;
+    }
+
+    /**
+     * Valida un ID de paciente
+     * @param id ID a validar
+     * @return true si el ID es válido, false si es nulo, vacío o "current_user_id"
+     */
+    private boolean isValidPatientId(String id) {
+        return id != null && !id.isEmpty() && !"current_user_id".equals(id);
     }
 }

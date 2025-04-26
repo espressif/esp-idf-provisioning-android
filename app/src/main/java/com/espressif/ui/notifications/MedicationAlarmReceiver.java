@@ -101,12 +101,18 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
         String medicationName = intent.getStringExtra(EXTRA_MEDICATION_NAME);
         String patientId = intent.getStringExtra(EXTRA_PATIENT_ID);
         
+        // Validar ID de paciente
+        if ("current_user_id".equals(patientId) || patientId == null || patientId.isEmpty()) {
+            Log.e(TAG, "ID de paciente inválido o no encontrado en la alarma: " + patientId);
+            return;
+        }
+        
         // Mostrar notificación de recordatorio
         showMedicationReminder(context, medicationId, scheduleId, medicationName);
         
         // Si tu sistema está configurado para dispensación automática,
         // actualizar el conteo aquí
-        if (medicationId != null && scheduleId != null && patientId != null) {
+        if (medicationId != null && scheduleId != null) {
             // Verificar si la dispensación automática está habilitada para este medicamento
             checkAndHandleAutomaticDispensation(context, patientId, medicationId, scheduleId);
             
@@ -169,6 +175,12 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
      * Programa la verificación de medicación perdida
      */
     private void scheduleMissedCheck(Context context, String patientId, String medicationId, String scheduleId) {
+        // Validar ID
+        if (!isValidPatientId(patientId)) {
+            Log.e(TAG, "Intento de programar verificación con ID de paciente inválido: " + patientId);
+            return;
+        }
+        
         getMedicationRepository().getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
             @Override
             public void onSuccess(Medication medication) {
@@ -211,8 +223,14 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
         String scheduleId = intent.getStringExtra(EXTRA_SCHEDULE_ID);
         String patientId = intent.getStringExtra(EXTRA_PATIENT_ID);
         
-        if (medicationId == null || scheduleId == null || patientId == null) {
-            Log.e(TAG, "Missing required extras in intent");
+        if (medicationId == null || scheduleId == null) {
+            Log.e(TAG, "Falta medicationId o scheduleId en el intent");
+            return;
+        }
+        
+        // Validar ID de paciente
+        if ("current_user_id".equals(patientId) || patientId == null || patientId.isEmpty()) {
+            Log.e(TAG, "ID de paciente inválido o no encontrado en la alarma: " + patientId);
             return;
         }
         
@@ -373,5 +391,14 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
             // En caso de error al mostrar notificación, al menos registrar
             Log.e(TAG, "Error al mostrar notificación de error", ex);
         }
+    }
+
+    /**
+     * Valida un ID de paciente
+     * @param patientId ID a validar
+     * @return true si el ID es válido, false si es nulo, vacío o "current_user_id"
+     */
+    private boolean isValidPatientId(String patientId) {
+        return patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId);
     }
 }

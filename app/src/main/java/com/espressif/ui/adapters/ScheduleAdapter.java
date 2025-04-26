@@ -269,41 +269,40 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ViewHo
             return;
         }
         
-        // 1. Verificar primero si fue confirmado manualmente (mediante botón del ESP32)
-        if (schedule.isTakingConfirmed()) {
+        // Usar el campo status como fuente principal
+        String status = schedule.getStatus();
+        
+        // También considerar los campos antiguos para compatibilidad con datos existentes
+        if ("taken".equals(status) || schedule.isTakingConfirmed()) {
             holder.ivStatus.setImageResource(R.drawable.ic_checkbox_on);
             holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorSuccess));
             
             // Mostrar cuándo fue tomado
+            long takenTime = schedule.getStatusUpdatedAt() > 0 ? 
+                            schedule.getStatusUpdatedAt() : schedule.getLastTaken();
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            String timeLabel = sdf.format(new Date(schedule.getLastTaken()));
+            String timeLabel = sdf.format(new Date(takenTime));
             holder.tvStatusText.setText("Tomado a las " + timeLabel);
-            return;
-        }
-        
-        // 2. Verificar si fue dispensado recientemente (últimos 5 minutos)
-        if (schedule.wasRecentlyDispensed()) {
+        } 
+        else if ("dispensed".equals(status) || schedule.wasRecentlyDispensed()) {
             holder.ivStatus.setImageResource(R.drawable.ic_dispensed);
             holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorSuccess));
             holder.tvStatusText.setText("Dispensado");
-            return;
         }
-        
-        // 3. Verificar si está atrasado (la hora programada ya pasó)
-        if (schedule.getNextScheduled() < now) {
+        else if ("missed".equals(status) || (schedule.getNextScheduled() < now && !schedule.isTakingConfirmed())) {
             holder.ivStatus.setImageResource(R.drawable.ic_schedule_missed);
             holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorError));
             holder.tvStatusText.setText("Pendiente (retrasado)");
-            return;
         }
-        
-        // 4. Programado para el futuro - Mostrar cuenta regresiva
-        holder.ivStatus.setImageResource(R.drawable.ic_schedule_pending);
-        holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
-        
-        // Calcular tiempo restante para mostrar cuenta regresiva de forma concisa
-        String countdown = formatCountdown(schedule.getNextScheduled() - now);
-        holder.tvStatusText.setText(countdown); // Mostrar solo la cuenta regresiva
+        else {
+            // Estado programado o por defecto
+            holder.ivStatus.setImageResource(R.drawable.ic_schedule_pending);
+            holder.ivStatus.setColorFilter(ContextCompat.getColor(context, R.color.colorPending));
+            
+            // Calcular tiempo restante
+            String countdown = formatCountdown(schedule.getNextScheduled() - now);
+            holder.tvStatusText.setText(countdown);
+        }
     }
     
     /**

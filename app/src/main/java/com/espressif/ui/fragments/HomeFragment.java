@@ -69,9 +69,10 @@ public class HomeFragment extends Fragment {
         // Observar cambios en los datos
         observeViewModel();
         
-        // En su lugar, forzar una actualización inicial basada en los datos actuales
-        if (viewModel.getPatientId() != null) {
-            viewModel.loadMedications(viewModel.getPatientId());
+        // Usar getSelectedPatientId() en lugar de getPatientId()
+        String patientId = viewModel.getSelectedPatientId();
+        if (patientId != null) {
+            viewModel.loadMedications(patientId);
         }
     }
     
@@ -96,8 +97,12 @@ public class HomeFragment extends Fragment {
         super.onResume();
         
         // Forzar una actualización de los datos cuando el fragmento se vuelve visible
-        if (viewModel != null && viewModel.getPatientId() != null) {
-            viewModel.loadMedications(viewModel.getPatientId());
+        // Usar getSelectedPatientId() en lugar de getPatientId()
+        if (viewModel != null) {
+            String patientId = viewModel.getSelectedPatientId();
+            if (patientId != null) {
+                viewModel.loadMedications(patientId);
+            }
         }
         
         // También podemos programar actualizaciones periódicas
@@ -105,8 +110,11 @@ public class HomeFragment extends Fragment {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (isAdded() && !isDetached() && viewModel != null && viewModel.getPatientId() != null) {
-                    viewModel.loadMedications(viewModel.getPatientId());
+                if (isAdded() && !isDetached() && viewModel != null) {
+                    String patientId = viewModel.getSelectedPatientId();
+                    if (patientId != null) {
+                        viewModel.loadMedications(patientId);
+                    }
                     handler.postDelayed(this, 60000); // Actualizar cada minuto
                 }
             }

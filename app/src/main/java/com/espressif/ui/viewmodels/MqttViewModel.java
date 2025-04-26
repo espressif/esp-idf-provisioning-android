@@ -86,7 +86,22 @@ public class MqttViewModel extends AndroidViewModel {
         super(application);
         this.notificationHelper = new NotificationHelper(application);
         this.notificationScheduler = new NotificationScheduler(application);
-        this.userRepository = UserRepository.getInstance(application);
+        
+        // Inicialización robusta del UserRepository
+        try {
+            this.userRepository = UserRepository.getInstance(application);
+            
+            // Validar si podemos obtener un ID de paciente
+            String testId = getValidPatientId();
+            if (testId != null) {
+                Log.d(TAG, "✅ Iniciado con ID de paciente válido: " + testId);
+            } else {
+                Log.w(TAG, "⚠️ Iniciado sin ID de paciente válido, se intentará obtener después");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al inicializar UserRepository: " + e.getMessage(), e);
+        }
+        
         initializeMqtt();
     }
     
@@ -372,28 +387,29 @@ public class MqttViewModel extends AndroidViewModel {
             Log.d(TAG, "🔔 Confirmación de medicamento tomado recibida: " + medicationId);
             
             // Actualizar el estado del medicamento en la base de datos
-            String patientId = userRepository.getConnectedPatientId();
-            if (patientId != null && !patientId.isEmpty()) {
-                // Obtener el repositorio de medicamentos
-                MedicationRepository medicationRepository = MedicationRepository.getInstance();
-                
-                // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
-                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-                    @Override
-                    public void onSuccess(Medication medication) {
-                        if (medication != null) {
-                            // Buscar el horario específico
-                            for (Schedule schedule : medication.getScheduleList()) {
-                                if (schedule.getId().equals(scheduleId)) {
-                                    // Actualizar el estado
-                                    schedule.setTakingConfirmed(true);
-                                    schedule.setLastTaken(System.currentTimeMillis());
-                                    
-                                    // Guardar en base de datos
-                                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+            String patientId = getValidPatientId();
+            if (patientId == null) {
+                Log.e(TAG, "❌ No se puede procesar confirmación: ID de paciente inválido");
+                return;
+            }
+            
+            // Obtener el repositorio de medicamentos
+            MedicationRepository medicationRepository = MedicationRepository.getInstance();
+            
+            // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication != null) {
+                        // Buscar el horario específico
+                        for (Schedule schedule : medication.getScheduleList()) {
+                            if (schedule.getId().equals(scheduleId)) {
+                                // Actualizar el estado
+                                medicationRepository.updateScheduleStatus(patientId, medicationId, scheduleId, "taken", 
+                                    new MedicationRepository.DatabaseCallback() {
                                         @Override
                                         public void onSuccess() {
-                                            Log.d(TAG, "✅ Estado de toma actualizado para: " + medication.getName());
+                                            Log.d(TAG, "✅ Estado de toma actualizado para horario: " + scheduleId);
                                             
                                             // Notificar para actualización de UI
                                             notifyMedicationDispensed(medicationId);
@@ -408,18 +424,17 @@ public class MqttViewModel extends AndroidViewModel {
                                             Log.e(TAG, "Error al actualizar estado de toma: " + message);
                                         }
                                     });
-                                    break;
-                                }
+                                break;
                             }
                         }
                     }
-                    
-                    @Override
-                    public void onError(String message) {
-                        Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
-                    }
-                });
-            }
+                }
+                
+                @Override
+                public void onError(String message) {
+                    Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
+                }
+            });
         }
     }
     
@@ -435,28 +450,29 @@ public class MqttViewModel extends AndroidViewModel {
             Log.d(TAG, "🔔 Confirmación de medicamento tomado recibida: " + medicationId);
             
             // Actualizar el estado del medicamento en la base de datos
-            String patientId = userRepository.getConnectedPatientId();
-            if (patientId != null && !patientId.isEmpty()) {
-                // Obtener el repositorio de medicamentos
-                MedicationRepository medicationRepository = MedicationRepository.getInstance();
-                
-                // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
-                medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
-                    @Override
-                    public void onSuccess(Medication medication) {
-                        if (medication != null) {
-                            // Buscar el horario específico
-                            for (Schedule schedule : medication.getScheduleList()) {
-                                if (schedule.getId().equals(scheduleId)) {
-                                    // Actualizar el estado
-                                    schedule.setTakingConfirmed(true);
-                                    schedule.setLastTaken(System.currentTimeMillis());
-                                    
-                                    // Guardar en base de datos
-                                    medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+            String patientId = getValidPatientId();
+            if (patientId == null) {
+                Log.e(TAG, "❌ No se puede procesar medicamento tomado: ID de paciente inválido");
+                return;
+            }
+            
+            // Obtener el repositorio de medicamentos
+            MedicationRepository medicationRepository = MedicationRepository.getInstance();
+            
+            // Buscar el medicamento y actualizar el estado de 'takingConfirmed'
+            medicationRepository.getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+                @Override
+                public void onSuccess(Medication medication) {
+                    if (medication != null) {
+                        // Buscar el horario específico
+                        for (Schedule schedule : medication.getScheduleList()) {
+                            if (schedule.getId().equals(scheduleId)) {
+                                // Actualizar el estado
+                                medicationRepository.updateScheduleStatus(patientId, medicationId, scheduleId, "taken", 
+                                    new MedicationRepository.DatabaseCallback() {
                                         @Override
                                         public void onSuccess() {
-                                            Log.d(TAG, "✅ Estado de toma actualizado para: " + medication.getName());
+                                            Log.d(TAG, "✅ Estado de toma actualizado para horario: " + scheduleId);
                                             
                                             // Notificar para actualización de UI
                                             notifyMedicationDispensed(medicationId);
@@ -471,18 +487,17 @@ public class MqttViewModel extends AndroidViewModel {
                                             Log.e(TAG, "Error al actualizar estado de toma: " + message);
                                         }
                                     });
-                                    break;
-                                }
+                                break;
                             }
                         }
                     }
-                    
-                    @Override
-                    public void onError(String message) {
-                        Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
-                    }
-                });
-            }
+                }
+                
+                @Override
+                public void onError(String message) {
+                    Log.e(TAG, "Error al obtener medicamento para confirmar toma: " + message);
+                }
+            });
         } else {
             Log.e(TAG, "❌ Mensaje de confirmación de toma incompleto: falta medicationId o scheduleId");
         }
@@ -492,10 +507,10 @@ public class MqttViewModel extends AndroidViewModel {
      * Actualiza el conteo de medicación tras dispensación remota
      */
     private void updateMedicationCount(String medicationId) {
-        String patientId = userRepository.getConnectedPatientId();
-        if (patientId == null || patientId.isEmpty()) {
+        String patientId = getValidPatientId();
+        if (patientId == null) {
             ErrorHandler.handleError(TAG, ErrorHandler.ERROR_VALIDATION, 
-                              "No se pudo obtener patientId para actualizar medicación", null);
+                              "No se pudo obtener patientId válido para actualizar medicación", null);
             return;
         }
         
@@ -547,101 +562,133 @@ public class MqttViewModel extends AndroidViewModel {
         // Reducir a un solo log inicial con información relevante
         Log.d(TAG, "📱→🤖 SYNC: Iniciando sincronización de " + medications.size() + " medicamentos");
         
+        // Intentar obtener ID de paciente primero de los medicamentos si está disponible
+        String patientId = obtainPatientIdFromMedications(medications);
+        
+        if (patientId == null) {
+            // Si no se pudo obtener de los medicamentos, intentar obtenerlo del repositorio
+            patientId = getValidPatientId();
+            
+            if (patientId == null) {
+                Log.e(TAG, "⛔ ID de paciente inválido obtenido del repositorio: null");
+                errorMessage.postValue("No se puede sincronizar: ID de paciente inválido");
+                return;
+            }
+        }
+        
+        // Ahora tenemos un ID de paciente válido, podemos continuar
+        Log.d(TAG, "✅ ID de paciente válido obtenido para sincronización: " + patientId);
+        
         isSyncingSchedules.postValue(true);
         
         try {
-            // Crear el mensaje usando CustomMqttMessage
+            // Crear mensaje MQTT para sincronizar horarios
             CustomMqttMessage syncMessage = CustomMqttMessage.createCommand("syncSchedules");
             
-            // Crear array de medicamentos para añadir al payload
-            JSONArray medicationsArray = new JSONArray();
-            
+            // Agregar los medicamentos al payload
+            JSONArray medsArray = new JSONArray();
             for (Medication medication : medications) {
-                JSONObject medicationObj = new JSONObject();
-                medicationObj.put("id", medication.getId());
-                medicationObj.put("name", medication.getName());
-                medicationObj.put("compartment", medication.getCompartmentNumber());
-                medicationObj.put("type", medication.getType());
-                
-                // AÑADIR INFORMACIÓN DE DOSIFICACIÓN
-                medicationObj.put("pillsPerDose", medication.getPillsPerDose());
-                medicationObj.put("totalPills", medication.getTotalPills());
-                
-                JSONArray schedulesArray = new JSONArray();
-                int activeSchedulesCount = 0;
-                
-                for (Schedule schedule : medication.getScheduleList()) {
-                    // SOLO INCLUIR HORARIOS ACTIVOS
+                // Solo incluir medicamentos que tengan al menos un horario activo
+                boolean tieneHorariosActivos = false;
+                List<Schedule> schedules = medication.getScheduleList();
+                for (Schedule schedule : schedules) {
                     if (schedule.isActive()) {
-                        JSONObject scheduleObj = new JSONObject();
-                        scheduleObj.put("id", schedule.getId());
-                        
-                        // Calcular los minutos a partir de hora y minuto
-                        int timeInMinutes = schedule.getHour() * 60 + schedule.getMinute();
-                        scheduleObj.put("time", timeInMinutes);
-                        
-                        // AÑADIR INFORMACIÓN DE MODO INTERVALO
-                        scheduleObj.put("intervalMode", schedule.isIntervalMode());
-                        if (schedule.isIntervalMode()) {
-                            scheduleObj.put("intervalHours", schedule.getIntervalHours());
-                            scheduleObj.put("treatmentDays", schedule.getTreatmentDays());
-                        }
-                        
-                        // Convertir ArrayList<Boolean> a un array de índices de días activos
-                        JSONArray daysArray = new JSONArray();
-                        ArrayList<Boolean> daysOfWeek = schedule.getDaysOfWeek();
-                        if (daysOfWeek != null) {
-                            for (int i = 0; i < daysOfWeek.size(); i++) {
-                                if (daysOfWeek.get(i)) {
-                                    daysArray.put(i + 1);
-                                }
-                            }
-                        }
-                        scheduleObj.put("days", daysArray);
-                        schedulesArray.put(scheduleObj);
-                        activeSchedulesCount++;
+                        tieneHorariosActivos = true;
+                        break;
                     }
                 }
                 
-                medicationObj.put("schedules", schedulesArray);
-                medicationsArray.put(medicationObj);
-                
-                // Log resumido por medicamento
-                Log.d(TAG, "📱→🤖 SYNC: " + medication.getName() + " [Compartimento " + 
-                      medication.getCompartmentNumber() + "] - " + activeSchedulesCount + " horarios activos");
+                if (tieneHorariosActivos) {
+                    // Crear objeto JSON para este medicamento
+                    JSONObject medObj = new JSONObject();
+                    medObj.put("id", medication.getId());
+                    medObj.put("name", medication.getName());
+                    
+                    // Agregar el ID de paciente al medicamento si no lo tiene
+                    if (medication.getPatientId() == null || medication.getPatientId().isEmpty()) {
+                        Log.d(TAG, "ℹ️ Asignando ID de paciente al medicamento: " + medication.getId());
+                        // No modificamos el objeto directamente, solo en el JSON
+                        medObj.put("patientId", patientId);
+                    } else {
+                        medObj.put("patientId", medication.getPatientId());
+                    }
+                    
+                    // Crear array de horarios
+                    JSONArray schedulesArray = new JSONArray();
+                    for (Schedule schedule : schedules) {
+                        if (schedule.isActive()) {
+                            JSONObject scheduleObj = new JSONObject();
+                            scheduleObj.put("id", schedule.getId());
+                            schedulesArray.put(scheduleObj);
+                        }
+                    }
+                    medObj.put("schedules", schedulesArray);
+                    
+                    // Añadir a la lista de medicamentos
+                    medsArray.put(medObj);
+                }
             }
             
-            // Añadir el array de medicamentos al mensaje
-            syncMessage.addPayload("medications", medicationsArray);
-            syncMessage.addPayload("timestamp", System.currentTimeMillis());
-            syncMessage.addPayload("autoDispense", true);
+            syncMessage.addPayload("medications", medsArray);
+            syncMessage.addPayload("patientId", patientId);  // Añadir ID de paciente a nivel global
             
-            // Solo mostrar el tópico, no el mensaje completo que puede ser muy largo
-            Log.d(TAG, "📱→🤖 SYNC: Enviando al tópico: " + AppConstants.MQTT_TOPIC_DEVICE_COMMANDS);
-            
-            // Publicar el mensaje
+            // Publicar mensaje
             mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, syncMessage.toString());
             
             // Confirmar envío exitoso
             Log.d(TAG, "📱→🤖 SYNC: Mensaje de sincronización enviado exitosamente");
             
-        } catch (JSONException | MqttException e) {
-            Log.e(TAG, "❌ SYNC ERROR: " + e.getMessage(), e);
+            // Programar notificaciones para cada medicamento
+            scheduleNotificationsForMedications(patientId, medications);
+            
+        } catch (JSONException e) {
+            Log.e(TAG, "❌ SYNC ERROR: Error al crear mensaje JSON: " + e.getMessage(), e);
             errorMessage.postValue("Error al sincronizar: " + e.getMessage());
             isSyncingSchedules.postValue(false);
+        } catch (MqttException e) {
+            Log.e(TAG, "❌ SYNC ERROR: Error al publicar mensaje MQTT: " + e.getMessage(), e);
+            errorMessage.postValue("Error al sincronizar: " + e.getMessage());
+            isSyncingSchedules.postValue(false);
+        } catch (Exception e) {
+            Log.e(TAG, "❌ SYNC ERROR: Error inesperado: " + e.getMessage(), e);
+            errorMessage.postValue("Error inesperado: " + e.getMessage());
+            isSyncingSchedules.postValue(false);
+        }
+    }
+
+    /**
+     * Obtiene ID de paciente desde la lista de medicamentos
+     */
+    private String obtainPatientIdFromMedications(List<Medication> medications) {
+        if (medications == null || medications.isEmpty()) {
+            return null;
         }
         
-        // Programar notificaciones para cada medicamento
-        String patientId = userRepository.getConnectedPatientId();
-        if (patientId != null && !patientId.isEmpty()) {
-            for (Medication medication : medications) {
-                for (Schedule schedule : medication.getScheduleList()) {
-                    if (schedule.isActive()) {
-                        notificationScheduler.scheduleReminder(patientId, medication, schedule);
-                    } else {
-                        // Cancelar recordatorios para horarios desactivados
-                        notificationScheduler.cancelReminders(medication.getId(), schedule.getId());
+        // Intentar obtener un ID válido de cualquiera de los medicamentos
+        for (Medication medication : medications) {
+            String patientId = medication.getPatientId();
+            if (isValidPatientId(patientId)) {
+                return patientId;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Programa notificaciones para una lista de medicamentos
+     */
+    private void scheduleNotificationsForMedications(String patientId, List<Medication> medications) {
+        for (Medication medication : medications) {
+            for (Schedule schedule : medication.getScheduleList()) {
+                if (schedule.isActive()) {
+                    boolean scheduled = notificationScheduler.scheduleReminder(patientId, medication, schedule);
+                    if (scheduled) {
+                        Log.d(TAG, "✅ Notificación programada para: " + medication.getName());
                     }
+                } else {
+                    // Cancelar recordatorios para horarios desactivados
+                    notificationScheduler.cancelReminders(medication.getId(), schedule.getId());
                 }
             }
         }
@@ -700,9 +747,9 @@ public class MqttViewModel extends AndroidViewModel {
         Log.d(TAG, "📡 Enviando comando para dispensar medicación: " + medicationId);
         
         // Construir el topic y payload
-        String patientId = userRepository.getConnectedPatientId();
-        if (patientId == null || patientId.isEmpty()) {
-            Log.e(TAG, "No se puede enviar comando: patientId no disponible");
+        String patientId = getValidPatientId();
+        if (patientId == null) {
+            Log.e(TAG, "❌ No se puede enviar comando: patientId inválido");
             return;
         }
         
@@ -742,5 +789,50 @@ public class MqttViewModel extends AndroidViewModel {
         // Aquí usamos setValue porque estamos en el hilo principal
         medicationDispensedEvent.setValue(medicationId);
         Log.d(TAG, "🔔 Evento de dispensación emitido para: " + medicationId);
+    }
+
+    /**
+     * Valida un ID de paciente
+     * @param patientId ID a validar
+     * @return true si el ID es válido, false si es nulo, vacío o "current_user_id"
+     */
+    private boolean isValidPatientId(String patientId) {
+        return patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId);
+    }
+
+    /**
+     * Obtiene ID de paciente válido del repositorio utilizando múltiples estrategias
+     * @return ID de paciente validado o null si no hay ID válido
+     */
+    private String getValidPatientId() {
+        String patientId = null;
+        
+        // Estrategia 1: Obtener ID de paciente seleccionado
+        patientId = userRepository.getSelectedPatientId();
+        if (isValidPatientId(patientId)) {
+            Log.d(TAG, "Usando ID de paciente seleccionado: " + patientId);
+            return patientId;
+        }
+        
+        // Estrategia 2: Obtener ID de paciente conectado
+        patientId = userRepository.getConnectedPatientId();
+        if (isValidPatientId(patientId)) {
+            Log.d(TAG, "Usando ID de paciente conectado: " + patientId);
+            return patientId;
+        }
+        
+        // Estrategia 3: Acceso directo a preferencias
+        try {
+            patientId = userRepository.getPreferencesHelper().getPatientId();
+            if (isValidPatientId(patientId)) {
+                Log.d(TAG, "Usando ID de paciente desde preferencias: " + patientId);
+                return patientId;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error al acceder a preferencias: " + e.getMessage());
+        }
+        
+        Log.e(TAG, "⛔ No se pudo obtener un ID de paciente válido mediante ninguna estrategia");
+        return null;
     }
 }

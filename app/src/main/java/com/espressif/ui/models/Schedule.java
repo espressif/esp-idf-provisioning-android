@@ -32,6 +32,9 @@ public class Schedule {
     private int intervalHours = 0;
     private int treatmentDays = 0;
     private long treatmentEndDate = 0;
+    private String status = "scheduled"; // Valor por defecto: scheduled, dispensed, taken, missed
+    private long statusUpdatedAt;
+    private boolean missed;  // Añadir esta variable
 
     // Constructor vacío requerido para Firebase
     public Schedule() {
@@ -147,10 +150,6 @@ public class Schedule {
         this.nextScheduled = nextScheduled;
     }
 
-    public boolean isDispensed() {
-        return dispensed;
-    }
-
     public void setDispensed(boolean dispensed) {
         this.dispensed = dispensed;
         if (dispensed) {
@@ -226,6 +225,26 @@ public class Schedule {
 
     public void setTreatmentEndDate(long treatmentEndDate) {
         this.treatmentEndDate = treatmentEndDate;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public long getStatusUpdatedAt() {
+        return statusUpdatedAt;
+    }
+
+    public void setStatusUpdatedAt(long statusUpdatedAt) {
+        this.statusUpdatedAt = statusUpdatedAt;
+    }
+
+    public void setMissed(boolean missed) {
+        this.missed = missed;
     }
 
     // Métodos auxiliares
@@ -473,5 +492,25 @@ public class Schedule {
         } else {
             return sb.toString().trim();
         }
+    }
+
+    @Exclude
+    public boolean isScheduled() {
+        return "scheduled".equals(status);
+    }
+
+    @Exclude
+    public boolean isDispensed() {
+        return "dispensed".equals(status) || dispensed;
+    }
+
+    @Exclude
+    public boolean isTaken() {
+        return "taken".equals(status) || takingConfirmed;
+    }
+
+    @Exclude
+    public boolean isMissed() {
+        return "missed".equals(status) || missed;
     }
 }

@@ -657,6 +657,40 @@ public class UserRepository {
         
     }
 
+    /**
+     * Obtiene el ID del paciente seleccionado actualmente
+     * @return El ID del paciente seleccionado o null si no hay ninguno
+     */
+    public String getSelectedPatientId() {
+        // En el caso de un paciente, devolver su propio ID de paciente
+        if (AppConstants.USER_TYPE_PATIENT.equals(getUserType())) {
+            String patientId = preferencesHelper.getPatientId();
+            // Verificar que no sea null ni "current_user_id"
+            if (patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId)) {
+                Log.d(TAG, "getSelectedPatientId: Devolviendo ID de paciente (usuario es paciente): " + patientId);
+                return patientId;
+            }
+        }
+        
+        // En el caso de un familiar, devolver el ID del paciente conectado
+        String connectedPatientId = getConnectedPatientId();
+        if (connectedPatientId != null && !connectedPatientId.isEmpty() && !"current_user_id".equals(connectedPatientId)) {
+            Log.d(TAG, "getSelectedPatientId: Devolviendo ID de paciente conectado: " + connectedPatientId);
+            return connectedPatientId;
+        }
+        
+        // Si llegamos aquí, no se encontró un ID válido
+        return null;
+    }
+
+    /**
+     * Método de conveniencia para acceder a las preferencias directamente
+     * @return El objeto SharedPreferencesHelper
+     */
+    public SharedPreferencesHelper getPreferencesHelper() {
+        return preferencesHelper;
+    }
+
     // Interfaces adicionales
     
     /**
