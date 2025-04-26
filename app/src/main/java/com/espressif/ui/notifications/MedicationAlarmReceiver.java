@@ -104,10 +104,41 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
         // Mostrar notificación de recordatorio
         showMedicationReminder(context, medicationId, scheduleId, medicationName);
         
-        // Programar verificación de medicación perdida
+        // Si tu sistema está configurado para dispensación automática,
+        // actualizar el conteo aquí
         if (medicationId != null && scheduleId != null && patientId != null) {
+            // Verificar si la dispensación automática está habilitada para este medicamento
+            checkAndHandleAutomaticDispensation(context, patientId, medicationId, scheduleId);
+            
+            // Programar verificación de medicación perdida
             scheduleMissedCheck(context, patientId, medicationId, scheduleId);
         }
+    }
+    
+    /**
+     * Verifica si la dispensación automática está habilitada y la maneja
+     */
+    private void checkAndHandleAutomaticDispensation(Context context, String patientId, 
+                                                  String medicationId, String scheduleId) {
+        getMedicationRepository().getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication medication) {
+                if (medication != null) {
+                    Schedule matchingSchedule = findMatchingSchedule(medication, scheduleId);
+                    
+                    // Aquí verificaríamos si la dispensación automática está habilitada
+                    // Por ahora, asumiremos que siempre lo está
+                    if (matchingSchedule != null) {
+                        handleScheduledDispensation(context, patientId, medicationId, scheduleId);
+                    }
+                }
+            }
+            
+            @Override
+            public void onError(String message) {
+                handleError(context, "Error al verificar dispensación automática: " + message);
+            }
+        });
     }
     
     /**
@@ -250,6 +281,71 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
                 handleError(context, "Error al registrar medicación perdida: " + errorMessage);
             }
         });
+    }
+    
+    /**
+     * Maneja la dispensación automática cuando llega la hora programada
+     */
+    private void handleScheduledDispensation(Context context, String patientId, String medicationId, String scheduleId) {
+        getMedicationRepository().getMedication(patientId, medicationId, new MedicationRepository.DataCallback<Medication>() {
+            @Override
+            public void onSuccess(Medication medication) {
+                if (medication != null) {
+                    // Actualizar el conteo de medicamentos
+                    boolean dispensed = medication.dispenseDose();
+                    
+                    if (dispensed) {
+                        // Si se dispensó exitosamente, actualizar en la base de datos
+                        getMedicationRepository().updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                            @Override
+                            public void onSuccess() {
+                                Log.d(TAG, "Conteo de medicamento actualizado tras dispensación automática: " + medication.getName());
+                                
+                                // También marcar el horario como dispensado
+                                getMedicationRepository().markAsDispensed(patientId, medicationId, scheduleId, 
+                                    new MedicationRepository.DatabaseCallback() {
+                                        @Override
+                                        public void onSuccess() {
+                                            Log.d(TAG, "Horario marcado como dispensado automáticamente");
+                                        }
+                                        
+                                        @Override
+                                        public void onError(String errorMessage) {
+                                            handleError(context, "Error al marcar dispensación: " + errorMessage);
+                                        }
+                                    });
+                            }
+                            
+                            @Override
+                            public void onError(String errorMessage) {
+                                handleError(context, "Error al actualizar conteo de medicamento: " + errorMessage);
+                            }
+                        });
+                    } else {
+                        // Si no se pudo dispensar (por ejemplo, no hay suficiente medicamento)
+                        Log.w(TAG, "No se pudo dispensar el medicamento automáticamente: " + medication.getName());
+                        // Enviar una notificación diferente indicando que no hay suficiente medicamento
+                        showLowMedicationAlert(context, medication);
+                    }
+                }
+            }
+            
+            @Override
+            public void onError(String message) {
+                handleError(context, "Error al obtener medicación para dispensación: " + message);
+            }
+        });
+    }
+    
+    /**
+     * Muestra una alerta cuando el medicamento está por agotarse
+     */
+    private void showLowMedicationAlert(Context context, Medication medication) {
+        NotificationHelper notificationHelper = new NotificationHelper(context);
+        String title = "Medicamento insuficiente";
+        String message = "No hay suficiente " + medication.getName() + " para dispensar la dosis completa. Por favor recargue pronto.";
+        int notificationId = ("low_" + medication.getId()).hashCode();
+        notificationHelper.showMedicationReminder(context, title, message, notificationId);
     }
     
     /**

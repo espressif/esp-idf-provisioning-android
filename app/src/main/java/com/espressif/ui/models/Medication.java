@@ -333,20 +333,76 @@ public class Medication {
     }
 
     /**
+     * Calcula las dosis restantes basado en el total y la cantidad por dosis
+     * @return Número de dosis completas que pueden dispensarse aún
+     */
+    @Exclude
+    public int calculateRemainingDoses() {
+        // Si es píldora, calcular basado en totalPills y pillsPerDose
+        if (MedicationType.PILL.equals(type) || "pill".equalsIgnoreCase(type)) {
+            if (pillsPerDose <= 0) return 0;
+            return totalPills / pillsPerDose;
+        }
+        // Si es líquido, calcular basado en totalVolume y doseVolume
+        else if (MedicationType.LIQUID.equals(type) || "liquid".equalsIgnoreCase(type)) {
+            if (doseVolume <= 0) return 0;
+            return totalVolume / doseVolume;
+        }
+        return remainingDoses; // Valor por defecto si no se puede calcular
+    }
+
+    /**
+     * Actualiza las dosis restantes basado en el inventario actual
+     */
+    @Exclude
+    public void updateRemainingDoses() {
+        this.remainingDoses = calculateRemainingDoses();
+    }
+
+    /**
      * Disminuye el número de pastillas/volumen cuando se dispensa una dosis
-     * Maneja la verificación de cambios, actualización de contadores y registros
      * @return boolean - true si la dispensación fue exitosa
      */
     @Exclude
     public boolean dispenseDose() {
-        // Versión simplificada que siempre reporta éxito
+        // Registrar operación de dispensación
         Log.d("Medication", "🧪 dispenseDose() llamado para: " + name);
         
-        // Marcar como dispensado sin verificar cantidades
-        dosesTaken++;
+        // Actualizar según el tipo de medicamento
+        if (MedicationType.PILL.equals(type) || "pill".equalsIgnoreCase(type)) {
+            // Verificar si hay suficientes pastillas
+            if (totalPills < pillsPerDose) {
+                Log.w("Medication", "⚠️ No hay suficientes pastillas para dispensar: " 
+                      + totalPills + " disponibles, " + pillsPerDose + " necesarias");
+                return false;
+            }
+            
+            // Actualizar inventario
+            totalPills -= pillsPerDose;
+            dosesTaken++;
+        } 
+        else if (MedicationType.LIQUID.equals(type) || "liquid".equalsIgnoreCase(type)) {
+            // Verificar si hay suficiente volumen
+            if (totalVolume < doseVolume) {
+                Log.w("Medication", "⚠️ No hay suficiente líquido para dispensar: " 
+                      + totalVolume + " disponibles, " + doseVolume + " necesarios");
+                return false;
+            }
+            
+            // Actualizar inventario
+            totalVolume -= doseVolume;
+            volumeTaken += doseVolume;
+            dosesTaken++;
+        }
+        
+        // Actualizar timestamp
         this.updatedAt = System.currentTimeMillis();
         
-        Log.d("Medication", "✅ Dispensación exitosa de " + name + ", actualizando timestamp: " + updatedAt);
+        // Actualizar las dosis restantes
+        updateRemainingDoses();
+        
+        Log.d("Medication", "✅ Dispensación exitosa de " + name + 
+              ", quedan " + remainingDoses + " dosis");
         return true;
     }
 
@@ -355,9 +411,14 @@ public class Medication {
      */
     @Exclude
     public void validateConsistency() {
-        // Validar que pillsPerDose sea positivo
-        if (pillsPerDose <= 0) {
+        // Validar que pillsPerDose sea positivo para pastillas
+        if (MedicationType.PILL.equals(type) && pillsPerDose <= 0) {
             pillsPerDose = 1;
+        }
+        
+        // Validar que doseVolume sea positivo para líquidos
+        if (MedicationType.LIQUID.equals(type) && doseVolume <= 0) {
+            doseVolume = 1;
         }
         
         // Validar totalPills y dosesTaken
@@ -367,6 +428,14 @@ public class Medication {
         
         if (dosesTaken < 0) {
             dosesTaken = 0;
+        }
+        
+        if (totalVolume < 0) {
+            totalVolume = 0;
+        }
+        
+        if (volumeTaken < 0) {
+            volumeTaken = 0;
         }
         
         // Actualizar las dosis restantes

@@ -647,43 +647,69 @@ public class DispenserViewModel extends AndroidViewModel {
                     return;
                 }
                 
-                // ELIMINAR cálculos de actualización de pastillas
-                // Simplemente marcar como dispensado sin actualizar conteos
+                // Aplicar la lógica de dispensación
+                boolean dispensed = medication.dispenseDose();
                 
-                // Marcar como dispensado
-                medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, 
-                    new MedicationRepository.DatabaseCallback() {
-                        @Override
-                        public void onSuccess() {
-                            Log.d(TAG, "✓ Horario marcado como dispensado");
-                            
-                            // Enviar comando MQTT si se proporcionó el viewmodel
-                            if (mqttViewModel != null) {
-                                try {
-                                    // Notificar vía MqttViewModel
-                                    new Handler(Looper.getMainLooper()).post(() -> {
-                                        mqttViewModel.notifyMedicationDispensed(medicationId);
-                                        Log.d(TAG, "📡 Notificación enviada vía MqttViewModel");
-                                    });
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Error al notificar dispensación: " + e.getMessage());
-                                }
-                            }
-                            
-                            // Llamar al callback de éxito
-                            if (callback != null) {
-                                callback.onSuccess();
-                            }
-                        }
+                if (!dispensed) {
+                    Log.e(TAG, "⚠️ No hay suficiente medicamento para dispensar");
+                    if (callback != null) {
+                        callback.onError("No hay suficiente medicamento para dispensar");
+                    }
+                    return;
+                }
+                
+                // Actualizar el medicamento en la base de datos después de dispensar
+                medicationRepository.updateMedication(medication, new MedicationRepository.DatabaseCallback() {
+                    @Override
+                    public void onSuccess() {
+                        Log.d(TAG, "✅ Medicamento actualizado tras dispensación");
                         
-                        @Override
-                        public void onError(String message) {
-                            Log.e(TAG, "❌ Error al marcar dispensación: " + message);
-                            if (callback != null) {
-                                callback.onError("Error al marcar dispensación: " + message);
-                            }
+                        // Marcar el horario como dispensado
+                        medicationRepository.markAsDispensed(patientId, medicationId, scheduleId, 
+                            new MedicationRepository.DatabaseCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    Log.d(TAG, "✓ Horario marcado como dispensado");
+                                    
+                                    // Actualizar UI después de dispensar
+                                    updateCompartmentAfterDispense(medication);
+                                    
+                                    // Enviar comando MQTT si se proporcionó el viewmodel
+                                    if (mqttViewModel != null) {
+                                        try {
+                                            new Handler(Looper.getMainLooper()).post(() -> {
+                                                mqttViewModel.notifyMedicationDispensed(medicationId);
+                                                Log.d(TAG, "📡 Notificación enviada vía MqttViewModel");
+                                            });
+                                        } catch (Exception e) {
+                                            Log.e(TAG, "Error al notificar dispensación: " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    // Llamar al callback de éxito
+                                    if (callback != null) {
+                                        callback.onSuccess();
+                                    }
+                                }
+                                
+                                @Override
+                                public void onError(String message) {
+                                    Log.e(TAG, "❌ Error al marcar dispensación: " + message);
+                                    if (callback != null) {
+                                        callback.onError("Error al marcar dispensación: " + message);
+                                    }
+                                }
+                            });
+                    }
+                    
+                    @Override
+                    public void onError(String message) {
+                        Log.e(TAG, "❌ Error al actualizar medicamento tras dispensar: " + message);
+                        if (callback != null) {
+                            callback.onError("Error al actualizar inventario: " + message);
                         }
-                    });
+                    }
+                });
             }
             
             @Override

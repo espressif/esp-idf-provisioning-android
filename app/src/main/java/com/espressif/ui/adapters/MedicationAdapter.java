@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -228,7 +229,7 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
 
         // Reemplazar TODO el método bind() con esta versión corregida:
         public void bind(Medication medication) {
-            // Agregar log al inicio para diagnóstico - sin mencionar cantidad de pastillas
+            // Agregar log al inicio para diagnóstico
             Log.d("MedicationAdapter", "📌 bind() llamado para: " + medication.getName() + 
                   " | ID: " + medication.getId());
             
@@ -269,11 +270,45 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
             // Configurar horarios
             scheduleAdapter.setSchedules(medication.getScheduleList());
 
-            // ELIMINAR toda lógica de pastillas/dosis y simplemente ocultar el elemento UI
-            tvRemainingPills.setVisibility(View.GONE);
+            // AQUÍ: Mostrar dosis restantes
+            tvRemainingPills.setVisibility(View.VISIBLE);
             
-            // Log simple sin detalles de conteo
-            Log.d("MedicationAdapter", "✅ UI actualizada para: " + medication.getName());
+            // Calcular dosis restantes y mostrarlas según el tipo
+            int remainingDoses = medication.calculateRemainingDoses();
+            
+            if (MedicationType.PILL.equals(medication.getType()) || "pill".equalsIgnoreCase(medication.getType())) {
+                // Para píldoras: mostrar dosis y cantidad de pastillas
+                if (medication.getPillsPerDose() > 0) {
+                    tvRemainingPills.setText(String.format("Quedan %d dosis (%d pastillas)", 
+                        remainingDoses, medication.getTotalPills()));
+                } else {
+                    tvRemainingPills.setText(String.format("Disponible: %d pastillas", 
+                        medication.getTotalPills()));
+                }
+            } else if (MedicationType.LIQUID.equals(medication.getType()) || "liquid".equalsIgnoreCase(medication.getType())) {
+                // Para líquidos: mostrar dosis y volumen
+                if (medication.getDoseVolume() > 0) {
+                    tvRemainingPills.setText(String.format("Quedan %d dosis (%d ml)", 
+                        remainingDoses, medication.getTotalVolume()));
+                } else {
+                    tvRemainingPills.setText(String.format("Disponible: %d ml", 
+                        medication.getTotalVolume()));
+                }
+            } else {
+                // Caso por defecto
+                tvRemainingPills.setText(String.format("Dosis restantes: %d", remainingDoses));
+            }
+            
+            // Cambiar color según cantidad restante
+            if (remainingDoses <= 2) {
+                tvRemainingPills.setTextColor(ContextCompat.getColor(context, R.color.colorRed));
+            } else {
+                tvRemainingPills.setTextColor(ContextCompat.getColor(context, R.color.design_default_color_secondary_variant));
+            }
+            
+            // Log de finalización
+            Log.d("MedicationAdapter", "✅ UI actualizada para: " + medication.getName() + 
+                  " con " + remainingDoses + " dosis restantes");
         }
 
         // Añadir un getter para el adaptador de horarios en ViewHolder
