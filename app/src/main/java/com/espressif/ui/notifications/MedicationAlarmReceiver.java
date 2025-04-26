@@ -116,12 +116,22 @@ public class MedicationAlarmReceiver extends BroadcastReceiver {
     private void showMedicationReminder(Context context, String medicationId, String scheduleId, String medicationName) {
         NotificationHelper notificationHelper = new NotificationHelper(context);
         
+        // Crear un título y mensaje adecuados para la notificación
+        String title = "Es hora de tomar su medicamento";
+        String message = medicationName != null ? 
+                        "Por favor tome ahora: " + medicationName : 
+                        "Es momento de tomar su medicación programada";
+        
+        // Generar ID para la notificación
+        int notificationId;
         if (medicationName != null) {
-            notificationHelper.showMedicationReminder(context, medicationId, scheduleId, medicationName.hashCode());
+            notificationId = medicationName.hashCode();
         } else {
-            int notificationId = (medicationId + scheduleId).hashCode();
-            notificationHelper.showMedicationReminder(context, medicationId, scheduleId, notificationId);
+            notificationId = (medicationId + scheduleId).hashCode();
         }
+        
+        // Ahora llamar al método con los parámetros correctos
+        notificationHelper.showMedicationReminder(context, title, message, notificationId);
     }
     
     /**
