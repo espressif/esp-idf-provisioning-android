@@ -333,24 +333,6 @@ public class Medication {
     }
 
     /**
-     * Calcula las dosis restantes basado en el número de pastillas
-     */
-    @Exclude
-    public int calculateRemainingDoses() {
-        // Versión simplificada que devuelve un valor predeterminado
-        return remainingDoses; // Devuelve el valor existente sin recalcular
-    }
-
-    /**
-     * Actualiza las dosis restantes basado en el número de pastillas o volumen
-     */
-    @Exclude
-    public void updateRemainingDoses() {
-        // Método vacío para evitar recálculos problemáticos
-        // No hacemos nada aquí por ahora
-    }
-
-    /**
      * Disminuye el número de pastillas/volumen cuando se dispensa una dosis
      * Maneja la verificación de cambios, actualización de contadores y registros
      * @return boolean - true si la dispensación fue exitosa
