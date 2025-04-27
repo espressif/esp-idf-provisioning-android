@@ -145,6 +145,13 @@ public class MqttViewModel extends AndroidViewModel {
                 mqttHandler.connect();
                 subscribeToTopics();
                 checkConnection();
+                
+                // Enviar el nombre del paciente tras una conexión exitosa
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (isConnected.getValue() == Boolean.TRUE) {
+                        sendPatientNameToDevice();
+                    }
+                }, 1000); // Pequeño retraso para asegurar que la conexión es estable
             }
         } catch (MqttException e) {
             String errorMsg = ErrorHandler.handleMqttError(TAG, "connect", e);
@@ -834,5 +841,52 @@ public class MqttViewModel extends AndroidViewModel {
         
         Log.e(TAG, "⛔ No se pudo obtener un ID de paciente válido mediante ninguna estrategia");
         return null;
+    }
+
+    /**
+     * Envía el nombre del paciente al dispositivo
+     * Esto actualizará el nombre que muestra el dispositivo
+     */
+    public void sendPatientNameToDevice() {
+        try {
+            // Obtener ID y nombre del paciente conectado
+            String patientId = getValidPatientId();
+            if (patientId == null) {
+                Log.e(TAG, "⛔ No se puede enviar nombre: ID de paciente inválido");
+                return;
+            }
+            
+            // Obtener el nombre del paciente desde el UserRepository
+            String patientName = null;
+            
+            if (AppConstants.USER_TYPE_PATIENT.equals(userRepository.getUserType())) {
+                // Si es paciente, usar su propio nombre
+                patientName = userRepository.getPreferencesHelper().getUserName();
+            } else {
+                // Si es familiar, usar el nombre del paciente conectado
+                patientName = userRepository.getPreferencesHelper().getConnectedPatientName();
+            }
+            
+            // Si aún no tenemos nombre, usar valor por defecto
+            if (patientName == null || patientName.isEmpty()) {
+                patientName = "Paciente " + patientId;
+            }
+            
+            // Crear mensaje JSON con el nombre
+            JSONObject payload = new JSONObject();
+            payload.put("patientName", patientName);
+            payload.put("patientId", patientId);
+            payload.put("timestamp", System.currentTimeMillis());
+            
+            // Publicar mensaje
+            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_NAME, payload.toString());
+            Log.d(TAG, "📱→🤖 Nombre de paciente enviado: " + patientName);
+            
+        } catch (JSONException | MqttException e) {
+            Log.e(TAG, "❌ Error al enviar nombre de paciente: " + e.getMessage(), e);
+            errorMessage.postValue("Error al enviar nombre: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error inesperado al enviar nombre: " + e.getMessage(), e);
+        }
     }
 }
