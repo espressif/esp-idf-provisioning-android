@@ -589,8 +589,17 @@ public class MqttViewModel extends AndroidViewModel {
         isSyncingSchedules.postValue(true);
         
         try {
-            // Crear mensaje MQTT para sincronizar horarios
-            CustomMqttMessage syncMessage = CustomMqttMessage.createCommand("syncSchedules");
+            // Crear estructura de mensaje según el formato requerido
+            JSONObject message = new JSONObject();
+            message.put("type", "command");
+            message.put("timestamp", System.currentTimeMillis());
+            
+            // Crear payload
+            JSONObject payload = new JSONObject();
+            payload.put("cmd", "syncSchedules");
+            payload.put("timestamp", System.currentTimeMillis());
+            payload.put("autoDispense", true);
+            payload.put("patientId", patientId);
             
             // Agregar los medicamentos al payload
             JSONArray medsArray = new JSONArray();
@@ -611,14 +620,15 @@ public class MqttViewModel extends AndroidViewModel {
                     medObj.put("id", medication.getId());
                     medObj.put("name", medication.getName());
                     
-                    // Agregar el ID de paciente al medicamento si no lo tiene
-                    if (medication.getPatientId() == null || medication.getPatientId().isEmpty()) {
-                        Log.d(TAG, "ℹ️ Asignando ID de paciente al medicamento: " + medication.getId());
-                        // No modificamos el objeto directamente, solo en el JSON
-                        medObj.put("patientId", patientId);
-                    } else {
-                        medObj.put("patientId", medication.getPatientId());
-                    }
+                    // Añadir información del tipo de medicamento
+                    medObj.put("type", medication.getType().toString().toLowerCase());
+                    medObj.put("compartment", medication.getCompartmentNumber());
+                    
+                    // Añadir dosis por defecto (ya que no existe el método getDosageValue())
+                    medObj.put("pillsPerDose", 1);  // Valor por defecto
+                    
+                    // Añadir pillsTotal por defecto
+                    medObj.put("totalPills", 30);  // Valor por defecto si no está disponible
                     
                     // Crear array de horarios
                     JSONArray schedulesArray = new JSONArray();
@@ -626,9 +636,35 @@ public class MqttViewModel extends AndroidViewModel {
                         if (schedule.isActive()) {
                             JSONObject scheduleObj = new JSONObject();
                             scheduleObj.put("id", schedule.getId());
+                            
+                            // Convertir hora y minuto a minutos desde medianoche
+                            int timeInMinutes = schedule.getHour() * 60 + schedule.getMinute();
+                            scheduleObj.put("time", timeInMinutes);
+                            
+                            // Modo de intervalo (por defecto false)
+                            scheduleObj.put("intervalMode", schedule.isIntervalMode());
+                            
+                            // Para los días, crear un array con los días configurados
+                            JSONArray daysArray = new JSONArray();
+                            ArrayList<Boolean> daysOfWeek = schedule.getDaysOfWeek();
+                            if (daysOfWeek != null && daysOfWeek.size() >= 7) {
+                                for (int i = 0; i < 7; i++) {
+                                    if (daysOfWeek.get(i)) {
+                                        daysArray.put(i + 1); // Convertir a formato 1-7 (Lun-Dom)
+                                    }
+                                }
+                            } else {
+                                // Si no hay días configurados, incluir todos
+                                for (int i = 1; i <= 7; i++) {
+                                    daysArray.put(i);
+                                }
+                            }
+                            scheduleObj.put("days", daysArray);
+                            
                             schedulesArray.put(scheduleObj);
                         }
                     }
+                    
                     medObj.put("schedules", schedulesArray);
                     
                     // Añadir a la lista de medicamentos
@@ -636,11 +672,14 @@ public class MqttViewModel extends AndroidViewModel {
                 }
             }
             
-            syncMessage.addPayload("medications", medsArray);
-            syncMessage.addPayload("patientId", patientId);  // Añadir ID de paciente a nivel global
+            // Añadir el array de medicamentos al payload
+            payload.put("medications", medsArray);
+            
+            // Añadir payload al mensaje
+            message.put("payload", payload);
             
             // Publicar mensaje
-            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, syncMessage.toString());
+            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, message.toString());
             
             // Confirmar envío exitoso
             Log.d(TAG, "📱→🤖 SYNC: Mensaje de sincronización enviado exitosamente");
@@ -872,14 +911,22 @@ public class MqttViewModel extends AndroidViewModel {
                 patientName = "Paciente " + patientId;
             }
             
-            // Crear mensaje JSON con el nombre
+            // Crear mensaje JSON con la nueva estructura
+            JSONObject message = new JSONObject();
+            message.put("type", "command");
+            message.put("timestamp", System.currentTimeMillis());
+            
+            // Crear payload
             JSONObject payload = new JSONObject();
+            payload.put("cmd", "setPatientName");
             payload.put("patientName", patientName);
             payload.put("patientId", patientId);
-            payload.put("timestamp", System.currentTimeMillis());
+            
+            // Añadir payload al mensaje principal
+            message.put("payload", payload);
             
             // Publicar mensaje
-            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_NAME, payload.toString());
+            mqttHandler.publishMessage(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, message.toString());
             Log.d(TAG, "📱→🤖 Nombre de paciente enviado: " + patientName);
             
         } catch (JSONException | MqttException e) {
