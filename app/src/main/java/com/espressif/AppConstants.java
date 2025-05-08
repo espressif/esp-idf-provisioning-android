@@ -74,7 +74,9 @@ public class AppConstants {
     public static final String USER_TYPE_FAMILY = "family";
 
     // MQTT constants
-    public static final String MQTT_BROKER_URL = "tcp://broker.emqx.io:1883"; // Actualiza esta URL a tu broker real
+    public static final String MQTT_BROKER_URL = "ssl://broker.emqx.io:8883"; // Actualiza esta URL a tu broker real
+    public static final String MQTT_USER = "Wenerr";
+    public static final String MQTT_PASSWORD = "Wenerr14"; 
     public static final String MQTT_TOPIC_DEVICE_COMMANDS = "/device/commands";
     public static final String MQTT_TOPIC_DEVICE_STATUS = "/device/status";
     public static final String MQTT_TOPIC_DEVICE_TELEMETRY = "/device/telemetry";

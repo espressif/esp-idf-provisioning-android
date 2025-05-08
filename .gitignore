@@ -67,7 +67,7 @@ fastlane/readme.md
 app/src/main/assets/api_key.txt
 
 # Built application files
-/*/build/
+/build/
 
 # Crashlytics configuations
 com_crashlytics_export_strings.xml
@@ -93,3 +93,6 @@ local.properties
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# MQTT certificates
+/app/src/main/res/raw/ca.crt

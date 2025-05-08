@@ -132,7 +132,6 @@ public class MqttViewModel extends AndroidViewModel {
             }
         });
         
-        mqttHandler.initialize();
         deviceConnectionChecker = new DeviceConnectionChecker(getApplication());
     }
     

@@ -126,13 +126,6 @@ public class SplashActivity extends AppCompatActivity {
         // Launcher para permisos de notificación
         requestPermissionLauncher = registerForActivityResult(
                 new ActivityResultContracts.RequestPermission(), isGranted -> {
-                    if (isGranted) {
-                        Log.d(TAG, "Permiso de notificaciones concedido");
-                    } else {
-                        Log.w(TAG, "Permiso de notificaciones denegado");
-                    }
-                    
-                    // Continuar con el flujo normal
                     startUserFlow();
                 });
         
@@ -144,7 +137,6 @@ public class SplashActivity extends AppCompatActivity {
                         Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
                         handleGoogleSignInResult(task);
                     } else {
-                        Log.e(TAG, "Resultado nulo de Google Sign In");
                         showUserTypeDialog();
                     }
                 });
@@ -158,15 +150,9 @@ public class SplashActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
                     != PackageManager.PERMISSION_GRANTED) {
-                Log.d(TAG, "Solicitando permiso de notificaciones");
-                
-                // Solicitar permiso
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
                 
-                // No continuamos con el flujo aquí, lo hacemos en el callback del launcher
                 return;
-            } else {
-                Log.d(TAG, "Permiso de notificaciones ya concedido");
             }
         }
         
@@ -184,17 +170,9 @@ public class SplashActivity extends AppCompatActivity {
             String packageName = getPackageName();
             
             if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                checkBatteryOptimization();
-                
                 // Primero verificar batería, luego alarmas, finalmente continuar
-                new Handler().postDelayed(() -> {
-                    checkAlarmPermissions();
-                    
-                    // Y luego continuar con el flujo normal
-                    new Handler().postDelayed(() -> {
-                        checkUserStatus();
-                    }, 500);
-                }, 500);
+                checkAlarmPermissions();
+                checkUserStatus();
                 
                 return;
             }
@@ -202,11 +180,7 @@ public class SplashActivity extends AppCompatActivity {
         
         // Si no se necesitó verificar batería, verificar alarmas
         checkAlarmPermissions();
-        
-        // Continuar con el flujo normal después de un breve delay
-        new Handler().postDelayed(() -> {
-            checkUserStatus();
-        }, 500);
+        checkUserStatus();
     }
 
     /**
@@ -218,11 +192,8 @@ public class SplashActivity extends AppCompatActivity {
         
         // Si no se completó el onboarding, siempre mostrar la selección de tipo
         if (!onboardingCompleted) {
-            Log.d(TAG, "El onboarding no está completo, mostrando selección de tipo de usuario");
-            
             // Asegurarnos de que no queden datos parciales
             userRepository.resetAppState();
-            
             // Mostrar primera pantalla del flujo
             showUserTypeDialog();
             return;
@@ -237,34 +208,21 @@ public class SplashActivity extends AppCompatActivity {
         
         // Corregir inconsistencias si las hay
         if (!isReallyLoggedIn && userRepository.isUserLoggedIn()) {
-            Log.d(TAG, "Inconsistencia detectada: Firebase muestra sin sesión pero SharedPreferences dice que hay sesión");
             userRepository.setLoggedIn(false);
         }
         
         boolean isLoggedIn = isReallyLoggedIn;
         boolean hasCompletedProvisioning = userRepository.hasCompletedProvisioning();
 
-        Log.d(TAG, "======= DIAGNÓSTICO DE FLUJO DE USUARIO =======");
-        Log.d(TAG, "Tipo de usuario: " + userType);
-        Log.d(TAG, "¿Está logueado en Firebase?: " + isReallyLoggedIn);
-        Log.d(TAG, "¿Está logueado en Prefs?: " + userRepository.isUserLoggedIn());
-        Log.d(TAG, "¿Completó provisioning?: " + hasCompletedProvisioning);
-        Log.d(TAG, "¿Completó onboarding?: " + onboardingCompleted);
-        Log.d(TAG, "ID de paciente conectado: " + userRepository.getConnectedPatientId());
-
         if (userType == null) {
-            Log.d(TAG, "Flujo seleccionado: PRIMERA VEZ - mostrar selección de tipo");
             showUserTypeDialog();
         } else if (userType.equals(AppConstants.USER_TYPE_PATIENT) && !isLoggedIn) {
-            Log.d(TAG, "Flujo seleccionado: PACIENTE SIN LOGIN - mostrar inicio de sesión");
             showGoogleSignInDialog();
         } else if (userType.equals(AppConstants.USER_TYPE_FAMILY) && 
                   userRepository.getConnectedPatientId() == null) {
-            Log.d(TAG, "Flujo seleccionado: FAMILIAR SIN CONEXIÓN - mostrar conexión con paciente");
             showFamilyConnectionDialog();
         } else {
             if (!isLoggedIn) {
-                Log.d(TAG, "Estado inconsistente: el usuario debería estar logueado pero no lo está. Redirigiendo a login");
                 if (userType.equals(AppConstants.USER_TYPE_PATIENT)) {
                     showGoogleSignInDialog();
                 } else {
@@ -272,8 +230,6 @@ public class SplashActivity extends AppCompatActivity {
                 }
                 return;
             }
-            
-            Log.d(TAG, "Flujo seleccionado: USUARIO CONFIGURADO - verificar dispositivo conectado");
             checkDeviceConnection();
         }
     }
@@ -289,10 +245,6 @@ public class SplashActivity extends AppCompatActivity {
         progressDialog.setCancelable(false);
         progressDialog.show();
         
-        Log.d(TAG, "==== Verificación en checkDeviceConnection ====");
-        Log.d(TAG, "Tipo de usuario: " + userRepository.getUserType());
-        Log.d(TAG, "¿Está logueado?: " + userRepository.isUserLoggedIn());
-        
         // Verificar si hay dispositivo conectado
         DeviceConnectionChecker deviceChecker = new DeviceConnectionChecker(this);
         deviceChecker.checkConnection(new DeviceConnectionChecker.ConnectionCheckListener() {
@@ -305,13 +257,11 @@ public class SplashActivity extends AppCompatActivity {
                     }
 
                     if (isConnected) {
-                        Log.d(TAG, "Dispositivo conectado - iniciando MainActivity");
                         // ¡Genial! Un dispositivo está conectado, vamos directo al MainActivity
                         Intent intent = new Intent(SplashActivity.this, MainActivity.class);
                         startActivity(intent);
                         finish();
                     } else {
-                        Log.d(TAG, "Dispositivo NO conectado - iniciando EspMainActivity");
                         // No hay dispositivo conectado, mostrar la pantalla de provisioning
                         startEspMainActivity();
                     }
@@ -323,13 +273,11 @@ public class SplashActivity extends AppCompatActivity {
 
             @Override
             public void onError(String errorMessage) {
-                Log.e(TAG, "Error en verificación de conexión: " + errorMessage);
                 runOnUiThread(() -> {
                     // Cerrar el diálogo de progreso
                     if (progressDialog.isShowing()) {
                         progressDialog.dismiss();
                     }
-                    
                     // Mostrar error específico de conexión de dispositivo
                     showErrorDialog(errorMessage);
                     
@@ -346,9 +294,6 @@ public class SplashActivity extends AppCompatActivity {
     private void showErrorDialog(String errorMessage) {
         String title = "Error de conexión";
         String message = "No se pudo conectar con el dispositivo. Por favor verifica que esté encendido e intenta nuevamente.";
-        
-        // Registrar el error para depuración
-        Log.e(TAG, "Error de conexión de dispositivo: " + errorMessage);
         
         new AlertDialog.Builder(this)
             .setTitle(title)
@@ -370,10 +315,6 @@ public class SplashActivity extends AppCompatActivity {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
-        
-        // Registrar el error original para depuración
-        Log.e(TAG, "Error original al verificar ID: " + errorMessage);
-        
         // Categorizar el error
         String messageToShow;
         String dialogTitle;
@@ -608,12 +549,9 @@ public class SplashActivity extends AppCompatActivity {
         try {
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
             if (account == null) {
-                Log.e(TAG, "Google Sign In account is null");
                 showUserTypeDialog();
                 return;
             }
-            
-            Log.d(TAG, "Google Sign In successful, account: " + account.getEmail());
 
             // Usar el repositorio para iniciar sesión
             userRepository.signInWithGoogle(account, new UserRepository.AuthCallback() {
@@ -621,25 +559,18 @@ public class SplashActivity extends AppCompatActivity {
                 public void onSuccess(User user) {
                     // IMPORTANTE: Marcar que se completó el onboarding
                     userRepository.setOnboardingCompleted(true);
-                    
-                    // Verificar estado de login después de autenticación exitosa
-                    Log.d(TAG, "Después de login exitoso, estado de login: " + userRepository.isUserLoggedIn());
-                    Log.d(TAG, "Datos de usuario: tipo=" + user.getUserType() + ", patientId=" + user.getPatientId());
-                    
+
                     // Si es un paciente nuevo, mostrar su ID único
-                    if (AppConstants.USER_TYPE_PATIENT.equals(user.getUserType()) && 
-                        user.getPatientId() != null) {
-                        
+                    if (AppConstants.USER_TYPE_PATIENT.equals(user.getUserType()) &&
+                            user.getPatientId() != null) {
+
                         // Mostrar el ID al paciente para que pueda compartirlo
-                        runOnUiThread(() -> {
-                            showPatientIdDialog(user.getPatientId());
-                        });
+                        runOnUiThread(() -> showPatientIdDialog(user.getPatientId()));
                     } else {
                         // Continuar con el flujo normal
                         runOnUiThread(() -> {
-                            Log.d(TAG, "Inicio de sesión exitoso para: " + user.getName());
-                            Toast.makeText(SplashActivity.this, "Bienvenido " + user.getName(), 
-                                        Toast.LENGTH_SHORT).show();
+                            Toast.makeText(SplashActivity.this, "Bienvenido " + user.getName(),
+                                    Toast.LENGTH_SHORT).show();
                             checkDeviceConnection();
                         });
                     }
@@ -650,10 +581,6 @@ public class SplashActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         // IMPORTANTE: Restablecer estado en caso de error
                         userRepository.setOnboardingCompleted(false);
-                        
-                        Log.e(TAG, "Error en inicio de sesión: " + errorMessage);
-                        Toast.makeText(SplashActivity.this, "Error: " + errorMessage, 
-                                    Toast.LENGTH_SHORT).show();
                         showUserTypeDialog();
                     });
                 }
@@ -662,14 +589,10 @@ public class SplashActivity extends AppCompatActivity {
         } catch (ApiException e) {
             // Restablecer estado en caso de error
             userRepository.setOnboardingCompleted(false);
-            
-            Log.e(TAG, "Google Sign In failed: " + e.getStatusCode() + " - " + e.getMessage());
             showUserTypeDialog();
         } catch (Exception e) {
             // Restablecer estado en caso de error
             userRepository.setOnboardingCompleted(false);
-            
-            Log.e(TAG, "Unexpected error in Google Sign In: " + e.getMessage(), e);
             showUserTypeDialog();
         }
     }
@@ -717,12 +640,6 @@ public class SplashActivity extends AppCompatActivity {
      * Inicia la actividad de provisioning
      */
     private void startEspMainActivity() {
-        Log.d(TAG, "========== Iniciando EspMainActivity ==========");
-        Log.d(TAG, "Resumen de estado de usuario:");
-        Log.d(TAG, "- Tipo: " + userRepository.getUserType());
-        Log.d(TAG, "- Logueado: " + userRepository.isUserLoggedIn());
-        Log.d(TAG, "- Provisioning completado: " + userRepository.hasCompletedProvisioning());
-        
         Intent intent = new Intent(this, EspMainActivity.class);
         startActivity(intent);
         finish(); // Cerrar esta actividad
@@ -736,7 +653,6 @@ public class SplashActivity extends AppCompatActivity {
             try {
                 activeDialog.dismiss();
             } catch (Exception e) {
-                Log.e(TAG, "Error al cerrar diálogo: " + e.getMessage());
             }
         }
         
@@ -745,8 +661,8 @@ public class SplashActivity extends AppCompatActivity {
             try {
                 batteryOptimizationDialog.dismiss();
                 batteryOptimizationDialog = null;
-            } catch (Exception e) {
-                Log.e(TAG, "Error al cerrar diálogo de optimización de batería: " + e.getMessage());
+            } finally {
+
             }
         }
     }
@@ -762,7 +678,6 @@ public class SplashActivity extends AppCompatActivity {
                 apiAvailability.getErrorDialog(this, resultCode, 1)
                         .show();
             } else {
-                Log.e(TAG, "Este dispositivo no es compatible con Google Play Services");
                 Toast.makeText(this, "Este dispositivo no es compatible con Google Play Services", 
                             Toast.LENGTH_LONG).show();
             }
@@ -781,59 +696,6 @@ public class SplashActivity extends AppCompatActivity {
     protected void onDestroy() {
         closeActiveDialog();
         super.onDestroy();
-    }
-
-    /**
-     * Verifica y solicita la exención de optimización de batería
-     */
-    private void checkBatteryOptimization() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-            String packageName = getPackageName();
-            
-            if (!powerManager.isIgnoringBatteryOptimizations(packageName)) {
-                Log.d(TAG, "La app está sujeta a optimizaciones de batería, solicitando exención");
-                
-                // Verificar que la actividad sigue activa
-                if (isFinishing() || isDestroyed()) {
-                    Log.w(TAG, "No se muestra diálogo de optimización de batería, actividad terminando");
-                    return;
-                }
-                
-                // Mostrar un diálogo explicando por qué se necesita la exención
-                AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                    .setTitle("Optimización de batería")
-                    .setMessage("Para garantizar que recibas recordatorios de medicación a tiempo, necesitamos desactivar la optimización de batería para MEDIWATCH.\n\n¿Deseas continuar?")
-                    .setPositiveButton("Configurar", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // Iniciar intent para solicitar la exención
-                            Intent intent = new Intent();
-                            intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-                            intent.setData(Uri.parse("package:" + packageName));
-                            startActivity(intent);
-                        }
-                    })
-                    .setNegativeButton("Más tarde", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            // Continuar sin exención
-                            Log.w(TAG, "Usuario optó por no desactivar optimizaciones de batería");
-                        }
-                    })
-                    .setCancelable(false);
-                
-                // Guardar referencia al diálogo
-                batteryOptimizationDialog = builder.create();
-                
-                // Mostrar el diálogo solo si la actividad sigue activa
-                if (!isFinishing() && !isDestroyed()) {
-                    batteryOptimizationDialog.show();
-                }
-            } else {
-                Log.d(TAG, "La app ya está exenta de optimizaciones de batería");
-            }
-        }
     }
 
     /**
@@ -859,8 +721,6 @@ public class SplashActivity extends AppCompatActivity {
             
             // Registrar el canal
             notificationManager.createNotificationChannel(channel);
-            
-            Log.d(TAG, "Canal de notificaciones configurado con prioridad alta");
         }
     }
 
@@ -869,7 +729,6 @@ public class SplashActivity extends AppCompatActivity {
             AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
             
             if (!alarmManager.canScheduleExactAlarms()) {
-                Log.d(TAG, "La app no puede programar alarmas exactas, solicitando permiso");
                 
                 // Mostrar diálogo explicativo
                 AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -878,16 +737,11 @@ public class SplashActivity extends AppCompatActivity {
                     .setPositiveButton("Configurar", (dialog, which) -> {
                         Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                         startActivity(intent);
-                    })
-                    .setNegativeButton("Más tarde", (dialog, which) -> {
-                        Log.w(TAG, "Usuario optó por no conceder permiso de alarmas exactas");
                     });
                     
                 if (!isFinishing() && !isDestroyed()) {
                     builder.show();
                 }
-            } else {
-                Log.d(TAG, "La app puede programar alarmas exactas");
             }
         }
     }

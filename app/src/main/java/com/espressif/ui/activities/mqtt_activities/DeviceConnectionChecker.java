@@ -49,7 +49,13 @@ public class DeviceConnectionChecker {
             @Override
             public void messageArrived(String topic, MqttMessage mqttMessage) {
                 String payload = new String(mqttMessage.getPayload());
-                
+
+                // Filtrar mensajes de tópicos no relevantes
+                if (!topic.startsWith("/device/status") && !topic.startsWith("/device/commands")) {
+                    Log.d(TAG, "Mensaje ignorado de tópico no relevante: " + topic);
+                    return;
+                }
+
                 // Auto-detección: Si recibimos un mensaje en /device/status y no tenemos
                 // un dispositivo guardado, intentamos extraer un ID y guardarlo
                 if (topic.contains("/device/status")) {
@@ -58,11 +64,8 @@ public class DeviceConnectionChecker {
                         Log.d(TAG, "Procesando mensaje de status para auto-detección: " + json.toString());
                         SharedPreferencesHelper prefsHelper = SharedPreferencesHelper.getInstance(context);
                         String savedDeviceId = prefsHelper.getConnectedDeviceId();
-                        
-                        // Si no tenemos un dispositivo guardado, guardar este automáticamente
-                        // Relajar la condición de detección (no requerir explícitamente "type")
+
                         if (savedDeviceId == null || savedDeviceId.isEmpty()) {
-                            // Extraer un ID, o generar uno si no encontramos
                             String deviceId = "";
                             if (json.has("deviceId")) {
                                 deviceId = json.getString("deviceId");
@@ -73,15 +76,10 @@ public class DeviceConnectionChecker {
                                 deviceId = "esp32-" + UUID.randomUUID().toString().substring(0, 8);
                                 Log.d(TAG, "Usando UUID para generar deviceId: " + deviceId);
                             }
-                            
-                            // Guardar este dispositivo en preferencias
+
                             Log.d(TAG, "¡Auto-detección exitosa! Guardando dispositivo con ID: " + deviceId);
                             prefsHelper.saveConnectedDeviceId(deviceId);
-                            
-                            // Marcar provisioning como completado
                             prefsHelper.setProvisioningCompleted(true);
-                            
-                            // Notificar como conectado
                             notifyListenerAndCleanup(true);
                             return;
                         } else {
@@ -90,34 +88,29 @@ public class DeviceConnectionChecker {
                     } catch (JSONException e) {
                         Log.e(TAG, "Error procesando mensaje de status para auto-detección", e);
                         Log.e(TAG, "Mensaje problemático: " + payload);
-                        e.printStackTrace();
                     }
                 }
-                
+
                 // Verificar si es nuestro propio mensaje PING
                 if (payload.contains("\"type\":\"ping\"") && payload.contains("\"clientId\":\"" + clientId + "\"")) {
                     return; // Ignorar nuestros propios mensajes ping
                 }
-                
-                // Verificar si es un PONG para nosotros usando String.contains (método rápido)
+
+                // Verificar si es un PONG para nosotros
                 if (payload.contains("\"type\":\"pong\"") && payload.contains("\"clientId\":\"" + clientId + "\"")) {
-                    // Determinar si está online
                     boolean isOnline = payload.contains("\"status\":\"online\"") || !payload.contains("\"status\":\"offline\"");
-                    
-                    // Notificar al listener
                     notifyListenerAndCleanup(isOnline);
                     return;
                 }
-                
+
                 // Intentar con la clase CustomMqttMessage
                 try {
                     CustomMqttMessage message = CustomMqttMessage.fromJson(payload);
-                    
-                    // Solo procesamos si es un mensaje PONG
-                    if (message.isPong()) {
+
+                    // Verificar si el mensaje es de tipo "pong"
+                    if ("pong".equals(message.getType())) {
                         String msgClientId = message.getClientId();
-                        
-                        // Verificar si el mensaje es para esta instancia
+
                         if (clientId.equals(msgClientId)) {
                             notifyListenerAndCleanup(message.isOnline());
                         }
