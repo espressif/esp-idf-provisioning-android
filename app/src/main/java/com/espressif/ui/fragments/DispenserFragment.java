@@ -130,22 +130,14 @@ public class DispenserFragment extends Fragment implements
     private String getCurrentPatientId() {
         if (patientId == null || patientId.isEmpty()) {
             UserRepository userRepo = UserRepository.getInstance(requireContext());
-            patientId = userRepo.getConnectedPatientId();
+            patientId = userRepo.getSelectedPatientId();
             
-            // Verificar si pudimos obtener un ID válido
-            if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
+            if (patientId == null) {
                 Log.e(TAG, "No se pudo obtener un ID de paciente válido");
                 showErrorMessage("Error: No se puede determinar el paciente");
-                
-                // Como fallback, intentamos obtener el ID seleccionado
-                String fallbackId = userRepo.getSelectedPatientId();
-                if (fallbackId != null && !fallbackId.isEmpty() && !"current_user_id".equals(fallbackId)) {
-                    patientId = fallbackId;
-                    Log.d(TAG, "Usando ID fallback: " + patientId);
-                }
+                return null;
             }
         }
-        
         return patientId;
     }
     

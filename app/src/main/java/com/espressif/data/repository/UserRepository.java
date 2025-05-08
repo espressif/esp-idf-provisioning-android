@@ -662,25 +662,68 @@ public class UserRepository {
      * @return El ID del paciente seleccionado o null si no hay ninguno
      */
     public String getSelectedPatientId() {
-        // En el caso de un paciente, devolver su propio ID de paciente
+        // Cache temporal para evitar múltiples llamadas
+        String cachedId = null;
+        
+        // Estrategia 1: Usuario es paciente
         if (AppConstants.USER_TYPE_PATIENT.equals(getUserType())) {
-            String patientId = preferencesHelper.getPatientId();
-            // Verificar que no sea null ni "current_user_id"
-            if (patientId != null && !patientId.isEmpty() && !"current_user_id".equals(patientId)) {
-                Log.d(TAG, "getSelectedPatientId: Devolviendo ID de paciente (usuario es paciente): " + patientId);
-                return patientId;
+            cachedId = preferencesHelper.getPatientId();
+            if (isValidPatientId(cachedId)) {
+                Log.d(TAG, "✓ ID obtenido de paciente directo: " + cachedId);
+                return cachedId;
             }
         }
         
-        // En el caso de un familiar, devolver el ID del paciente conectado
-        String connectedPatientId = getConnectedPatientId();
-        if (connectedPatientId != null && !connectedPatientId.isEmpty() && !"current_user_id".equals(connectedPatientId)) {
-            Log.d(TAG, "getSelectedPatientId: Devolviendo ID de paciente conectado: " + connectedPatientId);
-            return connectedPatientId;
+        // Estrategia 2: Usuario es familiar
+        cachedId = preferencesHelper.getConnectedPatientId();
+        if (isValidPatientId(cachedId)) {
+            Log.d(TAG, "✓ ID obtenido de paciente conectado: " + cachedId);
+            return cachedId;
         }
         
-        // Si llegamos aquí, no se encontró un ID válido
+        // Estrategia 3: Firebase Auth
+        if (firebaseDataSource.isInitialized()) {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user != null) {
+                String firebaseId = getUserPatientIdFromFirebase(user.getUid());
+                if (isValidPatientId(firebaseId)) {
+                    // Guardar en preferencias para futuros accesos
+                    preferencesHelper.savePatientId(firebaseId);
+                    Log.d(TAG, "✓ ID recuperado de Firebase: " + firebaseId);
+                    return firebaseId;
+                }
+            }
+        }
+        
+        Log.e(TAG, "✗ No se pudo obtener un ID de paciente válido");
         return null;
+    }
+
+    private boolean isValidPatientId(String id) {
+        if (id == null || id.isEmpty() || "current_user_id".equals(id)) {
+            return false;
+        }
+        
+        // Validación adicional: debe tener el formato correcto (6 caracteres alfanuméricos)
+        return id.matches("[A-Z0-9]{6}");
+    }
+
+    private String getUserPatientIdFromFirebase(String userId) {
+        // Intentar obtener el ID mapeado en Firebase
+        DatabaseReference userRef = FirebaseDatabase.getInstance()
+                .getReference("auth_mappings")
+                .child(userId);
+        
+        final String[] patientId = {null};
+        
+        // Realizar consulta sincrónica (esto es seguro solo en background)
+        userRef.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                patientId[0] = task.getResult().getValue(String.class);
+            }
+        });
+        
+        return patientId[0];
     }
 
     /**

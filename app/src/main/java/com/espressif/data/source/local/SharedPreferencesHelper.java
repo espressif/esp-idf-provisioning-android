@@ -93,14 +93,12 @@ public class SharedPreferencesHelper {
      * @param patientId ID único del paciente
      */
     public void savePatientId(String patientId) {
-        // No guardar IDs inválidos
-        if (patientId == null || patientId.isEmpty() || "current_user_id".equals(patientId)) {
-            Log.w("SharedPrefsHelper", "Intento de guardar ID de paciente inválido: " + patientId);
-            return;
+        if (patientId != null && !patientId.isEmpty()) {
+            editor.putString(AppConstants.KEY_PATIENT_ID, patientId)
+                 .putString(AppConstants.KEY_CONNECTED_PATIENT_ID, patientId)
+                 .apply();
+            Log.d("SharedPrefsHelper", "ID de paciente guardado: " + patientId);
         }
-        
-        Log.d("SharedPrefsHelper", "Guardando ID de paciente: " + patientId);
-        preferences.edit().putString(AppConstants.KEY_PATIENT_ID, patientId).apply();
     }
 
     /**
@@ -108,16 +106,15 @@ public class SharedPreferencesHelper {
      * @return El ID del paciente o null si no está disponible
      */
     public String getPatientId() {
-        String patientId = preferences.getString(AppConstants.KEY_PATIENT_ID, null);
-        
-        // Si el valor almacenado es el valor problemático, devolver null
-        if ("current_user_id".equals(patientId)) {
-            Log.w("SharedPrefsHelper", "Se encontró un ID de paciente inválido almacenado, devolviendo null");
-            return null;
-        }
-        
-        Log.d("SharedPrefsHelper", "Obteniendo ID de paciente: " + patientId);
-        return patientId;
+        String id = preferences.getString(AppConstants.KEY_PATIENT_ID, null);
+        // No devolver IDs inválidos
+        return ("current_user_id".equals(id)) ? null : id;
+    }
+
+    public void clearPatientId() {
+        editor.remove(AppConstants.KEY_PATIENT_ID)
+             .remove(AppConstants.KEY_CONNECTED_PATIENT_ID)
+             .apply();
     }
 
     /**
