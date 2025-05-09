@@ -1,7 +1,8 @@
 package com.espressif.ui.viewmodels;
 
 import android.app.Application;
-import android.content.DialogInterface;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -82,6 +83,8 @@ public class MqttViewModel extends AndroidViewModel {
     // Agregar estos atributos:
     private ObserverManager observerManager = new ObserverManager();
 
+    private String deviceName;  // Añadir esta variable
+    
     public MqttViewModel(@NonNull Application application) {
         super(application);
         this.notificationHelper = new NotificationHelper(application);
@@ -100,6 +103,16 @@ public class MqttViewModel extends AndroidViewModel {
             }
         } catch (Exception e) {
             Log.e(TAG, "Error al inicializar UserRepository: " + e.getMessage(), e);
+        }
+        
+        // Obtener el nombre del dispositivo de SharedPreferences
+        SharedPreferences prefs = application.getSharedPreferences(
+            AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        deviceName = prefs.getString(AppConstants.KEY_DEVICE_NAME, null);
+        
+        if (deviceName == null) {
+            Log.e(TAG, "No se encontró nombre de dispositivo");
+            return;
         }
         
         initializeMqtt();
@@ -174,17 +187,27 @@ public class MqttViewModel extends AndroidViewModel {
      * Suscribe a los tópicos relevantes
      */
     private void subscribeToTopics() {
-        try {
-            // Usar tópicos definidos en AppConstants
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TELEMETRY, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_COMMANDS, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_STATUS, 1);
-            mqttHandler.subscribe(AppConstants.MQTT_TOPIC_DEVICE_TAKEN, 1);
+        if (deviceName == null) {
+            Log.e(TAG, "No hay nombre de dispositivo configurado para suscripción");
+            return;
+        }
 
+        try {
+            // Suscribirse a los tópicos específicos del dispositivo
+            mqttHandler.subscribe(
+                AppConstants.buildTopic(AppConstants.MQTT_TOPIC_DEVICE_CONFIRMATION, deviceName), 1);
+            mqttHandler.subscribe(
+                AppConstants.buildTopic(AppConstants.MQTT_TOPIC_DEVICE_STATUS, deviceName), 1);
+            mqttHandler.subscribe(
+                AppConstants.buildTopic(AppConstants.MQTT_TOPIC_DEVICE_TELEMETRY, deviceName), 1);
+            mqttHandler.subscribe(
+                AppConstants.buildTopic(AppConstants.MQTT_TOPIC_DEVICE_RESPONSE, deviceName), 1);
+            mqttHandler.subscribe(
+                AppConstants.buildTopic(AppConstants.MQTT_TOPIC_DEVICE_TAKEN, deviceName), 1);
+
+            Log.d(TAG, "Suscrito a tópicos para dispositivo: " + deviceName);
         } catch (MqttException e) {
-            Log.e(TAG, "Error al suscribirse a tópicos", e);
+            Log.e(TAG, "Error al suscribirse a tópicos: " + e.getMessage());
             errorMessage.postValue("Error de suscripción: " + e.getMessage());
         }
     }
@@ -933,6 +956,45 @@ public class MqttViewModel extends AndroidViewModel {
             errorMessage.postValue("Error al enviar nombre: " + e.getMessage());
         } catch (Exception e) {
             Log.e(TAG, "❌ Error inesperado al enviar nombre: " + e.getMessage(), e);
+        }
+    }
+
+    public void publishMessage(String topicTemplate, String message) {
+        if (deviceName == null) {
+            Log.e(TAG, "No hay nombre de dispositivo configurado para publicar");
+            return;
+        }
+        
+        try {
+            String topic = AppConstants.buildTopic(topicTemplate, deviceName);
+            mqttHandler.publishMessage(topic, message);
+            Log.d(TAG, "Mensaje publicado en: " + topic);
+        } catch (MqttException e) {
+            Log.e(TAG, "Error al publicar mensaje: " + e.getMessage());
+            errorMessage.postValue("Error al publicar: " + e.getMessage());
+        }
+    }
+
+    public void updateDeviceName(String newDeviceName) {
+        if (newDeviceName == null || newDeviceName.isEmpty()) {
+            Log.e(TAG, "❌ Nombre de dispositivo inválido");
+            return;
+        }
+
+        Log.d(TAG, "Actualizando nombre de dispositivo: " + newDeviceName);
+        this.deviceName = newDeviceName;
+        
+        // Guardar en SharedPreferences para persistencia
+        SharedPreferences prefs = getApplication().getSharedPreferences(
+            AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
+        prefs.edit().putString(AppConstants.KEY_DEVICE_NAME, newDeviceName).apply();
+        
+        // Reconectar con nuevo nombre
+        if (mqttHandler != null && mqttHandler.isConnected()) {
+            disconnect();
+            connect(); // Esto llamará a subscribeToTopics() con el nuevo nombre
+        } else {
+            connect(); // Primera conexión
         }
     }
 }

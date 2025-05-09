@@ -74,15 +74,26 @@ public class AppConstants {
     public static final String USER_TYPE_FAMILY = "family";
 
     // MQTT constants
-    public static final String MQTT_BROKER_URL = "ssl://broker.emqx.io:8883"; // Actualiza esta URL a tu broker real
+    public static final String MQTT_BROKER_URL = "ssl://broker.emqx.io:8883";
     public static final String MQTT_USER = "Wenerr";
-    public static final String MQTT_PASSWORD = "Wenerr14"; 
-    public static final String MQTT_TOPIC_DEVICE_COMMANDS = "/device/commands";
-    public static final String MQTT_TOPIC_DEVICE_STATUS = "/device/status";
-    public static final String MQTT_TOPIC_DEVICE_TELEMETRY = "/device/telemetry";
-    public static final String MQTT_TOPIC_DEVICE_RESPONSE = "/device/response";
-    public static final String MQTT_TOPIC_DEVICE_CONFIRMATION = "/device/med_confirmation";
-    public static final String MQTT_TOPIC_DEVICE_TAKEN = "/device/taken";
-    public static final String MQTT_TOPIC_DEVICE_NAME = "/device/name";
-    public static final int MQTT_CONNECTION_TIMEOUT_MS = 5000; // 5 segundos de timeout
+    public static final String MQTT_PASSWORD = "Wenerr14";
+    
+    // Base topic structure
+    public static final String MQTT_BASE_TOPIC = "mediwatch/%s";  // %s será reemplazado por PROV_XXXXXX
+    
+    // Topic templates
+    public static final String MQTT_TOPIC_DEVICE_COMMANDS = MQTT_BASE_TOPIC + "/commands";
+    public static final String MQTT_TOPIC_DEVICE_STATUS = MQTT_BASE_TOPIC + "/status";
+    public static final String MQTT_TOPIC_DEVICE_TELEMETRY = MQTT_BASE_TOPIC + "/telemetry";
+    public static final String MQTT_TOPIC_DEVICE_RESPONSE = MQTT_BASE_TOPIC + "/response";
+    public static final String MQTT_TOPIC_DEVICE_CONFIRMATION = MQTT_BASE_TOPIC + "/med_confirmation";
+    public static final String MQTT_TOPIC_DEVICE_TAKEN = MQTT_BASE_TOPIC + "/taken";
+    public static final String MQTT_TOPIC_DEVICE_NAME = MQTT_BASE_TOPIC + "/name";
+    
+    public static final int MQTT_CONNECTION_TIMEOUT_MS = 5000;
+
+    // Helper method to build topics
+    public static String buildTopic(String topicTemplate, String deviceName) {
+        return String.format(topicTemplate, deviceName);
+    }
 }

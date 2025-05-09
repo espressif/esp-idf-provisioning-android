@@ -199,6 +199,27 @@ public class SharedPreferencesHelper {
     }
 
     /**
+     * Guarda el nombre del dispositivo ESP32 (PROV_XXXXXX)
+     * @param deviceName Nombre único del dispositivo
+     */
+    public void saveDeviceName(String deviceName) {
+        if (deviceName != null && !deviceName.isEmpty()) {
+            Log.d("SharedPrefsHelper", "Guardando nombre de dispositivo ESP32: " + deviceName);
+            editor.putString(AppConstants.KEY_DEVICE_NAME, deviceName).apply();
+        }
+    }
+
+    /**
+     * Obtiene el nombre del dispositivo ESP32
+     * @return Nombre del dispositivo o null si no está configurado
+     */
+    public String getDeviceName() {
+        String deviceName = preferences.getString(AppConstants.KEY_DEVICE_NAME, null);
+        Log.d("SharedPrefsHelper", "Obteniendo nombre de dispositivo ESP32: " + deviceName);
+        return deviceName;
+    }
+
+    /**
      * Limpiar datos de usuario (logout)
      */
     public void clearUserData() {

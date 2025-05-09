@@ -41,6 +41,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.espressif.AppConstants;
 import com.espressif.provisioning.ESPConstants;
@@ -50,6 +51,7 @@ import com.espressif.mediwatch.R;
 import com.espressif.ui.activities.MainActivity; // ← AÑADE ESTA IMPORTACIÓN
 import com.espressif.ui.activities.mqtt_activities.DeviceConnectionChecker;
 import com.espressif.ui.dialogs.ProgressDialogFragment;
+import com.espressif.ui.viewmodels.MqttViewModel;
 import com.google.android.material.button.MaterialButton;
 
 public class EspMainActivity extends AppCompatActivity {
@@ -541,15 +543,26 @@ public class EspMainActivity extends AppCompatActivity {
     }
 
     private void showSuccessDialog() {
+        // Guardar el nombre del dispositivo ESP32
+        String deviceName = provisionManager.getEspDevice().getDeviceName();
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(AppConstants.KEY_DEVICE_NAME, deviceName);
+        editor.apply();
+
+        Log.d(TAG, "Dispositivo ESP32 guardado: " + deviceName);
+        
+        // AÑADIR: Propagar el cambio al MqttViewModel
+        MqttViewModel mqttViewModel = new ViewModelProvider(this).get(MqttViewModel.class);
+        mqttViewModel.updateDeviceName(deviceName);
+
         new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.device_found))
-                .setMessage("¡Se ha encontrado un dispositivo ESP32 en la red! " +
-                        "Ya puedes comenzar a monitorearlo.")
-                .setPositiveButton(R.string.btn_ok, (dialog, which) -> {
-                    // Navegar a MainActivity cuando el usuario presione OK
-                    navigateToMainActivity();
-                })
-                .show();
+            .setTitle(getString(R.string.device_found))
+            .setMessage("¡Se ha encontrado un dispositivo ESP32 en la red! " +
+                    "Ya puedes comenzar a monitorearlo.")
+            .setPositiveButton(R.string.btn_ok, (dialog, which) -> {
+                navigateToMainActivity();
+            })
+            .show();
     }
 
     /**
