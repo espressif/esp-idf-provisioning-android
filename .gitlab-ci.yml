@@ -1,0 +1,51 @@
+variables:
+  JENKINS_URL: "https://pn-jenkins.espressif.cn:8443/job/qa_phone"
+  JENKINS_JOB: "Android-Provisioning-App"
+  JENKINS_TRIGGER_TOKEN: "android_prov_app_token"
+
+stages:
+  - trigger-and-wait-jenkins
+
+trigger_wait_jenkins:
+  stage: trigger-and-wait-jenkins
+  tags:
+    - test
+  script:
+    - curl -X POST "${JENKINS_URL}/job/${JENKINS_JOB}/buildWithParameters?token=${JENKINS_TRIGGER_TOKEN}&branch=${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME}" --user "${JENKINS_USER}:${JENKINS_API_TOKEN}"
+    - echo "Jenkins job triggered! Waiting for Jenkins to start the build..."
+    - sleep 10
+    - RESPONSE=$(curl -s "${JENKINS_URL}/job/${JENKINS_JOB}/api/json" --user "${JENKINS_USER}:${JENKINS_API_TOKEN}")
+    - BUILD_NUMBER=$(echo "$RESPONSE" | sed -n 's/.*"lastBuild":{"_class":"[^"]*","number":\([0-9]*\).*/\1/p')
+    - echo "$BUILD_NUMBER"
+    - |
+      TIMEOUT=600
+      INTERVAL=10
+      ELAPSED=0
+
+      while true; do
+        STATUS=$(curl -s "${JENKINS_URL}/job/${JENKINS_JOB}/${BUILD_NUMBER}/api/json" --user "${JENKINS_USER}:${JENKINS_API_TOKEN}" | sed -n 's/.*"result":"\([A-Z]*\)".*/\1/p')
+
+        if [[ "$STATUS" == "SUCCESS" ]]; then
+          echo "✅ Jenkins build successful!"
+          exit 0
+        elif [[ "$STATUS" == "FAILURE" || "$STATUS" == "ABORTED" ]]; then
+          echo "❌ Jenkins build failed with status: $STATUS"
+          exit 1
+        else
+          echo "⏳ Build in progress... (status: ${STATUS:-null})"
+        fi
+
+        sleep $INTERVAL
+        ELAPSED=$((ELAPSED + INTERVAL))
+
+        if [[ $ELAPSED -ge $TIMEOUT ]]; then
+          echo "⏰ Timeout reached after $((TIMEOUT / 60)) minutes. Exiting."
+          exit 1
+        fi
+      done
+
+  rules:
+    - if: '$CI_MERGE_REQUEST_TITLE =~ /^\s*(WIP|Draft)/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
