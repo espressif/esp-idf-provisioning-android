@@ -543,22 +543,44 @@ public class EspMainActivity extends AppCompatActivity {
     }
 
     private void showSuccessDialog() {
-        // Guardar el nombre del dispositivo ESP32
-        String deviceName = provisionManager.getEspDevice().getDeviceName();
+        // Obtener el nombre del dispositivo ESP32
+        String rawDeviceName = provisionManager.getEspDevice().getDeviceName();
+        
+        // Formatear el nombre para asegurar formato PROV_XXXXXX
+        String deviceName;
+        if (rawDeviceName != null && !rawDeviceName.isEmpty()) {
+            if (rawDeviceName.startsWith("PROV_")) {
+                deviceName = rawDeviceName;
+            } else {
+                // Extraer los últimos 6 caracteres o usar todo el string si es más corto
+                String suffix = rawDeviceName.length() > 6 
+                    ? rawDeviceName.substring(rawDeviceName.length() - 6) 
+                    : rawDeviceName;
+                // Convertir a mayúsculas y añadir prefijo PROV_
+                deviceName = "PROV_" + suffix.toUpperCase();
+            }
+        } else {
+            // Generar un ID aleatorio si no hay nombre
+            deviceName = "PROV_" + String.format("%06X", (int)(Math.random() * 0xFFFFFF));
+        }
+
+        Log.d(TAG, "Nombre original: " + rawDeviceName);
+        Log.d(TAG, "Nombre formateado: " + deviceName);
+
+        // Guardar el nombre formateado
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(AppConstants.KEY_DEVICE_NAME, deviceName);
         editor.apply();
 
-        Log.d(TAG, "Dispositivo ESP32 guardado: " + deviceName);
-        
-        // AÑADIR: Propagar el cambio al MqttViewModel
+        // Propagar el cambio al MqttViewModel
         MqttViewModel mqttViewModel = new ViewModelProvider(this).get(MqttViewModel.class);
         mqttViewModel.updateDeviceName(deviceName);
 
         new AlertDialog.Builder(this)
             .setTitle(getString(R.string.device_found))
             .setMessage("¡Se ha encontrado un dispositivo ESP32 en la red! " +
-                    "Ya puedes comenzar a monitorearlo.")
+                    "Ya puedes comenzar a monitorearlo.\n" +
+                    "ID del dispositivo: " + deviceName)
             .setPositiveButton(R.string.btn_ok, (dialog, which) -> {
                 navigateToMainActivity();
             })
