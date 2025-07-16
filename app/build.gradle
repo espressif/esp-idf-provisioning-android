@@ -17,9 +17,9 @@ android {
     defaultConfig {
         applicationId "com.espressif.wifi_provisioning"
         minSdkVersion 26
-        targetSdkVersion 34
-        versionCode 24
-        versionName "2.2.5 - ${getGitHash()}"
+        targetSdkVersion 35
+        versionCode 25
+        versionName "2.3.0 - ${getGitHash()}"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-proguard-rules.pro"
     }
@@ -74,6 +74,16 @@ dependencies {
     implementation 'com.github.firdausmaulan:AVLoadingIndicatorView:2.3.0'
 
     implementation 'com.google.android.gms:play-services-threadnetwork:16.2.1'
+
+    // CameraX
+    def camerax_version = "1.2.3"
+    implementation "androidx.camera:camera-core:${camerax_version}"
+    implementation "androidx.camera:camera-camera2:${camerax_version}"
+    implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+    implementation "androidx.camera:camera-view:${camerax_version}"
+
+    // ML Kit for QR code scanning
+    implementation 'com.google.mlkit:barcode-scanning:17.3.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

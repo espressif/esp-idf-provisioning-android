@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_qr_code_frame"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Top-left corner -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@drawable/qr_code_corner" />
+
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@drawable/qr_code_corner" />
+    </LinearLayout>
+
+    <!-- Top-right corner -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="end"
+            android:background="@drawable/qr_code_corner" />
+
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:background="@drawable/qr_code_corner" />
+    </LinearLayout>
+
+    <!-- Bottom-left corner -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:background="@drawable/qr_code_corner" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:background="@drawable/qr_code_corner" />
+    </LinearLayout>
+
+    <!-- Bottom-right corner -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:orientation="vertical">
+
+        <View
+            android:layout_width="4dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:background="@drawable/qr_code_corner" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="end"
+            android:background="@drawable/qr_code_corner" />
+    </LinearLayout>
+
+</FrameLayout> 

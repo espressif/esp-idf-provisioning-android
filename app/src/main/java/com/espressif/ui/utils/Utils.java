@@ -15,12 +15,15 @@
 package com.espressif.ui.utils;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.DialogInterface;
 
 import androidx.appcompat.app.AlertDialog;
 
 import com.espressif.provisioning.ESPProvisionManager;
 import com.espressif.wifi_provisioning.R;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 
 public class Utils {
 
@@ -55,5 +58,21 @@ public class Utils {
         });
 
         builder.show();
+    }
+
+    /**
+     * Check the device to make sure it has the Google Play Services APK.
+     *
+     * @return Returns true if Google Api is available.
+     */
+    public static boolean isPlayServicesAvailable(Context appContext) {
+        try {
+            GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+            int resultCode = apiAvailability.isGooglePlayServicesAvailable(appContext);
+            return resultCode == ConnectionResult.SUCCESS;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

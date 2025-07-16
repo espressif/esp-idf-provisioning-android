@@ -30,6 +30,16 @@ import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresPermission;
+import androidx.camera.core.AspectRatio;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ExperimentalGetImage;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.LifecycleOwner;
 
 import com.budiyev.android.codescanner.CodeScanner;
 import com.budiyev.android.codescanner.DecodeCallback;
@@ -42,6 +52,10 @@ import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.barcode.Barcode;
 import com.google.android.gms.vision.barcode.BarcodeDetector;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.mlkit.vision.barcode.BarcodeScanner;
+import com.google.mlkit.vision.barcode.BarcodeScanning;
+import com.google.mlkit.vision.common.InputImage;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.Result;
 
@@ -51,6 +65,9 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * App can use this class to provision device. It has APIs to scan devices, scan QR code and connect with the device to get
@@ -161,74 +178,15 @@ public class ESPProvisionManager {
                     Log.d(TAG, "QR Code Data : " + barcode.rawValue);
                     String scannedData = barcode.rawValue;
 
-                    try {
-                        JSONObject jsonObject = new JSONObject(scannedData);
+                    Handler handler = new Handler(Looper.getMainLooper());
+                    handler.post(new Runnable() {
 
-                        String deviceName = jsonObject.optString("name");
-                        String pop = jsonObject.optString("pop");
-                        String transport = jsonObject.optString("transport");
-                        int security = jsonObject.optInt("security", ESPConstants.SecurityType.SECURITY_2.ordinal());
-                        String userName = jsonObject.optString("username");
-                        String password = jsonObject.optString("password");
-                        isScanned = true;
-
-                        if (qrCodeScanListener != null) {
-                            qrCodeScanListener.qrCodeScanned();
+                        @Override
+                        public void run() {
+                            cameraSourcePreview.release();
                         }
-
-                        Handler handler = new Handler(Looper.getMainLooper());
-                        handler.post(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                cameraSourcePreview.release();
-                            }
-                        });
-
-                        ESPConstants.TransportType transportType = null;
-                        ESPConstants.SecurityType securityType = null;
-
-                        if (!TextUtils.isEmpty(transport)) {
-
-                            if (transport.equalsIgnoreCase("softap")) {
-
-                                transportType = ESPConstants.TransportType.TRANSPORT_SOFTAP;
-
-                            } else if (transport.equalsIgnoreCase("ble")) {
-
-                                transportType = ESPConstants.TransportType.TRANSPORT_BLE;
-
-                            } else {
-                                qrCodeScanListener.onFailure(new RuntimeException("Transport type not supported"));
-                            }
-
-                        } else {
-                            qrCodeScanListener.onFailure(new RuntimeException("Transport is not available"));
-                        }
-
-                        securityType = setSecurityType(security);
-
-                        espDevice = new ESPDevice(context, transportType, securityType);
-                        espDevice.setDeviceName(deviceName);
-                        espDevice.setProofOfPossession(pop);
-                        espDevice.setUserName(userName);
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && transportType.equals(ESPConstants.TransportType.TRANSPORT_SOFTAP)) {
-
-                            WiFiAccessPoint wiFiDevice = new WiFiAccessPoint();
-                            wiFiDevice.setWifiName(deviceName);
-                            wiFiDevice.setPassword(password);
-                            espDevice.setWifiDevice(wiFiDevice);
-                            qrCodeScanListener.deviceDetected(espDevice);
-                        } else {
-                            isDeviceAvailable(espDevice, password, qrCodeScanListener);
-                        }
-
-                    } catch (JSONException e) {
-
-                        e.printStackTrace();
-                        qrCodeScanListener.onFailure(new RuntimeException("QR code not valid"));
-                    }
+                    });
+                    processQrCode(scannedData, qrCodeScanListener);
                 }
             }
         });
@@ -258,82 +216,206 @@ public class ESPProvisionManager {
 
                     Log.d(TAG, "QR Code Data : " + scannedData);
 
-                    try {
-                        JSONObject jsonObject = new JSONObject(scannedData);
+                    Handler handler = new Handler(Looper.getMainLooper());
+                    handler.post(new Runnable() {
 
-                        String deviceName = jsonObject.optString("name");
-                        String pop = jsonObject.optString("pop");
-                        String transport = jsonObject.optString("transport");
-                        int security = jsonObject.optInt("security", ESPConstants.SecurityType.SECURITY_2.ordinal());
-                        String userName = jsonObject.optString("username");
-                        String password = jsonObject.optString("password");
-                        isScanned = true;
-
-                        if (qrCodeScanListener != null) {
-                            qrCodeScanListener.qrCodeScanned();
+                        @Override
+                        public void run() {
+                            codeScanner.releaseResources();
                         }
+                    });
+                    processQrCode(scannedData, qrCodeScanListener);
 
-                        Handler handler = new Handler(Looper.getMainLooper());
-                        handler.post(new Runnable() {
-
-                            @Override
-                            public void run() {
-                                codeScanner.releaseResources();
-                            }
-                        });
-
-                        ESPConstants.TransportType transportType = null;
-                        ESPConstants.SecurityType securityType = null;
-
-                        if (!TextUtils.isEmpty(transport)) {
-
-                            if (transport.equalsIgnoreCase("softap")) {
-
-                                transportType = ESPConstants.TransportType.TRANSPORT_SOFTAP;
-
-                            } else if (transport.equalsIgnoreCase("ble")) {
-
-                                transportType = ESPConstants.TransportType.TRANSPORT_BLE;
-
-                            } else {
-                                Log.e(TAG, "" + transport + " Transport type is not supported");
-                                qrCodeScanListener.onFailure(new RuntimeException("Transport type is not supported"));
-                                return;
-                            }
-                        } else {
-                            Log.e(TAG, "Transport is not available in QR code data");
-                            qrCodeScanListener.onFailure(new RuntimeException("QR code is not valid"), scannedData);
-                            return;
-                        }
-
-                        securityType = setSecurityType(security);
-
-                        espDevice = new ESPDevice(context, transportType, securityType);
-                        espDevice.setDeviceName(deviceName);
-                        espDevice.setProofOfPossession(pop);
-                        espDevice.setUserName(userName);
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && transportType.equals(ESPConstants.TransportType.TRANSPORT_SOFTAP)) {
-
-                            WiFiAccessPoint wiFiDevice = new WiFiAccessPoint();
-                            wiFiDevice.setWifiName(deviceName);
-                            wiFiDevice.setPassword(password);
-                            espDevice.setWifiDevice(wiFiDevice);
-                            qrCodeScanListener.deviceDetected(espDevice);
-                        } else {
-                            isDeviceAvailable(espDevice, password, qrCodeScanListener);
-                        }
-
-                    } catch (JSONException e) {
-
-                        e.printStackTrace();
-                        qrCodeScanListener.onFailure(new RuntimeException("QR code is not valid"), scannedData);
-                    }
                 } else {
                     qrCodeScanListener.onFailure(new RuntimeException("QR code is not valid"), scannedData);
                 }
             }
         });
+    }
+
+    /**
+     * This method scans QR code from, get the device information and checks whether this device is available or not.
+     * If device is available in scanning (BLE / Wi-Fi), then it will return ESPDevice.
+     *
+     * @param cameraPreview      PreviewView in which CameraX preview needs to be displayed to scan QR code.
+     * @param activityContext    Activity Context for lifecycle owner.
+     * @param qrCodeScanListener QRCodeScanListener for callbacks.
+     */
+    @RequiresPermission(allOf = {Manifest.permission.CAMERA, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    public void scanQRCode(final PreviewView cameraPreview, Activity activityContext, final QRCodeScanListener qrCodeScanListener) {
+
+        isScanned = false;
+        ExecutorService cameraExecutor = Executors.newSingleThreadExecutor();
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(activityContext);
+
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+
+                // Configure Preview use case
+                Preview preview = new Preview.Builder()
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3) // Set a standard aspect ratio
+                        .build();
+                preview.setSurfaceProvider(cameraPreview.getSurfaceProvider());
+
+                // Configure ImageAnalysis use case
+                ImageAnalysis imageAnalyzer = new ImageAnalysis.Builder()
+                        .setTargetAspectRatio(AspectRatio.RATIO_4_3) // Match preview aspect ratio
+                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                        .build();
+
+                try {
+
+                    imageAnalyzer.setAnalyzer(cameraExecutor, new QRCodeAnalyzer(qrCode -> {
+                        if (!isScanned) {
+                            isScanned = true;
+
+                            // Run on main thread to handle UI updates
+                            new Handler(Looper.getMainLooper()).post(() -> {
+                                // Stop camera preview and analysis
+                                try {
+                                    cameraProvider.unbindAll();
+                                    cameraExecutor.shutdown();
+                                    cameraPreview.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Error stopping camera: " + e.getMessage());
+                                }
+                                Log.d(TAG, "QR Code Data : " + qrCode);
+
+                                // Process QR code data
+                                processQrCode(qrCode, qrCodeScanListener);
+                            });
+                        }
+                    }));
+
+                    // Unbind all use cases before rebinding
+                    cameraProvider.unbindAll();
+
+                    // Try to bind both use cases
+                    cameraProvider.bindToLifecycle(
+                            (LifecycleOwner) activityContext,
+                            CameraSelector.DEFAULT_BACK_CAMERA,
+                            preview,
+                            imageAnalyzer
+                    );
+
+                } catch (IllegalArgumentException e) {
+                    // If binding both use cases fails, try with just ImageAnalysis
+                    Log.w(TAG, "Failed to bind both Preview and ImageAnalysis. Trying ImageAnalysis only.");
+                }
+
+            } catch (ExecutionException | InterruptedException e) {
+                String errorMsg = "Failed to start camera: " + e.getMessage();
+                Log.e(TAG, errorMsg);
+                qrCodeScanListener.onFailure(new RuntimeException(errorMsg));
+            }
+        }, ContextCompat.getMainExecutor(context));
+    }
+
+    // Helper method to process QR code data
+    private void processQrCode(String qrCode, QRCodeScanListener qrCodeScanListener) {
+        try {
+            JSONObject jsonObject = new JSONObject(qrCode);
+
+            String deviceName = jsonObject.optString("name");
+            String pop = jsonObject.optString("pop");
+            String transport = jsonObject.optString("transport");
+            int security = jsonObject.optInt("security", ESPConstants.SecurityType.SECURITY_2.ordinal());
+            String userName = jsonObject.optString("username");
+            String password = jsonObject.optString("password");
+            isScanned = true;
+
+            if (qrCodeScanListener != null) {
+                qrCodeScanListener.qrCodeScanned();
+            }
+
+            ESPConstants.TransportType transportType = null;
+            ESPConstants.SecurityType securityType = null;
+
+            if (!TextUtils.isEmpty(transport)) {
+
+                if (transport.equalsIgnoreCase("softap")) {
+
+                    transportType = ESPConstants.TransportType.TRANSPORT_SOFTAP;
+
+                } else if (transport.equalsIgnoreCase("ble")) {
+
+                    transportType = ESPConstants.TransportType.TRANSPORT_BLE;
+
+                } else {
+                    Log.e(TAG, "" + transport + " Transport type is not supported");
+                    qrCodeScanListener.onFailure(new RuntimeException("Transport type is not supported"), qrCode);
+                    return;
+                }
+            } else {
+                Log.e(TAG, "Transport is not available in QR code data");
+                qrCodeScanListener.onFailure(new RuntimeException("QR code is not valid. Transport is not available"), qrCode);
+                return;
+            }
+
+            securityType = setSecurityType(security);
+
+            espDevice = new ESPDevice(context, transportType, securityType);
+            espDevice.setDeviceName(deviceName);
+            espDevice.setProofOfPossession(pop);
+            espDevice.setUserName(userName);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && transportType.equals(ESPConstants.TransportType.TRANSPORT_SOFTAP)) {
+                WiFiAccessPoint wiFiDevice = new WiFiAccessPoint();
+                wiFiDevice.setWifiName(deviceName);
+                wiFiDevice.setPassword(password);
+                espDevice.setWifiDevice(wiFiDevice);
+                qrCodeScanListener.deviceDetected(espDevice);
+            } else {
+                isDeviceAvailable(espDevice, password, qrCodeScanListener);
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            qrCodeScanListener.onFailure(new RuntimeException("QR code is not valid"), qrCode);
+        }
+    }
+
+
+    static class QRCodeAnalyzer implements ImageAnalysis.Analyzer {
+
+        interface QRCodeListener {
+            void onQRCodeDetected(String qrCode);
+        }
+
+        private final QRCodeListener listener;
+        private final BarcodeScanner scanner;
+
+        public QRCodeAnalyzer(QRCodeListener listener) {
+            this.listener = listener;
+            this.scanner = BarcodeScanning.getClient();
+        }
+
+        @Override
+        @ExperimentalGetImage
+        public void analyze(ImageProxy imageProxy) {
+            if (imageProxy.getImage() != null) {
+                InputImage image = InputImage.fromMediaImage(
+                        imageProxy.getImage(),
+                        imageProxy.getImageInfo().getRotationDegrees()
+                );
+
+                scanner.process(image)
+                        .addOnSuccessListener(barcodes -> {
+                            for (com.google.mlkit.vision.barcode.common.Barcode barcode : barcodes) {
+                                if (barcode.getFormat() == com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE) {
+                                    String value = barcode.getRawValue();
+                                    if (value != null) {
+                                        listener.onQRCodeDetected(value);
+                                    }
+                                }
+                            }
+                        })
+                        .addOnCompleteListener(task -> imageProxy.close());
+            } else {
+                imageProxy.close();
+            }
+        }
     }
 
     /**
