@@ -79,7 +79,7 @@ public class WiFiScanActivity extends AppCompatActivity {
 
         wifiAPList = new ArrayList<>();
         handler = new Handler();
-        provisionManager = ESPProvisionManager.getInstance(getApplicationContext());
+        provisionManager = ESPProvisionManager.getInstance(getApplicationContext()).scanTimeout(10_000);
 
         String deviceName = provisionManager.getEspDevice().getDeviceName();
         String wifiMsg = String.format(getString(R.string.setup_instructions), deviceName);

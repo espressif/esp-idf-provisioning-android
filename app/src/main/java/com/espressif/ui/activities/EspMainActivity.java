@@ -70,7 +70,7 @@ public class EspMainActivity extends AppCompatActivity {
         initViews();
 
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE);
-        provisionManager = ESPProvisionManager.getInstance(getApplicationContext());
+        provisionManager = ESPProvisionManager.getInstance(getApplicationContext()).scanTimeout(10_000);
     }
 
     @Override

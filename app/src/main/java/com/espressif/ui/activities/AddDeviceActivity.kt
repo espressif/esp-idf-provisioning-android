@@ -80,7 +80,7 @@ class AddDeviceActivity : AppCompatActivity() {
         setContentView(binding.root)
         intent = Intent()
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE)
-        provisionManager = ESPProvisionManager.getInstance(applicationContext)
+        provisionManager = ESPProvisionManager.getInstance(applicationContext).scanTimeout(10_000)
         initViews()
         EventBus.getDefault().register(this)
     }
@@ -157,7 +157,7 @@ class AddDeviceActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
-        grantResults: IntArray
+        grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         updatePermissionErrorText()

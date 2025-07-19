@@ -41,35 +41,33 @@ public class BleScanner {
 
     private static final String TAG = "ESP:" + BleScanner.class.getSimpleName();
 
-    private static final long SCAN_TIME_OUT = 6000;
+    private final long SCAN_TIME_OUT;
 
-    private Handler handler;
-    private BleScanListener bleScanListener;
-    private BluetoothAdapter bluetoothAdapter;
+    private final Handler handler;
+    private final BleScanListener bleScanListener;
+    private final BluetoothAdapter bluetoothAdapter;
     private BluetoothLeScanner bluetoothLeScanner;
 
     private boolean isScanning = false;
     private String prefix = "";
 
-    public BleScanner(Context context, BleScanListener bleScannerListener) {
-
+    public BleScanner(Context context, long timeout, BleScanListener bleScannerListener) {
         this.bleScanListener = bleScannerListener;
+        this.SCAN_TIME_OUT = timeout;
         handler = new Handler();
-
         BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
     }
 
-    public BleScanner(Context context, String prefix, BleScanListener bleScannerListener) {
-
-        this(context, bleScannerListener);
+    public BleScanner(Context context, String prefix, long timeout, BleScanListener bleScannerListener) {
+        this(context, timeout, bleScannerListener);
         this.prefix = prefix;
     }
 
     /**
      * This method is used to start BLE scan.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH_SCAN})
     public void startScan() {
         List<ScanFilter> filters = new ArrayList<>();
         ScanSettings settings = new ScanSettings.Builder()
@@ -83,7 +81,7 @@ public class BleScanner {
      *
      * @param filters The scan filters that will be used
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH_SCAN})
     public void startScan(List<ScanFilter> filters) {
         ScanSettings settings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
@@ -96,7 +94,7 @@ public class BleScanner {
      *
      * @param scanSettings The scan settings that will be used
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH_SCAN})
     public void startScan(ScanSettings scanSettings) {
         List<ScanFilter> filters = new ArrayList<>();
         startScan(filters, scanSettings);
@@ -108,7 +106,7 @@ public class BleScanner {
      * @param filters      The scan filters that will be used
      * @param scanSettings The scan settings that will be used
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH_SCAN})
     public void startScan(List<ScanFilter> filters, ScanSettings scanSettings) {
 
         if (!bluetoothAdapter.isEnabled()) {
@@ -126,7 +124,7 @@ public class BleScanner {
     /**
      * This method is used to start BLE scan.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_SCAN})
     public void stopScan() {
 
         Log.d(TAG, "Stop BLE device scan");
@@ -156,7 +154,7 @@ public class BleScanner {
     private Runnable stopScanTask = new Runnable() {
 
         @Override
-        @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH})
+        @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_SCAN})
         public void run() {
             stopScan();
         }

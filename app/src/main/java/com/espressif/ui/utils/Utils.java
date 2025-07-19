@@ -48,7 +48,7 @@ public class Utils {
 
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                ESPProvisionManager provisionManager = ESPProvisionManager.getInstance(aContext.getApplicationContext());
+                ESPProvisionManager provisionManager = ESPProvisionManager.getInstance(aContext.getApplicationContext()).scanTimeout(10_000);
                 if (provisionManager.getEspDevice() != null) {
                     provisionManager.getEspDevice().disconnectDevice();
                 }
