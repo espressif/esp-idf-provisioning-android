@@ -667,13 +667,19 @@ public class ESPDevice {
         try {
             JSONObject jsonObject = new JSONObject(getVersionInfo());
             JSONObject provInfo = jsonObject.getJSONObject("prov");
+            deviceCapabilities = getDeviceCapabilities();
+            Log.d(TAG, "Capabilities : " + deviceCapabilities);
+            if (deviceCapabilities != null && deviceCapabilities.contains("no_pop")) {
+                proofOfPossession = "";
+            }
 
             String deviceVersion = provInfo.getString("ver");
             Log.d(TAG, "Device Version : " + deviceVersion);
             Log.d(TAG, "sec_ver value : " + provInfo.optInt("sec_ver"));
             Log.d(TAG, "Has sec_ver key : " + provInfo.has("sec_ver"));
             Log.d(TAG, "Has sec_patch_ver key : " + provInfo.has("sec_patch_ver"));
-
+            Log.d(TAG, "POP : " + proofOfPossession);
+            
             if (provInfo.has("sec_ver")) {
 
                 int serVer = provInfo.optInt("sec_ver");
