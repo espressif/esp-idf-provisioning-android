@@ -21,8 +21,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
@@ -30,7 +28,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.cardview.widget.CardView;
 
 import com.espressif.AppConstants;
 import com.espressif.provisioning.DeviceConnectionEvent;
@@ -40,6 +37,7 @@ import com.espressif.provisioning.WiFiAccessPoint;
 import com.espressif.provisioning.listeners.WiFiScanListener;
 import com.espressif.ui.utils.Utils;
 import com.espressif.wifi_provisioning.R;
+import com.espressif.wifi_provisioning.databinding.ActivityThreadScanListBinding;
 import com.google.android.gms.threadnetwork.ThreadNetwork;
 import com.google.android.gms.threadnetwork.ThreadNetworkCredentials;
 
@@ -53,10 +51,9 @@ public class ThreadConfigActivity extends AppCompatActivity {
 
     private static final String TAG = ThreadConfigActivity.class.getSimpleName();
 
+    private ActivityThreadScanListBinding binding;
+
     private Handler handler;
-    private ProgressBar progressBar;
-    private CardView btnNext;
-    private TextView txtNextBtn, tvProgress, tvError;
     private ArrayList<WiFiAccessPoint> threadNetworkList;
     private ESPProvisionManager provisionManager;
 
@@ -67,7 +64,8 @@ public class ThreadConfigActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_thread_scan_list);
+        binding = ActivityThreadScanListBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         handler = new Handler();
         threadNetworkList = new ArrayList<>();
@@ -108,7 +106,7 @@ public class ThreadConfigActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
 
-            String btnText = txtNextBtn.getText().toString();
+            String btnText = binding.btnNext.textBtn.getText().toString();
 
             if (btnText.equals(getString(R.string.btn_next))) {
 
@@ -132,17 +130,12 @@ public class ThreadConfigActivity extends AppCompatActivity {
         toolbar.setTitle(R.string.title_activity_thread_config);
         setSupportActionBar(toolbar);
 
-        tvProgress = findViewById(R.id.tv_thread_message);
-        tvError = findViewById(R.id.tv_prov_error);
-        progressBar = findViewById(R.id.network_search_loading);
-        progressBar.setVisibility(View.VISIBLE);
+        binding.networkSearchLoading.setVisibility(View.VISIBLE);
 
-        btnNext = findViewById(R.id.btn_next);
-        txtNextBtn = findViewById(R.id.text_btn);
-        txtNextBtn.setText(R.string.btn_next);
-        btnNext.setEnabled(false);
-        btnNext.setAlpha(0.5f);
-        btnNext.setOnClickListener(nextBtnClickListener);
+        binding.btnNext.textBtn.setText(R.string.btn_next);
+        binding.btnNext.layoutBtn.setEnabled(false);
+        binding.btnNext.layoutBtn.setAlpha(0.5f);
+        binding.btnNext.layoutBtn.setOnClickListener(nextBtnClickListener);
 
         preferredCredentialsLauncher = registerForActivityResult(new ActivityResultContracts.StartIntentSenderForResult(),
                 result -> {
@@ -156,10 +149,10 @@ public class ThreadConfigActivity extends AppCompatActivity {
                         } else {
                             // If "thread_scan" capability is not available and "thread_prov" is available
                             hideLoading();
-                            txtNextBtn.setText(R.string.btn_next);
+                            binding.btnNext.textBtn.setText(R.string.btn_next);
                             String str = "Available Thread Network : " + preferredCredentials.getNetworkName() + "\n"
                                     + "Do you want to proceed ?";
-                            tvProgress.setText(str);
+                            binding.tvThreadMessage.setText(str);
                         }
 
                     } else {
@@ -238,10 +231,10 @@ public class ThreadConfigActivity extends AppCompatActivity {
                             if (isNetworkAvailable) {
 
                                 hideLoading();
-                                txtNextBtn.setText(R.string.btn_next);
+                                binding.btnNext.textBtn.setText(R.string.btn_next);
                                 String str = "Available Thread Network : " + preferredCredentials.getNetworkName() + "\n"
                                         + "Do you want to proceed ?";
-                                tvProgress.setText(str);
+                                binding.tvThreadMessage.setText(str);
 
                             } else {
                                 hideLoading();
@@ -315,17 +308,17 @@ public class ThreadConfigActivity extends AppCompatActivity {
     }
 
     private void showLoading(String msg) {
-        btnNext.setEnabled(false);
-        btnNext.setAlpha(0.5f);
-        tvProgress.setText(msg);
-        progressBar.setVisibility(View.VISIBLE);
-        tvError.setVisibility(View.GONE);
+        binding.btnNext.layoutBtn.setEnabled(false);
+        binding.btnNext.layoutBtn.setAlpha(0.5f);
+        binding.tvThreadMessage.setText(msg);
+        binding.networkSearchLoading.setVisibility(View.VISIBLE);
+        binding.tvProvError.setVisibility(View.GONE);
     }
 
     private void hideLoading() {
-        btnNext.setEnabled(true);
-        btnNext.setAlpha(1f);
-        progressBar.setVisibility(View.GONE);
+        binding.btnNext.layoutBtn.setEnabled(true);
+        binding.btnNext.layoutBtn.setAlpha(1f);
+        binding.networkSearchLoading.setVisibility(View.GONE);
     }
 
     private void showError(String title, String msg, boolean canReadAgain) {
@@ -333,13 +326,13 @@ public class ThreadConfigActivity extends AppCompatActivity {
         findViewById(R.id.iv_arrow).setVisibility(View.GONE);
 
         if (canReadAgain) {
-            txtNextBtn.setText(R.string.btn_try_again);
+            binding.btnNext.textBtn.setText(R.string.btn_try_again);
         } else {
-            txtNextBtn.setText(R.string.btn_ok);
+            binding.btnNext.textBtn.setText(R.string.btn_ok);
         }
 
-        tvProgress.setText(title);
-        tvError.setText(msg);
-        tvError.setVisibility(View.VISIBLE);
+        binding.tvThreadMessage.setText(title);
+        binding.tvProvError.setText(msg);
+        binding.tvProvError.setVisibility(View.VISIBLE);
     }
 }

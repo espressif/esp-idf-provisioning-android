@@ -34,6 +34,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -339,12 +340,6 @@ class AddDeviceActivity : AppCompatActivity() {
         }
     }
 
-    private val cancelBtnClickListener = View.OnClickListener {
-        provisionManager.espDevice?.disconnectDevice()
-        setResult(RESULT_CANCELED, intent)
-        finish()
-    }
-
     private val btnGetPermissionClickListener = View.OnClickListener {
         buttonClicked = true
 
@@ -523,11 +518,7 @@ class AddDeviceActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        binding.titleBar.mainToolbarTitle.setText(R.string.title_activity_add_device)
-        binding.titleBar.btnBack.visibility = View.GONE
-        binding.titleBar.btnCancel.visibility = View.VISIBLE
-        binding.titleBar.btnCancel.setOnClickListener(cancelBtnClickListener)
-
+        setToolbar()
         codeScanner = CodeScanner(this, binding.scannerView)
 
         binding.btnAddDeviceManually.textBtn.setText(R.string.btn_no_qr_code)
@@ -548,6 +539,20 @@ class AddDeviceActivity : AppCompatActivity() {
                 arrayOf(Manifest.permission.CAMERA),
                 REQUEST_CAMERA_PERMISSION
             )
+        }
+    }
+
+    private fun setToolbar() {
+        setSupportActionBar(binding.titleBar.toolbar)
+        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
+        supportActionBar!!.setDisplayShowHomeEnabled(true)
+        supportActionBar!!.setTitle(R.string.title_activity_add_device)
+        binding.titleBar.toolbar.navigationIcon =
+            AppCompatResources.getDrawable(this, R.drawable.ic_arrow_left)
+        binding.titleBar.toolbar.setNavigationOnClickListener {
+            provisionManager.espDevice?.disconnectDevice()
+            setResult(RESULT_CANCELED, intent)
+            finish()
         }
     }
 

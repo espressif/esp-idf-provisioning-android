@@ -6,7 +6,7 @@
 
     <include
         android:id="@+id/title_bar"
-        layout="@layout/tool_bar_main_purple" />
+        layout="@layout/toolbar" />
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/layout_groups"
