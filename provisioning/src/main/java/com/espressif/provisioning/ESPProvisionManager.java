@@ -82,9 +82,10 @@ public class ESPProvisionManager {
     private ESPDevice espDevice;
     private BleScanner bleScanner;
     private WiFiScanner wifiScanner;
-    private Context context;
-    private Handler handler;
+    private final Context context;
+    private final Handler handler;
     private boolean isScanned = false;
+    private long timeout = 6000;
 
     /**
      * This method is used to get singleton instance of
@@ -103,6 +104,17 @@ public class ESPProvisionManager {
     private ESPProvisionManager(Context context) {
         this.context = context;
         handler = new Handler();
+    }
+
+    /**
+     * This method is to set the timeout for Bluetooth scanning
+     *
+     * @param timeout timeout
+     * @return Returns ESPProvisionManager
+     */
+    public ESPProvisionManager scanTimeout(long timeout) {
+        this.timeout = timeout;
+        return this;
     }
 
     /**
@@ -343,7 +355,7 @@ public class ESPProvisionManager {
                     transportType = ESPConstants.TransportType.TRANSPORT_BLE;
 
                 } else {
-                    Log.e(TAG, "" + transport + " Transport type is not supported");
+                    Log.e(TAG, transport + " Transport type is not supported");
                     qrCodeScanListener.onFailure(new RuntimeException("Transport type is not supported"), qrCode);
                     return;
                 }
@@ -424,11 +436,11 @@ public class ESPProvisionManager {
      * @param filters            The scan filters that will be used
      * @param bleScannerListener BleScanListener for scanning callbacks.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void searchBleEspDevices(List<ScanFilter> filters, BleScanListener bleScannerListener) {
 
         Log.d(TAG, "Search for BLE devices");
-        bleScanner = new BleScanner(context, bleScannerListener);
+        bleScanner = new BleScanner(context, timeout, bleScannerListener);
         bleScanner.startScan(filters);
     }
 
@@ -438,11 +450,11 @@ public class ESPProvisionManager {
      * @param scanSettings       The scan settings that will be used
      * @param bleScannerListener BleScanListener for scanning callbacks.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void searchBleEspDevices(ScanSettings scanSettings, BleScanListener bleScannerListener) {
 
         Log.d(TAG, "Search for BLE devices");
-        bleScanner = new BleScanner(context, bleScannerListener);
+        bleScanner = new BleScanner(context, timeout, bleScannerListener);
         bleScanner.startScan(scanSettings);
     }
 
@@ -453,11 +465,11 @@ public class ESPProvisionManager {
      * @param scanSettings       The scan settings that will be used
      * @param bleScannerListener BleScanListener for scanning callbacks.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void searchBleEspDevices(List<ScanFilter> filters, ScanSettings scanSettings, BleScanListener bleScannerListener) {
 
         Log.d(TAG, "Search for BLE devices");
-        bleScanner = new BleScanner(context, bleScannerListener);
+        bleScanner = new BleScanner(context, timeout, bleScannerListener);
         bleScanner.startScan(filters, scanSettings);
     }
 
@@ -466,11 +478,11 @@ public class ESPProvisionManager {
      *
      * @param bleScannerListener BleScanListener for scanning callbacks.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void searchBleEspDevices(BleScanListener bleScannerListener) {
 
         Log.d(TAG, "Search for BLE devices");
-        bleScanner = new BleScanner(context, bleScannerListener);
+        bleScanner = new BleScanner(context, timeout, bleScannerListener);
         bleScanner.startScan();
     }
 
@@ -480,18 +492,18 @@ public class ESPProvisionManager {
      * @param prefix             Prefix to filter devices from device name.
      * @param bleScannerListener BleScanListener for scanning callbacks.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void searchBleEspDevices(String prefix, BleScanListener bleScannerListener) {
 
         Log.d(TAG, "Search for BLE devices");
-        bleScanner = new BleScanner(context, prefix, bleScannerListener);
+        bleScanner = new BleScanner(context, prefix, timeout, bleScannerListener);
         bleScanner.startScan();
     }
 
     /**
      * This method is used to stop BLE scanning.
      */
-    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION})
+    @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.BLUETOOTH_SCAN})
     public void stopBleScan() {
 
         if (bleScanner != null) {
@@ -558,9 +570,9 @@ public class ESPProvisionManager {
 
     class SearchDeviceTask implements Runnable {
 
-        private ESPDevice device;
-        private QRCodeScanListener listener;
-        private String password;
+        private final ESPDevice device;
+        private final QRCodeScanListener listener;
+        private final String password;
 
         SearchDeviceTask(ESPDevice device1, String password1, QRCodeScanListener listener1) {
             searchCnt++;
@@ -573,7 +585,7 @@ public class ESPProvisionManager {
         @Override
         @RequiresPermission(allOf = {Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.BLUETOOTH,
                 Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CHANGE_WIFI_STATE,
-                Manifest.permission.ACCESS_WIFI_STATE})
+                Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.BLUETOOTH_SCAN})
         public void run() {
 
             if (device.getTransportType().equals(ESPConstants.TransportType.TRANSPORT_BLE)) {
@@ -596,7 +608,7 @@ public class ESPProvisionManager {
                                 isDeviceFound = true;
                                 String serviceUuid = "";
 
-                                if (scanResult.getScanRecord().getServiceUuids() != null && scanResult.getScanRecord().getServiceUuids().size() > 0) {
+                                if (scanResult.getScanRecord().getServiceUuids() != null && !scanResult.getScanRecord().getServiceUuids().isEmpty()) {
                                     serviceUuid = scanResult.getScanRecord().getServiceUuids().get(0).toString();
                                 }
 
@@ -620,7 +632,7 @@ public class ESPProvisionManager {
                                 SearchDeviceTask searchDeviceTask = new SearchDeviceTask(device, password, listener);
                                 handler.postDelayed(searchDeviceTask, 500);
                             } else {
-                                String errMsg = "" + device.getDeviceName() + " device not found";
+                                String errMsg = device.getDeviceName() + " device not found";
                                 listener.onFailure(new RuntimeException(errMsg));
                             }
                         } else {
@@ -643,7 +655,7 @@ public class ESPProvisionManager {
                                 SearchDeviceTask searchDeviceTask = new SearchDeviceTask(device, password, listener);
                                 handler.postDelayed(searchDeviceTask, 500);
                             } else {
-                                String errMsg = "" + device.getDeviceName() + " device not found";
+                                String errMsg = device.getDeviceName() + " device not found";
                                 listener.onFailure(new RuntimeException(errMsg));
                             }
                         }
@@ -680,7 +692,7 @@ public class ESPProvisionManager {
                                 SearchDeviceTask searchDeviceTask = new SearchDeviceTask(device, password, listener);
                                 handler.postDelayed(searchDeviceTask, 500);
                             } else {
-                                String errMsg = "" + device.getDeviceName() + " device not found";
+                                String errMsg = device.getDeviceName() + " device not found";
                                 listener.onFailure(new RuntimeException(errMsg));
                             }
                         }
@@ -702,7 +714,7 @@ public class ESPProvisionManager {
                                 SearchDeviceTask searchDeviceTask = new SearchDeviceTask(device, password, listener);
                                 handler.postDelayed(searchDeviceTask, 500);
                             } else {
-                                String errMsg = "" + device.getDeviceName() + " device not found";
+                                String errMsg = device.getDeviceName() + " device not found";
                                 listener.onFailure(new RuntimeException(errMsg));
                             }
                         }

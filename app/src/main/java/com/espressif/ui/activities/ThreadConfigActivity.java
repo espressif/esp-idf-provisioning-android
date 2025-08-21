@@ -71,7 +71,7 @@ public class ThreadConfigActivity extends AppCompatActivity {
 
         handler = new Handler();
         threadNetworkList = new ArrayList<>();
-        provisionManager = ESPProvisionManager.getInstance(getApplicationContext());
+        provisionManager = ESPProvisionManager.getInstance(getApplicationContext()).scanTimeout(10_000);
         scanCapAvailable = getIntent().getBooleanExtra(AppConstants.KEY_THREAD_SCAN_AVAILABLE, false);
 
         initViews();

@@ -60,7 +60,7 @@ public class ProofOfPossessionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pop);
 
-        provisionManager = ESPProvisionManager.getInstance(getApplicationContext());
+        provisionManager = ESPProvisionManager.getInstance(getApplicationContext()).scanTimeout(10_000);
         initViews();
         EventBus.getDefault().register(this);
 
