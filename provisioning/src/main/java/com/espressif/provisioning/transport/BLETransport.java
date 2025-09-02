@@ -73,7 +73,7 @@ public class BLETransport implements Transport {
      */
     public BLETransport(Context context) {
         this.context = context;
-        this.transportToken = new Semaphore(1);
+        this.transportToken = new Semaphore(0);
         this.dispatcherThreadPool = Executors.newSingleThreadExecutor();
     }
 
@@ -98,12 +98,14 @@ public class BLETransport implements Transport {
             if (characteristic != null) {
                 try {
                     this.transportToken.acquire();
+                    currentResponseListener = listener;
                     characteristic.setValue(data);
                     bluetoothGatt.writeCharacteristic(characteristic);
                     currentResponseListener = listener;
                 } catch (Exception e) {
                     e.printStackTrace();
                     listener.onFailure(e);
+                    currentResponseListener = null;
                     this.transportToken.release();
                     currentResponseListener = listener;
                     if (currentResponseListener != null) {
