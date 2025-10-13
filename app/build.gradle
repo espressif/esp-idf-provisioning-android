@@ -18,8 +18,8 @@ android {
         applicationId "com.espressif.wifi_provisioning"
         minSdkVersion 26
         targetSdkVersion 35
-        versionCode 29
-        versionName "2.4.0 - ${getGitHash()}"
+        versionCode 31
+        versionName "2.4.1 - ${getGitHash()}"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-proguard-rules.pro"
     }
@@ -85,7 +85,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-threadnetwork:16.2.1'
 
     // CameraX
-    def camerax_version = "1.2.3"
+    def camerax_version = "1.5.1"
     implementation "androidx.camera:camera-core:${camerax_version}"
     implementation "androidx.camera:camera-camera2:${camerax_version}"
     implementation "androidx.camera:camera-lifecycle:${camerax_version}"
