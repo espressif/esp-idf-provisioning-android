@@ -131,6 +131,7 @@ public class ESPDevice {
      */
     @RequiresPermission(allOf = {Manifest.permission.CHANGE_WIFI_STATE, Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.ACCESS_NETWORK_STATE})
     public void connectToDevice() {
+        clearCachedVersionInfoAndCapabilities();
 
         switch (transportType) {
 
@@ -153,6 +154,7 @@ public class ESPDevice {
      */
     @RequiresPermission(Manifest.permission.BLUETOOTH)
     public void connectBLEDevice(BluetoothDevice bluetoothDevice, String primaryServiceUuid) {
+        clearCachedVersionInfoAndCapabilities();
 
         if (transport instanceof BLETransport) {
             deviceName = bluetoothDevice.getName();
@@ -168,6 +170,7 @@ public class ESPDevice {
      */
     @RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
     public void connectWiFiDevice() {
+        clearCachedVersionInfoAndCapabilities();
 
         if (transport instanceof SoftAPTransport) {
 
@@ -189,6 +192,7 @@ public class ESPDevice {
      */
     @RequiresPermission(allOf = {Manifest.permission.CHANGE_WIFI_STATE, Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.ACCESS_NETWORK_STATE})
     public void connectWiFiDevice(String ssid, String password) {
+        clearCachedVersionInfoAndCapabilities();
 
         Log.d(TAG, "connectWiFiDevice ========== SSID : " + ssid + " and Password : " + password);
 
@@ -321,6 +325,7 @@ public class ESPDevice {
             ((BLETransport) transport).disconnect();
         }
         session = null;
+        clearCachedVersionInfoAndCapabilities();
         disableOnlyWifiNetwork();
     }
 
@@ -703,6 +708,28 @@ public class ESPDevice {
     }
 
     public void initSession(final ResponseListener listener) {
+        if (listener == null) {
+            Log.e(TAG, "initSession listener is null. Session init aborted.");
+            return;
+        }
+
+        ensureVersionInfoForSession(new ResponseListener() {
+
+            @Override
+            public void onSuccess(byte[] returnData) {
+                initSessionInternal(listener);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                if (listener != null) {
+                    listener.onFailure(e);
+                }
+            }
+        });
+    }
+
+    private void initSessionInternal(final ResponseListener listener) {
 
         try {
             JSONObject jsonObject = new JSONObject(getVersionInfo());
@@ -750,6 +777,15 @@ public class ESPDevice {
         } catch (JSONException e) {
             e.printStackTrace();
             Log.d(TAG, "Capabilities JSON not available.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Unexpected error while parsing version info.", e);
+            if (listener != null) {
+                listener.onFailure(new RuntimeException("Failed to parse device version info.", e));
+            } else {
+                Log.e(TAG, "Failed to notify listener after parsing error because listener is null.");
+            }
+            return;
         }
 
         try {
@@ -777,17 +813,123 @@ public class ESPDevice {
 
                 @Override
                 public void OnSessionEstablished() {
-                    listener.onSuccess(null);
+                    if (listener != null) {
+                        listener.onSuccess(null);
+                    } else {
+                        Log.e(TAG, "Failed to notify session established because listener is null.");
+                    }
                 }
 
                 @Override
                 public void OnSessionEstablishFailed(Exception e) {
-                    listener.onFailure(e);
+                    if (listener != null) {
+                        listener.onFailure(e);
+                    } else {
+                        Log.e(TAG, "Failed to notify session establish failure because listener is null.", e);
+                    }
                 }
             });
         } catch (Exception e) {
             e.printStackTrace();
-            listener.onFailure(e);
+            if (listener != null) {
+                listener.onFailure(e);
+            } else {
+                Log.e(TAG, "Failed to notify listener after session init exception because listener is null.", e);
+            }
+        }
+    }
+
+    private void ensureVersionInfoForSession(final ResponseListener listener) {
+        if (listener == null) {
+            Log.e(TAG, "Cannot ensure version info because listener is null.");
+            return;
+        }
+
+        String existingVersionInfo = getVersionInfo();
+        if (!TextUtils.isEmpty(existingVersionInfo)) {
+            listener.onSuccess(null);
+            return;
+        }
+
+        Log.w(TAG, "Version info unavailable. Fetching capabilities before session init.");
+        transport.sendConfigData(ESPConstants.HANDLER_PROTO_VER, "ESP".getBytes(StandardCharsets.UTF_8), new ResponseListener() {
+
+            @Override
+            public void onSuccess(byte[] returnData) {
+
+                if (returnData == null || returnData.length == 0) {
+                    listener.onFailure(new RuntimeException("Version info response is empty."));
+                    return;
+                }
+
+                String data = new String(returnData, StandardCharsets.UTF_8);
+                if (TextUtils.isEmpty(data)) {
+                    listener.onFailure(new RuntimeException("Version info response is empty."));
+                    return;
+                }
+
+                cacheVersionInfoAndCapabilities(data);
+                listener.onSuccess(returnData);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
+    }
+
+    private void cacheVersionInfoAndCapabilities(String data) {
+        versionInfo = data;
+        ArrayList<String> parsedCapabilities = new ArrayList<>();
+
+        try {
+            JSONObject jsonObject = new JSONObject(data);
+            JSONObject provInfo = jsonObject.getJSONObject("prov");
+
+            String deviceVersion = provInfo.getString("ver");
+            Log.d(TAG, "Device Version : " + deviceVersion);
+
+            JSONArray capabilities = provInfo.optJSONArray("cap");
+            if (capabilities != null) {
+                for (int i = 0; i < capabilities.length(); i++) {
+                    String cap = capabilities.getString(i);
+                    parsedCapabilities.add(cap);
+                }
+            }
+            Log.d(TAG, "Capabilities : " + parsedCapabilities);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            Log.d(TAG, "Capabilities JSON not available.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "Unexpected error while caching version info.", e);
+        }
+
+        if (transport instanceof BLETransport) {
+            BLETransport bleTransport = (BLETransport) transport;
+            bleTransport.versionInfo = data;
+            bleTransport.deviceCapabilities.clear();
+            bleTransport.deviceCapabilities.addAll(parsedCapabilities);
+            deviceCapabilities = bleTransport.deviceCapabilities;
+        } else {
+            deviceCapabilities = parsedCapabilities;
+        }
+    }
+
+    private void clearCachedVersionInfoAndCapabilities() {
+        versionInfo = null;
+        if (deviceCapabilities == null) {
+            deviceCapabilities = new ArrayList<>();
+        }
+        deviceCapabilities.clear();
+        secPatchVersion = 0;
+
+        if (transport instanceof BLETransport) {
+            BLETransport bleTransport = (BLETransport) transport;
+            bleTransport.versionInfo = null;
+            bleTransport.deviceCapabilities.clear();
         }
     }
 
@@ -1652,30 +1794,19 @@ public class ESPDevice {
                 @Override
                 public void onSuccess(byte[] returnData) {
 
+                    if (returnData == null || returnData.length == 0) {
+                        onFailure(new RuntimeException("Version info response is empty."));
+                        return;
+                    }
+
                     String data = new String(returnData, StandardCharsets.UTF_8);
                     Log.d(TAG, "Value : " + data);
-                    versionInfo = data;
-                    deviceCapabilities = new ArrayList<>();
-
-                    try {
-                        JSONObject jsonObject = new JSONObject(data);
-                        JSONObject provInfo = jsonObject.getJSONObject("prov");
-
-                        String versionInfo = provInfo.getString("ver");
-                        Log.d(TAG, "Device Version : " + versionInfo);
-
-                        JSONArray capabilities = provInfo.getJSONArray("cap");
-
-                        for (int i = 0; i < capabilities.length(); i++) {
-                            String cap = capabilities.getString(i);
-                            deviceCapabilities.add(cap);
-                        }
-                        Log.d(TAG, "Capabilities : " + deviceCapabilities);
-
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                        Log.d(TAG, "Capabilities JSON not available.");
+                    if (TextUtils.isEmpty(data)) {
+                        onFailure(new RuntimeException("Version info response is empty."));
+                        return;
                     }
+
+                    cacheVersionInfoAndCapabilities(data);
                     deviceName = fetchWiFiSSID();
                     handler.removeCallbacks(wifiConnectionFailedTask);
                     EventBus.getDefault().post(new DeviceConnectionEvent(ESPConstants.EVENT_DEVICE_CONNECTED));
