@@ -18,6 +18,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.TextUtils
 import android.util.Log
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.espressif.AppConstants
 import com.espressif.provisioning.ESPConstants
@@ -49,6 +50,7 @@ open class ManualProvBaseActivity : AppCompatActivity() {
             intent.getIntExtra(AppConstants.KEY_SECURITY_TYPE, AppConstants.SEC_TYPE_DEFAULT)
         provisionManager = ESPProvisionManager.getInstance(applicationContext)
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, MODE_PRIVATE)
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         EventBus.getDefault().register(this)
     }
 
@@ -57,11 +59,21 @@ open class ManualProvBaseActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    override fun onBackPressed() {
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            cleanUpOnBack()
+            finish()
+        }
+    }
+
+    /**
+     * Called before the activity finishes on back navigation.
+     * Subclasses overriding this must call super so the device is disconnected.
+     */
+    protected open fun cleanUpOnBack() {
         if (provisionManager!!.espDevice != null) {
             provisionManager!!.espDevice.disconnectDevice()
         }
-        super.onBackPressed()
     }
 
     fun setSecurityTypeFromVersionInfo() {

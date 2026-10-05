@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.IntentSenderRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -75,6 +76,7 @@ public class ThreadConfigActivity extends AppCompatActivity {
         scanCapAvailable = getIntent().getBooleanExtra(AppConstants.KEY_THREAD_SCAN_AVAILABLE, false);
 
         initViews();
+        getOnBackPressedDispatcher().addCallback(this, onBackPressedCallback);
         EventBus.getDefault().register(this);
         getThreadPreferredCredentials();
     }
@@ -85,11 +87,13 @@ public class ThreadConfigActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-    @Override
-    public void onBackPressed() {
-        provisionManager.getEspDevice().disconnectDevice();
-        super.onBackPressed();
-    }
+    private OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+            provisionManager.getEspDevice().disconnectDevice();
+            finish();
+        }
+    };
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onEvent(DeviceConnectionEvent event) {

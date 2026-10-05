@@ -20,6 +20,7 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
@@ -48,6 +49,7 @@ class WiFiConfigActivity : AppCompatActivity() {
 
         provisionManager = ESPProvisionManager.getInstance(applicationContext)
         initViews()
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         EventBus.getDefault().register(this)
     }
 
@@ -56,9 +58,11 @@ class WiFiConfigActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    override fun onBackPressed() {
-        provisionManager.espDevice.disconnectDevice()
-        super.onBackPressed()
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            provisionManager.espDevice.disconnectDevice()
+            finish()
+        }
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
