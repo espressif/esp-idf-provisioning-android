@@ -142,11 +142,11 @@ class BLEProvisionLanding : ManualProvBaseActivity() {
         }
     }
 
-    override fun onBackPressed() {
+    override fun cleanUpOnBack() {
         if (isScanning) {
             stopScan()
         }
-        super.onBackPressed()
+        super.cleanUpOnBack()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

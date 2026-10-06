@@ -21,7 +21,6 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
@@ -73,8 +72,6 @@ class SettingsActivity : AppCompatActivity() {
 
     class SettingsFragment : PreferenceFragmentCompat() {
         private var securityPref: SwitchPreferenceCompat? = null
-        private var userNamePrefWifi: EditTextPreference? = null
-        private var userNamePrefThread: EditTextPreference? = null
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             val prefMgr = preferenceManager
@@ -83,18 +80,12 @@ class SettingsActivity : AppCompatActivity() {
 
             val sharedPreferences = prefMgr.sharedPreferences
             securityPref = prefMgr.findPreference(AppConstants.KEY_SECURITY_TYPE)
-            userNamePrefWifi = prefMgr.findPreference(AppConstants.KEY_USER_NAME_WIFI)
-            userNamePrefThread = prefMgr.findPreference(AppConstants.KEY_USER_NAME_THREAD)
 
             val isSecure = sharedPreferences!!.getBoolean(AppConstants.KEY_SECURITY_TYPE, true)
             if (isSecure) {
                 securityPref!!.setSummary(R.string.summary_secured)
-                userNamePrefWifi!!.isVisible = true
-                userNamePrefThread!!.isVisible = true
             } else {
                 securityPref!!.setSummary(R.string.summary_unsecured)
-                userNamePrefWifi!!.isVisible = false
-                userNamePrefThread!!.isVisible = false
             }
 
             securityPref!!.onPreferenceChangeListener =
@@ -102,12 +93,8 @@ class SettingsActivity : AppCompatActivity() {
                     val isSecure = newValue as Boolean
                     if (isSecure) {
                         preference.setSummary(R.string.summary_secured)
-                        userNamePrefWifi!!.isVisible = true
-                        userNamePrefThread!!.isVisible = true
                     } else {
                         preference.setSummary(R.string.summary_unsecured)
-                        userNamePrefWifi!!.isVisible = false
-                        userNamePrefThread!!.isVisible = false
                     }
                     true
                 }

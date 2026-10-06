@@ -32,6 +32,7 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
@@ -85,6 +86,7 @@ class AddDeviceActivity : AppCompatActivity() {
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, Context.MODE_PRIVATE)
         provisionManager = ESPProvisionManager.getInstance(applicationContext)
         initViews()
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         EventBus.getDefault().register(this)
     }
 
@@ -127,9 +129,11 @@ class AddDeviceActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    override fun onBackPressed() {
-        provisionManager.espDevice?.disconnectDevice()
-        super.onBackPressed()
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            provisionManager.espDevice?.disconnectDevice()
+            finish()
+        }
     }
 
     private fun areAllPermissionsGranted(): Boolean {

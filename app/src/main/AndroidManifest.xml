@@ -30,6 +30,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+
+        <!-- Keep the portrait lock on large screens (sw600dp+) on Android 16. Temporary opt-out:
+             Android ignores it once the app targets API level 37. -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+            android:value="true" />
+
         <activity
             android:name="com.espressif.ui.activities.EspMainActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
