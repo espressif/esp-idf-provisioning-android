@@ -36,6 +36,7 @@ import androidx.appcompat.widget.Toolbar
 import com.espressif.AppConstants
 import com.espressif.provisioning.ESPConstants
 import com.espressif.provisioning.ESPProvisionManager
+import com.espressif.ui.utils.InAppReviewHelper
 import com.espressif.ui.utils.applySystemBarsAsPadding
 import com.espressif.wifi_provisioning.BuildConfig
 import com.espressif.wifi_provisioning.R
@@ -57,6 +58,7 @@ class EspMainActivity : AppCompatActivity() {
     private var ivEsp: ImageView? = null
     private var sharedPreferences: SharedPreferences? = null
     private var deviceType: String? = null
+    private val reviewRunnable = Runnable { InAppReviewHelper.maybeLaunch(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +98,16 @@ class EspMainActivity : AppCompatActivity() {
         } else {
             ivEsp!!.setImageResource(R.drawable.ic_esp)
         }
+
+        if (InAppReviewHelper.hasPendingPrompt()) {
+            binding.root.removeCallbacks(reviewRunnable)
+            binding.root.postDelayed(reviewRunnable, InAppReviewHelper.LAUNCH_DELAY_MS)
+        }
+    }
+
+    override fun onPause() {
+        binding.root.removeCallbacks(reviewRunnable)
+        super.onPause()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -165,6 +177,7 @@ class EspMainActivity : AppCompatActivity() {
 
     private var addDeviceBtnClickListener: View.OnClickListener = object : View.OnClickListener {
         override fun onClick(v: View) {
+            InAppReviewHelper.cancelPendingPrompt()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 if (!isLocationEnabled) {
                     askForLocation()

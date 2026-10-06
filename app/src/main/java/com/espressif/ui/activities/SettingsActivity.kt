@@ -22,9 +22,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
 import com.espressif.AppConstants
+import com.espressif.ui.utils.InAppReviewHelper
 import com.espressif.ui.utils.applySystemBarsAsPadding
 import com.espressif.wifi_provisioning.R
 
@@ -96,6 +98,14 @@ class SettingsActivity : AppCompatActivity() {
                     } else {
                         preference.setSummary(R.string.summary_unsecured)
                     }
+                    true
+                }
+
+            prefMgr.findPreference<PreferenceCategory>(AppConstants.KEY_PREF_CATEGORY_FEEDBACK)?.isVisible =
+                InAppReviewHelper.canOpenStoreListing(requireContext())
+            prefMgr.findPreference<Preference>(AppConstants.KEY_RATE_APP)?.onPreferenceClickListener =
+                Preference.OnPreferenceClickListener {
+                    InAppReviewHelper.openStoreListing(requireActivity())
                     true
                 }
         }

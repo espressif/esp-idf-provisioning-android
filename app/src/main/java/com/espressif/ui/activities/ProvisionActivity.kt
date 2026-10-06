@@ -31,6 +31,7 @@ import com.espressif.provisioning.ESPConstants.ProvisionFailureReason
 import com.espressif.provisioning.ESPProvisionManager
 import com.espressif.provisioning.listeners.ProvisionListener
 import com.espressif.provisioning.listeners.ResponseListener
+import com.espressif.ui.utils.InAppReviewHelper
 import com.espressif.ui.utils.applySystemBarsAsPadding
 import com.espressif.wifi_provisioning.R
 import com.espressif.wifi_provisioning.databinding.ActivityProvisionBinding
@@ -52,6 +53,7 @@ class ProvisionActivity : AppCompatActivity() {
     private var dataset: String? = null
     private var isProvisioningCompleted = false
     private var errorMessage: String? = null
+    private var hadRetry = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -200,6 +202,9 @@ class ProvisionActivity : AppCompatActivity() {
 
                 override fun deviceProvisioningSuccess() {
                     runOnUiThread {
+                        if (!isProvisioningCompleted) {
+                            InAppReviewHelper.onProvisioningSuccess(applicationContext, cleanRun = !hadRetry)
+                        }
                         isProvisioningCompleted = true
                         binding.ivTick3.setImageResource(R.drawable.ic_checkbox_on)
                         binding.ivTick3.visibility = View.VISIBLE
@@ -318,6 +323,9 @@ class ProvisionActivity : AppCompatActivity() {
 
                     override fun deviceProvisioningSuccess() {
                         runOnUiThread {
+                            if (!isProvisioningCompleted) {
+                                InAppReviewHelper.onProvisioningSuccess(applicationContext, cleanRun = !hadRetry)
+                            }
                             isProvisioningCompleted = true
                             binding.ivTick3.setImageResource(R.drawable.ic_checkbox_on)
                             binding.ivTick3.visibility = View.VISIBLE
@@ -490,6 +498,9 @@ class ProvisionActivity : AppCompatActivity() {
 
         // Reset error message
         errorMessage = null
+
+        // A success after an error is not a moment to ask for a review
+        hadRetry = true
     }
 
     /**

@@ -128,6 +128,7 @@
 
     <!-- Preference Titles -->
     <string name="device_settings">Device Settings</string>
+    <string name="feedback_settings">Feedback</string>
 
     <!-- Messages Preferences -->
     <string name="device_selection_title">Supported Device Types</string>
@@ -138,6 +139,8 @@
     <string name="summary_secured">Secured</string>
     <string name="summary_unsecured">Unsecured</string>
     <string name="summary_username">(Applicable for security version 2)</string>
+    <string name="rate_app_title">Rate this app</string>
+    <string name="rate_app_summary">Share your feedback on Google Play</string>
 
     <!--Dialog texts-->
     <string name="dialog_title_camera_permission">Camera Permission Needed</string>

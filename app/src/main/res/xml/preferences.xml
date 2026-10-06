@@ -41,4 +41,19 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:isPreferenceVisible="false"
+        app:key="feedback_category"
+        app:title="@string/feedback_settings">
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="rate_app"
+            app:persistent="false"
+            app:summary="@string/rate_app_summary"
+            app:title="@string/rate_app_title" />
+
+    </PreferenceCategory>
+
 </PreferenceScreen>
