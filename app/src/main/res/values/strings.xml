@@ -32,6 +32,7 @@
     <string name="btn_yes">Yes</string>
     <string name="btn_get_permission">Get Permission</string>
     <string name="btn_try_again">Try Again</string>
+    <string name="btn_restart">Restart</string>
 
     <!-- Hint Text -->
     <string name="hint_pop">Proof of Possession</string>
@@ -151,5 +152,7 @@
     <string name="dialog_msg_nearby_devices_permission_use">Nearby Devices permission is required for scanning and connecting to BLE devices. Please grant it in Settings.</string>
 
     <string name="wifi_reset_message">WiFi has been reset. Please reselect the WiFi credentials.</string>
+
+    <string name="update_downloaded">An update has been downloaded.</string>
 
 </resources>

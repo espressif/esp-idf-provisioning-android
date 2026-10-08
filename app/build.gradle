@@ -18,8 +18,8 @@ android {
         applicationId "com.espressif.wifi_provisioning"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode 34
-        versionName "2.5.0 - ${getGitHash()}"
+        versionCode 35
+        versionName "2.6.0 - ${getGitHash()}"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-proguard-rules.pro"
     }
@@ -37,6 +37,7 @@ android {
             buildConfigField "boolean", "isSettingsAllowed", "true"
             buildConfigField "boolean", "isFilteringByPrefixAllowed", "true"
             buildConfigField "boolean", "isInAppReviewEnabled", "true"
+            buildConfigField "boolean", "isInAppUpdateEnabled", "true"
         }
 
         debug {
@@ -49,6 +50,7 @@ android {
             buildConfigField "boolean", "isSettingsAllowed", "true"
             buildConfigField "boolean", "isFilteringByPrefixAllowed", "true"
             buildConfigField "boolean", "isInAppReviewEnabled", "true"
+            buildConfigField "boolean", "isInAppUpdateEnabled", "true"
         }
     }
 
@@ -88,6 +90,9 @@ dependencies {
 
     // Google Play In-App Review
     implementation 'com.google.android.play:review:2.0.2'
+
+    // Google Play In-App Updates
+    implementation 'com.google.android.play:app-update:2.1.0'
 
     // CameraX
     def camerax_version = "1.5.1"

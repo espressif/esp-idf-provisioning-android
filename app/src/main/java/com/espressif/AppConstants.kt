@@ -38,6 +38,11 @@ object AppConstants {
     const val KEY_PREF_CATEGORY_FEEDBACK: String = "feedback_category"
     const val KEY_RATE_APP: String = "rate_app"
 
+    // In-app update
+    const val KEY_UPDATE_LAST_PROMPT_VERSION: String = "update_last_prompt_version"
+    const val KEY_UPDATE_LAST_PROMPT_TIME: String = "update_last_prompt_time"
+    const val KEY_UPDATE_ACCEPTED_VERSION: String = "update_accepted_version"
+
     const val ESP_PREFERENCES: String = "Esp_Preferences"
 
     const val DEVICE_TYPE_SOFTAP: String = "softap"
