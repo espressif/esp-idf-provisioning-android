@@ -32,6 +32,12 @@ object AppConstants {
     const val KEY_THREAD_DATASET: String = "thread_dataset"
     const val KEY_THREAD_SCAN_AVAILABLE: String = "thread_scan_available"
 
+    // In-app review
+    const val KEY_REVIEW_PROV_SUCCESS_COUNT: String = "review_prov_success_count"
+    const val KEY_REVIEW_LAST_PROMPT_TIME: String = "review_last_prompt_time"
+    const val KEY_PREF_CATEGORY_FEEDBACK: String = "feedback_category"
+    const val KEY_RATE_APP: String = "rate_app"
+
     const val ESP_PREFERENCES: String = "Esp_Preferences"
 
     const val DEVICE_TYPE_SOFTAP: String = "softap"

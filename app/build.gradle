@@ -36,6 +36,7 @@ android {
             buildConfigField "boolean", "isQrCodeSupported", "true"
             buildConfigField "boolean", "isSettingsAllowed", "true"
             buildConfigField "boolean", "isFilteringByPrefixAllowed", "true"
+            buildConfigField "boolean", "isInAppReviewEnabled", "true"
         }
 
         debug {
@@ -47,6 +48,7 @@ android {
             buildConfigField "boolean", "isQrCodeSupported", "true"
             buildConfigField "boolean", "isSettingsAllowed", "true"
             buildConfigField "boolean", "isFilteringByPrefixAllowed", "true"
+            buildConfigField "boolean", "isInAppReviewEnabled", "true"
         }
     }
 
@@ -83,6 +85,9 @@ dependencies {
     implementation 'com.github.firdausmaulan:AVLoadingIndicatorView:2.3.0'
 
     implementation 'com.google.android.gms:play-services-threadnetwork:16.2.1'
+
+    // Google Play In-App Review
+    implementation 'com.google.android.play:review:2.0.2'
 
     // CameraX
     def camerax_version = "1.5.1"
