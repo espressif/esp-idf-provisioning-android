@@ -37,6 +37,7 @@ import com.espressif.AppConstants
 import com.espressif.provisioning.ESPConstants
 import com.espressif.provisioning.ESPProvisionManager
 import com.espressif.ui.utils.InAppReviewHelper
+import com.espressif.ui.utils.InAppUpdateHelper
 import com.espressif.ui.utils.applySystemBarsAsPadding
 import com.espressif.wifi_provisioning.BuildConfig
 import com.espressif.wifi_provisioning.R
@@ -72,6 +73,7 @@ class EspMainActivity : AppCompatActivity() {
 
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, MODE_PRIVATE)
         provisionManager = ESPProvisionManager.getInstance(applicationContext)
+        InAppUpdateHelper.attach(this, binding.root)
     }
 
     override fun onResume() {
