@@ -98,6 +98,15 @@ public class BLETransport implements Transport {
             if (characteristic != null) {
                 try {
                     this.transportToken.acquire();
+                    if (bluetoothGatt == null) {
+                        // The GATT link dropped before this write was dispatched (commonly:
+                        // BLE/Wi-Fi radio contention on the peripheral tore down the
+                        // connection mid-provisioning). Report a clear transport failure
+                        // instead of dereferencing a null bluetoothGatt.
+                        this.transportToken.release();
+                        listener.onFailure(new RuntimeException("BLE transport is disconnected (bluetoothGatt is null); cannot write characteristic."));
+                        return;
+                    }
                     characteristic.setValue(data);
                     bluetoothGatt.writeCharacteristic(characteristic);
                     currentResponseListener = listener;
@@ -278,7 +287,7 @@ public class BLETransport implements Transport {
 
                 BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(ESPConstants.HANDLER_PROTO_VER)));
 
-                if (characteristic != null) {
+                if (characteristic != null && bluetoothGatt != null) {
                     // Write anything. It doesn't matter. We need to read characteristic and for that we need to write something.
                     characteristic.setValue("ESP");
                     bluetoothGatt.writeCharacteristic(characteristic);
@@ -421,7 +430,7 @@ public class BLETransport implements Transport {
 
             BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString(uuidMap.get(ESPConstants.HANDLER_PROTO_VER)));
 
-            if (characteristic != null) {
+            if (characteristic != null && bluetoothGatt != null) {
                 characteristic.setValue("ESP");
                 bluetoothGatt.writeCharacteristic(characteristic);
             }
