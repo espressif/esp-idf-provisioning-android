@@ -27,8 +27,6 @@ object AppConstants {
     const val KEY_WIFI_PASSWORD: String = "password"
     const val KEY_DEVICE_TYPES: String = "device_types"
     const val KEY_SECURITY_TYPE: String = "security_type"
-    const val KEY_USER_NAME_WIFI: String = "sec2_username_wifi"
-    const val KEY_USER_NAME_THREAD: String = "sec2_username_thread"
     const val KEY_THREAD_DATASET: String = "thread_dataset"
     const val KEY_THREAD_SCAN_AVAILABLE: String = "thread_scan_available"
 

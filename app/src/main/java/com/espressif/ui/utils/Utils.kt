@@ -17,6 +17,7 @@ package com.espressif.ui.utils
 import android.app.Activity
 import android.content.Context
 import androidx.appcompat.app.AlertDialog
+import com.espressif.AppConstants
 import com.espressif.provisioning.ESPProvisionManager
 import com.espressif.wifi_provisioning.R
 import com.google.android.gms.common.ConnectionResult
@@ -67,6 +68,22 @@ object Utils {
         } catch (e: Exception) {
             e.printStackTrace()
             return false
+        }
+    }
+
+    /**
+     * Returns the default Sec2 username for a device, based on its capabilities: Thread devices
+     * use [AppConstants.DEFAULT_USER_NAME_THREAD], all others [AppConstants.DEFAULT_USER_NAME_WIFI].
+     * These match the usernames used by the ESP-IDF provisioning examples.
+     */
+    fun getDefaultSec2UserName(deviceCapabilities: List<String>?): String {
+        val isThreadDevice = deviceCapabilities != null &&
+                (deviceCapabilities.contains(AppConstants.CAPABILITY_THREAD_SCAN) ||
+                        deviceCapabilities.contains(AppConstants.CAPABILITY_THREAD_PROV))
+        return if (isThreadDevice) {
+            AppConstants.DEFAULT_USER_NAME_THREAD
+        } else {
+            AppConstants.DEFAULT_USER_NAME_WIFI
         }
     }
 }

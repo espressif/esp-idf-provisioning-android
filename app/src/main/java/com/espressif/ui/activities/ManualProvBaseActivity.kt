@@ -16,13 +16,13 @@ package com.espressif.ui.activities
 
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.text.TextUtils
 import android.util.Log
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.espressif.AppConstants
 import com.espressif.provisioning.ESPConstants
 import com.espressif.provisioning.ESPProvisionManager
+import com.espressif.ui.utils.Utils
 import com.espressif.wifi_provisioning.R
 import org.greenrobot.eventbus.EventBus
 import org.json.JSONException
@@ -32,6 +32,7 @@ open class ManualProvBaseActivity : AppCompatActivity() {
 
     companion object {
         private val TAG: String = ManualProvBaseActivity::class.java.simpleName
+        private const val KEY_PRESET_USER_NAME = "preset_user_name"
     }
 
     @JvmField
@@ -43,6 +44,12 @@ open class ManualProvBaseActivity : AppCompatActivity() {
     @JvmField
     var sharedPreferences: SharedPreferences? = null
 
+    /**
+     * Sec2 username that was already set on the device before this screen opened (for example
+     * from a QR code). Empty in the manual flow, where the default for the device type is used.
+     */
+    private var presetUserName: String = ""
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_provision_landing)
@@ -50,8 +57,15 @@ open class ManualProvBaseActivity : AppCompatActivity() {
             intent.getIntExtra(AppConstants.KEY_SECURITY_TYPE, AppConstants.SEC_TYPE_DEFAULT)
         provisionManager = ESPProvisionManager.getInstance(applicationContext)
         sharedPreferences = getSharedPreferences(AppConstants.ESP_PREFERENCES, MODE_PRIVATE)
+        presetUserName = savedInstanceState?.getString(KEY_PRESET_USER_NAME)
+            ?: (provisionManager!!.espDevice?.userName ?: "")
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
         EventBus.getDefault().register(this)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(KEY_PRESET_USER_NAME, presetUserName)
     }
 
     override fun onDestroy() {
@@ -101,52 +115,12 @@ open class ManualProvBaseActivity : AppCompatActivity() {
                                 ESPConstants.SecurityType.SECURITY_1
                         }
 
-                        AppConstants.SEC_TYPE_2 -> {
-                            securityType = AppConstants.SEC_TYPE_2
-                            provisionManager!!.espDevice.securityType =
-                                ESPConstants.SecurityType.SECURITY_2
-                            val deviceCaps = provisionManager!!.espDevice.deviceCapabilities
-
-                            if (deviceCaps != null && deviceCaps.size > 0 && (deviceCaps.contains(
-                                    AppConstants.CAPABILITY_THREAD_SCAN
-                                ) || deviceCaps.contains(AppConstants.CAPABILITY_THREAD_PROV))
-                            ) {
-                                val userName = sharedPreferences!!.getString(
-                                    AppConstants.KEY_USER_NAME_THREAD,
-                                    AppConstants.DEFAULT_USER_NAME_THREAD
-                                )!!
-                                provisionManager!!.espDevice.userName = userName
-                            } else if (TextUtils.isEmpty(provisionManager!!.espDevice.userName)) {
-                                val userName = sharedPreferences!!.getString(
-                                    AppConstants.KEY_USER_NAME_WIFI,
-                                    AppConstants.DEFAULT_USER_NAME_WIFI
-                                )!!
-                                provisionManager!!.espDevice.userName = userName
-                            }
-                        }
-
                         else -> {
+                            // Sec2, or a newer version unknown to this app: treat it as Sec2.
                             securityType = AppConstants.SEC_TYPE_2
                             provisionManager!!.espDevice.securityType =
                                 ESPConstants.SecurityType.SECURITY_2
-                            val deviceCaps = provisionManager!!.espDevice.deviceCapabilities
-
-                            if (deviceCaps != null && deviceCaps.size > 0 && (deviceCaps.contains(
-                                    AppConstants.CAPABILITY_THREAD_SCAN
-                                ) || deviceCaps.contains(AppConstants.CAPABILITY_THREAD_PROV))
-                            ) {
-                                val userName = sharedPreferences!!.getString(
-                                    AppConstants.KEY_USER_NAME_THREAD,
-                                    AppConstants.DEFAULT_USER_NAME_THREAD
-                                )!!
-                                provisionManager!!.espDevice.userName = userName
-                            } else if (TextUtils.isEmpty(provisionManager!!.espDevice.userName)) {
-                                val userName = sharedPreferences!!.getString(
-                                    AppConstants.KEY_USER_NAME_WIFI,
-                                    AppConstants.DEFAULT_USER_NAME_WIFI
-                                )!!
-                                provisionManager!!.espDevice.userName = userName
-                            }
+                            setSec2UserName()
                         }
                     }
                 } else {
@@ -162,6 +136,19 @@ open class ManualProvBaseActivity : AppCompatActivity() {
         } catch (e: JSONException) {
             e.printStackTrace()
             Log.d(TAG, "Capabilities JSON not available.")
+        }
+    }
+
+    /**
+     * Applies the Sec2 username for the connected device: the one supplied before this screen
+     * (for example from a QR code) if any, otherwise the default for the device type. Evaluated on
+     * every connection, so reconnecting to a different kind of device from this screen picks the
+     * matching default.
+     */
+    private fun setSec2UserName() {
+        val espDevice = provisionManager!!.espDevice
+        espDevice.userName = presetUserName.ifEmpty {
+            Utils.getDefaultSec2UserName(espDevice.deviceCapabilities)
         }
     }
 }
