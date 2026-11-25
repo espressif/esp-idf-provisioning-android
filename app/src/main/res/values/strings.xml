@@ -134,12 +134,8 @@
     <!-- Messages Preferences -->
     <string name="device_selection_title">Supported Device Types</string>
     <string name="security_selection_title">Encrypted Communication</string>
-    <string name="username_wifi_pref_title">Sec2 Username for Wi-Fi</string>
-    <string name="username_thread_pref_title">Sec2 Username for Thread</string>
-    <string name="username_selection_title">Username</string>
     <string name="summary_secured">Secured</string>
     <string name="summary_unsecured">Unsecured</string>
-    <string name="summary_username">(Applicable for security version 2)</string>
     <string name="rate_app_title">Rate this app</string>
     <string name="rate_app_summary">Share your feedback on Google Play</string>
 

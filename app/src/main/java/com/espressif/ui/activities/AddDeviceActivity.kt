@@ -1002,53 +1002,17 @@ class AddDeviceActivity : AppCompatActivity() {
                             ESPConstants.SecurityType.SECURITY_1
                     }
 
-                    AppConstants.SEC_TYPE_2 -> {
-                        securityType = AppConstants.SEC_TYPE_2
-                        provisionManager.espDevice?.securityType =
-                            ESPConstants.SecurityType.SECURITY_2
-                        val deviceCaps = provisionManager.espDevice?.deviceCapabilities
-
-                        if (deviceCaps != null && deviceCaps.size > 0 &&
-                            (deviceCaps.contains(AppConstants.CAPABILITY_THREAD_SCAN) || deviceCaps.contains(
-                                AppConstants.CAPABILITY_THREAD_PROV
-                            ))
-                        ) {
-                            val userName = sharedPreferences.getString(
-                                AppConstants.KEY_USER_NAME_THREAD,
-                                AppConstants.DEFAULT_USER_NAME_THREAD
-                            )
-                            provisionManager.espDevice?.userName = userName
-                        } else if (TextUtils.isEmpty(provisionManager.espDevice?.userName)) {
-                            val userName = sharedPreferences.getString(
-                                AppConstants.KEY_USER_NAME_WIFI,
-                                AppConstants.DEFAULT_USER_NAME_WIFI
-                            )
-                            provisionManager.espDevice?.userName = userName
-                        }
-                    }
-
                     else -> {
+                        // Sec2, or a newer version unknown to this app: treat it as Sec2.
                         securityType = AppConstants.SEC_TYPE_2
-                        provisionManager.espDevice?.securityType =
-                            ESPConstants.SecurityType.SECURITY_2
-                        val deviceCaps = provisionManager.espDevice?.deviceCapabilities
-
-                        if (deviceCaps != null && deviceCaps.size > 0 &&
-                            (deviceCaps.contains(AppConstants.CAPABILITY_THREAD_SCAN) || deviceCaps.contains(
-                                AppConstants.CAPABILITY_THREAD_PROV
-                            ))
-                        ) {
-                            val userName = sharedPreferences.getString(
-                                AppConstants.KEY_USER_NAME_THREAD,
-                                AppConstants.DEFAULT_USER_NAME_THREAD
-                            )
-                            provisionManager.espDevice?.userName = userName
-                        } else if (TextUtils.isEmpty(provisionManager.espDevice?.userName)) {
-                            val userName = sharedPreferences.getString(
-                                AppConstants.KEY_USER_NAME_WIFI,
-                                AppConstants.DEFAULT_USER_NAME_WIFI
-                            )
-                            provisionManager.espDevice?.userName = userName
+                        provisionManager.espDevice?.let { device ->
+                            device.securityType = ESPConstants.SecurityType.SECURITY_2
+                            // Keep the username from the QR code, if it had one. Otherwise use
+                            // the default for the device type.
+                            if (TextUtils.isEmpty(device.userName)) {
+                                device.userName =
+                                    Utils.getDefaultSec2UserName(device.deviceCapabilities)
+                            }
                         }
                     }
                 }
